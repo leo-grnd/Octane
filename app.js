@@ -71,7 +71,7 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
     `&limit=100` +
-    `&select=id,adresse,ville,cp,geom,${fuelField},${majField}`;
+    `&select=id,adresse,ville,cp,geom,geo_point_2d,${fuelField},${majField}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`API carburants: ${res.status}`);
   const data = await res.json();
@@ -113,15 +113,25 @@ function renderStations(stations, fuelField, userLat, userLon) {
   $stationList.innerHTML = '';
 
   const enriched = stations.map(s => {
-    const [lon, lat] = s.geom.coordinates;
+    let lat, lon;
+    if (s.geom && Array.isArray(s.geom.coordinates)) {
+      [lon, lat] = s.geom.coordinates;
+    } else if (s.geo_point_2d) {
+      if (Array.isArray(s.geo_point_2d)) {
+        [lat, lon] = s.geo_point_2d;
+      } else {
+        lat = s.geo_point_2d.lat ?? s.geo_point_2d.latitude;
+        lon = s.geo_point_2d.lon ?? s.geo_point_2d.longitude;
+      }
+    }
     return {
       ...s,
       lat,
       lon,
-      distance: haversine(userLat, userLon, lat, lon),
+      distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
       price: parseFloat(s[fuelField])
     };
-  }).filter(s => !isNaN(s.price) && s.price > 0)
+  }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
     .sort((a, b) => a.price - b.price);
 
   const total = enriched.length;

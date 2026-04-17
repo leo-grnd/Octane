@@ -1,7 +1,6 @@
 services:
   octane:
     build: .
-    container_name: octane
     restart: unless-stopped
-    ports:
-      - "80:80"
+    expose:
+      - "80"

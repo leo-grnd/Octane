@@ -67,15 +67,39 @@ async function geocode(address) {
 // Appel API prix carburants
 async function fetchStations(lat, lon, radiusKm, fuelField) {
   const whereClause = `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km) AND ${fuelField} IS NOT NULL`;
-  const majField = fuelField.replace('_prix', '_maj');
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
-    `&limit=100` +
-    `&select=id,adresse,ville,cp,geom,geo_point_2d,${fuelField},${majField}`;
+    `&limit=100`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`API carburants: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error('API 4xx body:', body);
+    throw new Error(`API carburants: ${res.status}`);
+  }
   const data = await res.json();
   return data.results || [];
+}
+
+// Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
+function extractCoords(s) {
+  const g = s.geom;
+  if (g) {
+    if (Array.isArray(g.coordinates) && g.coordinates.length >= 2) {
+      return { lon: g.coordinates[0], lat: g.coordinates[1] };
+    }
+    if (g.lon != null && g.lat != null) return { lon: g.lon, lat: g.lat };
+    if (typeof g === 'string') {
+      const m = g.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+      if (m) return { lon: parseFloat(m[1]), lat: parseFloat(m[2]) };
+    }
+  }
+  const p = s.geo_point_2d;
+  if (p) {
+    if (Array.isArray(p) && p.length >= 2) return { lat: p[0], lon: p[1] };
+    if (p.lon != null && p.lat != null) return { lon: p.lon, lat: p.lat };
+    if (p.longitude != null && p.latitude != null) return { lon: p.longitude, lat: p.latitude };
+  }
+  return { lat: null, lon: null };
 }
 
 // Couleur par rang (vert → rouge)
@@ -113,17 +137,7 @@ function renderStations(stations, fuelField, userLat, userLon) {
   $stationList.innerHTML = '';
 
   const enriched = stations.map(s => {
-    let lat, lon;
-    if (s.geom && Array.isArray(s.geom.coordinates)) {
-      [lon, lat] = s.geom.coordinates;
-    } else if (s.geo_point_2d) {
-      if (Array.isArray(s.geo_point_2d)) {
-        [lat, lon] = s.geo_point_2d;
-      } else {
-        lat = s.geo_point_2d.lat ?? s.geo_point_2d.latitude;
-        lon = s.geo_point_2d.lon ?? s.geo_point_2d.longitude;
-      }
-    }
+    const { lat, lon } = extractCoords(s);
     return {
       ...s,
       lat,

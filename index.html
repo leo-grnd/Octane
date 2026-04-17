@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCTANE — Trouve ton carburant le moins cher</title>
+  <meta name="description" content="Comparateur en temps réel des prix du carburant en France. Données officielles du Ministère de l'Économie." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="logo">O<span>CTANE</span></div>
+        <div class="tagline">— Prix carburants · Temps réel</div>
+      </div>
+      <div class="meta">
+        <div><span class="pulse"></span>Data.gouv · Live</div>
+        <div id="timestamp" style="margin-top: 0.3rem;"></div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1>Le plein. <em>Le moins cher.</em><br />Autour de toi.</h1>
+      <p>Données officielles du Ministère de l'Économie. Comparaison instantanée des stations-service françaises, classées par prix et par distance.</p>
+    </section>
+
+    <section class="search-panel">
+      <div class="form-grid">
+        <div class="field">
+          <label for="address">→ Adresse ou ville</label>
+          <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="fuel">→ Carburant</label>
+          <select id="fuel">
+            <option value="sp95_e10_prix">SP95-E10</option>
+            <option value="sp95_prix">SP95</option>
+            <option value="sp98_prix">SP98</option>
+            <option value="gazole_prix" selected>Gazole</option>
+            <option value="e85_prix">E85</option>
+            <option value="gplc_prix">GPLc</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="radius">→ Rayon (km)</label>
+          <input id="radius" type="number" min="1" max="50" value="5" />
+        </div>
+        <button id="searchBtn" class="btn-search">Chercher ↗</button>
+      </div>
+      <button id="geolocBtn" class="geoloc-btn">⊙ Utiliser ma position actuelle</button>
+    </section>
+
+    <div id="status" class="status hidden"></div>
+
+    <section id="results" class="hidden">
+      <div class="results-header">
+        <h2 id="resultsTitle">Résultats</h2>
+        <div id="resultsCount" class="results-count"></div>
+      </div>
+      <div id="stationList" class="station-list"></div>
+    </section>
+
+    <footer>
+      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

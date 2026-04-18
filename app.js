@@ -42,6 +42,7 @@ const $results = document.getElementById('results');
 const $stationList = document.getElementById('stationList');
 const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
+const $osmHint = document.getElementById('osmHint');
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -131,12 +132,14 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
 
 // OSM Overpass : récupère toutes les stations essence de la zone avec leur marque
 async function fetchOSMFuelStations(lat, lon, radiusKm) {
-  // Cache géo arrondi à 0.01° (~1 km) pour partager entre recherches voisines
-  const key = `osm:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
+  // Cache géo arrondi à 0.01° (~1 km) pour partager entre recherches voisines.
+  // `v2` = bump de version pour invalider les anciens caches vides.
+  const key = `osm:v2:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
   const cached = cacheGet(localStorage, key, TTL_OSM);
-  if (cached) return cached;
+  if (cached && cached.length) return cached; // on ne réutilise PAS un cache vide
+
   const radiusM = Math.round(radiusKm * 1000 * 1.1);
-  const query = `[out:json][timeout:10];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
+  const query = `[out:json][timeout:25];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
   const endpoints = [
     'https://overpass.kumi.systems/api/interpreter',
     'https://overpass-api.de/api/interpreter'
@@ -144,7 +147,7 @@ async function fetchOSMFuelStations(lat, lon, radiusKm) {
   for (const ep of endpoints) {
     try {
       const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 12000);
+      const timeout = setTimeout(() => ctrl.abort(), 15000);
       const res = await fetch(`${ep}?data=${encodeURIComponent(query)}`, { signal: ctrl.signal });
       clearTimeout(timeout);
       if (!res.ok) continue;
@@ -158,7 +161,8 @@ async function fetchOSMFuelStations(lat, lon, radiusKm) {
           ? { lat: elat, lon: elon, brand: brand.trim() }
           : null;
       }).filter(Boolean);
-      cacheSet(localStorage, key, out);
+      console.log(`OSM: ${out.length} stations avec marque trouvées via ${ep}`);
+      if (out.length) cacheSet(localStorage, key, out); // n'enregistre pas les réponses vides
       return out;
     } catch (err) {
       console.warn('Overpass endpoint failed:', ep, err);
@@ -370,12 +374,15 @@ async function runSearch(lat, lon, label) {
 
     hideStatus();
     $results.classList.remove('hidden');
+    $osmHint.classList.remove('hidden');
     renderStations(stations, fuelField, lat, lon);
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     // Patch des marques OSM dès qu'elles arrivent (souvent + lent)
     osmPromise.then(osm => {
-      if (token !== currentSearchToken || !osm.length) return;
+      if (token !== currentSearchToken) return;
+      $osmHint.classList.add('hidden');
+      if (!osm.length) return;
       let changed = false;
       stations.forEach(s => {
         const { lat: sLat, lon: sLon } = extractCoords(s);
@@ -384,6 +391,8 @@ async function runSearch(lat, lon, label) {
         if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
       });
       if (changed) renderStations(stations, fuelField, lat, lon);
+    }).catch(() => {
+      if (token === currentSearchToken) $osmHint.classList.add('hidden');
     });
   } catch (err) {
     if (token !== currentSearchToken) return;

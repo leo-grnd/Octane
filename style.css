@@ -359,6 +359,27 @@ header {
   gap: 0.5rem;
 }
 
+.osm-hint {
+  font-size: 0.7rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.6rem 0 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.loader-sm {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.6rem;
+}
+
 .station {
   display: grid;
   grid-template-columns: 60px 1fr auto auto;

@@ -2,16 +2,19 @@
 """
 scripts/build_history.py — pré-calcule l'historique hebdomadaire des prix carburants.
 
-Alternative stdlib-only au script Node (scripts/build-history.mjs), utile quand
-GitHub Actions n'est pas de bonne humeur ou en dev local sans Node.
+Alternative stdlib-only au script Node (scripts/build-history.mjs).
 
-Source : dataset annuel `prix-des-carburants-fichier-annuel-YYYY` (data.economie.gouv.fr).
+Source : archives annuelles officielles
+  https://donnees.roulez-eco.fr/opendata/annee/YYYY (ZIP → XML)
+
+Le dataset Opendatasoft "prix-des-carburants-fichier-annuel-YYYY" n'est plus publié
+sous ce slug côté API ; on repasse par la source amont (fichiers publiés par le
+Ministère de l'Économie, mis à jour quotidiennement).
 
 Usage :
   python3 scripts/build_history.py                    # 12 dernières semaines, année en cours
   python3 scripts/build_history.py --weeks 24
   python3 scripts/build_history.py --year 2025        # force une année
-  python3 scripts/build_history.py --dataset nom-custom
 
 Sortie : data/history/<fuel_field>.json
 Format : { generated, source, fuel, weeks, stations: { id_pdv: [prix_millieme, ...] } }
@@ -20,18 +23,20 @@ Prix stockés en millièmes d'euros (entiers) ou null si pas de donnée pour la 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Nom API (dataset annuel) → clé côté client (dataset temps réel)
+# Nom dans le XML → clé côté client
 FUELS = {
     "Gazole": "gazole_prix",
     "SP95": "sp95_prix",
@@ -65,51 +70,80 @@ def week_list(since: datetime, now: datetime, weeks: int) -> list[str]:
     return deduped
 
 
-def fetch_export(dataset: str, fuel_name: str, since_iso: str) -> list[dict]:
-    params = {
-        "select": "id_pdv, prix_valeur, prix_maj",
-        "where": f'prix_nom = "{fuel_name}" AND prix_maj >= date\'{since_iso}\'',
-        "limit": "-1",
-    }
-    url = (
-        f"https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/"
-        f"{dataset}/exports/json?{urllib.parse.urlencode(params)}"
-    )
+def download_year_zip(year: int) -> bytes:
+    """Télécharge l'archive annuelle. Peut renvoyer plusieurs centaines de Mo."""
+    url = f"https://donnees.roulez-eco.fr/opendata/annee/{year}"
     req = urllib.request.Request(url, headers={"User-Agent": "octane-builder/1.0"})
-    with urllib.request.urlopen(req, timeout=180) as resp:
+    with urllib.request.urlopen(req, timeout=600) as resp:
         if resp.status != 200:
-            raise RuntimeError(f"HTTP {resp.status} on {dataset}")
-        return json.loads(resp.read())
+            raise RuntimeError(f"HTTP {resp.status}")
+        return resp.read()
 
 
-def aggregate(rows: list[dict], weeks: list[str]) -> dict[str, list[int | None]]:
+def extract_xml(zip_bytes: bytes) -> bytes:
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        names = zf.namelist()
+        xml_name = next((n for n in names if n.lower().endswith(".xml")), None)
+        if not xml_name:
+            raise RuntimeError(f"Pas de fichier XML dans le ZIP : {names}")
+        return zf.read(xml_name)
+
+
+def parse_price(raw: str | None) -> float | None:
+    """`valeur` peut être en euros ('1.789') ou, historiquement, en millièmes ('1789')."""
+    if not raw:
+        return None
+    try:
+        p = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if p <= 0:
+        return None
+    # Heuristique : au-delà de 10 €/L, c'est forcément du millième
+    if p > 10:
+        p = p / 1000.0
+    return p
+
+
+def parse_maj(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    s = raw.strip().replace("T", " ").replace("Z", "")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def aggregate(xml_bytes: bytes, weeks: list[str], fuel_name: str) -> dict[str, list[int | None]]:
     week_idx = {w: i for i, w in enumerate(weeks)}
     buckets: dict[str, list[list[float | int]]] = defaultdict(
         lambda: [[0.0, 0] for _ in range(len(weeks))]
     )
-    for r in rows:
-        id_ = r.get("id_pdv")
-        if id_ is None:
-            continue
-        try:
-            price = float(r.get("prix_valeur"))
-        except (TypeError, ValueError):
-            continue
-        if price <= 0 or price != price:  # reject NaN
-            continue
-        maj = r.get("prix_maj")
-        if not maj:
-            continue
-        try:
-            d = datetime.fromisoformat(str(maj).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        idx = week_idx.get(iso_week(d))
-        if idx is None:
-            continue
-        slot = buckets[str(id_)][idx]
-        slot[0] += price
-        slot[1] += 1
+    current_id: str | None = None
+
+    for event, elem in ET.iterparse(io.BytesIO(xml_bytes), events=("start", "end")):
+        if event == "start" and elem.tag == "pdv":
+            current_id = elem.get("id")
+        elif event == "end" and elem.tag == "prix":
+            if current_id and elem.get("nom") == fuel_name:
+                price = parse_price(elem.get("valeur"))
+                d = parse_maj(elem.get("maj"))
+                if price is not None and d is not None:
+                    idx = week_idx.get(iso_week(d))
+                    if idx is not None:
+                        slot = buckets[current_id][idx]
+                        slot[0] += price
+                        slot[1] += 1
+            elem.clear()
+        elif event == "end" and elem.tag == "pdv":
+            current_id = None
+            elem.clear()
 
     stations: dict[str, list[int | None]] = {}
     for id_, slots in buckets.items():
@@ -121,15 +155,27 @@ def aggregate(rows: list[dict], weeks: list[str]) -> dict[str, list[int | None]]
     return stations
 
 
+def try_year(year: int) -> bytes | None:
+    try:
+        print(f"  ↓ téléchargement annuel {year}…", file=sys.stderr, flush=True)
+        zip_bytes = download_year_zip(year)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        print(f"  ⚠ année {year} indispo ({e})", file=sys.stderr)
+        return None
+    try:
+        xml_bytes = extract_xml(zip_bytes)
+    except (zipfile.BadZipFile, RuntimeError) as e:
+        print(f"  ⚠ ZIP {year} illisible ({e})", file=sys.stderr)
+        return None
+    print(f"  ✓ XML {year} : {len(xml_bytes) / 1024 / 1024:.1f} Mo", file=sys.stderr)
+    return xml_bytes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--weeks", type=int, default=12)
     parser.add_argument("--year", type=int, default=date.today().year)
-    parser.add_argument("--dataset", default=None, help="Surcharge le nom du dataset")
     args = parser.parse_args()
-
-    dataset = args.dataset or f"prix-des-carburants-fichier-annuel-{args.year}"
-    fallback = f"prix-des-carburants-fichier-annuel-{args.year - 1}"
 
     now = datetime.now(timezone.utc)
     since = now - timedelta(weeks=args.weeks)
@@ -144,29 +190,27 @@ def main() -> int:
         file=sys.stderr,
     )
 
+    # Fallback année précédente si l'annuel courant n'est pas encore publié
+    xml_bytes = try_year(args.year)
+    used_year = args.year
+    if xml_bytes is None:
+        xml_bytes = try_year(args.year - 1)
+        used_year = args.year - 1
+    if xml_bytes is None:
+        print(
+            f"✗ Impossible de récupérer les archives annuelles {args.year} ni {args.year - 1}",
+            file=sys.stderr,
+        )
+        return 1
+
+    source = f"donnees.roulez-eco.fr/opendata/annee/{used_year}"
     any_success = False
     for api_name, field_key in FUELS.items():
         print(f"\n→ {api_name} ({field_key})", file=sys.stderr)
-        used_dataset = dataset
-        rows: list[dict] | None = None
-        try:
-            rows = fetch_export(dataset, api_name, since_iso)
-        except (urllib.error.HTTPError, urllib.error.URLError, RuntimeError) as e:
-            print(
-                f"  ⚠ {dataset} a échoué ({e}), fallback {fallback}",
-                file=sys.stderr,
-            )
-            used_dataset = fallback
-            try:
-                rows = fetch_export(fallback, api_name, since_iso)
-            except Exception as e2:  # noqa: BLE001
-                print(f"  ✗ {field_key} : {e2}", file=sys.stderr)
-                continue
-
-        stations = aggregate(rows or [], weeks)
+        stations = aggregate(xml_bytes, weeks, api_name)
         payload = {
             "generated": now.isoformat(),
-            "source": used_dataset,
+            "source": source,
             "fuel": api_name,
             "weeks": weeks,
             "stations": stations,

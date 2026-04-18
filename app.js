@@ -135,28 +135,40 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   return results;
 }
 
-// OSM Overpass : récupère toutes les stations essence de la zone avec leur marque
+// OSM Overpass : récupère toutes les stations essence de la zone avec leur marque.
+// Stratégie : course parallèle (Promise.any) sur plusieurs endpoints — le 1er qui
+// répond gagne. Ça évite d'attendre 15-30 s quand un miroir est lent/HS.
 async function fetchOSMFuelStations(lat, lon, radiusKm) {
   // Cache géo arrondi à 0.01° (~1 km) pour partager entre recherches voisines.
-  // `v2` = bump de version pour invalider les anciens caches vides.
-  const key = `osm:v2:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
+  // `v3` = bump après refactor Promise.any (invalide anciens caches pot. incomplets).
+  const key = `osm:v3:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
   const cached = cacheGet(localStorage, key, TTL_OSM);
-  if (cached && cached.length) return cached; // on ne réutilise PAS un cache vide
+  if (cached && cached.length) return cached;
 
   const radiusM = Math.round(radiusKm * 1000 * 1.1);
-  const query = `[out:json][timeout:25];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
+  const query = `[out:json][timeout:20];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
   const endpoints = [
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass-api.de/api/interpreter'
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
   ];
-  for (const ep of endpoints) {
-    try {
-      const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 15000);
-      const res = await fetch(`${ep}?data=${encodeURIComponent(query)}`, { signal: ctrl.signal });
-      clearTimeout(timeout);
-      if (!res.ok) continue;
-      const data = await res.json();
+  const PER_ENDPOINT_TIMEOUT = 12000;
+
+  const tryOne = (ep) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), PER_ENDPOINT_TIMEOUT);
+    // POST évite les problèmes de taille d'URL et est plus fiable côté Overpass
+    return fetch(ep, {
+      method: 'POST',
+      body: `data=${encodeURIComponent(query)}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: ctrl.signal
+    }).then(res => {
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }).then(data => {
       const out = (data.elements || []).map(e => {
         const elat = e.lat ?? e.center?.lat;
         const elon = e.lon ?? e.center?.lon;
@@ -166,14 +178,23 @@ async function fetchOSMFuelStations(lat, lon, radiusKm) {
           ? { lat: elat, lon: elon, brand: brand.trim() }
           : null;
       }).filter(Boolean);
-      console.log(`OSM: ${out.length} stations avec marque trouvées via ${ep}`);
-      if (out.length) cacheSet(localStorage, key, out); // n'enregistre pas les réponses vides
-      return out;
-    } catch (err) {
-      console.warn('Overpass endpoint failed:', ep, err);
-    }
+      if (!out.length) throw new Error('empty');
+      console.log(`OSM: ${out.length} stations avec marque via ${ep}`);
+      return { ep, out };
+    }).catch(err => {
+      clearTimeout(timer);
+      throw err;
+    });
+  };
+
+  try {
+    const { out } = await Promise.any(endpoints.map(tryOne));
+    cacheSet(localStorage, key, out);
+    return out;
+  } catch {
+    console.warn('Overpass: tous les endpoints ont échoué');
+    return [];
   }
-  return [];
 }
 
 // Trouve la station OSM la plus proche (< 150 m) d'une station donnée
@@ -465,6 +486,11 @@ async function runSearch(lat, lon, label) {
     hideStatus();
     $results.classList.remove('hidden');
     $osmHint.classList.remove('hidden');
+    // Filet de sécurité : on cache le hint après 12 s même si Overpass pédale encore,
+    // pour ne pas laisser l'utilisateur croire que l'app est bloquée.
+    const hintSafetyTimer = setTimeout(() => {
+      if (token === currentSearchToken) $osmHint.classList.add('hidden');
+    }, 12000);
 
     currentResults = {
       stations: enrichStations(rawStations, fuelField, lat, lon),
@@ -479,6 +505,7 @@ async function runSearch(lat, lon, label) {
 
     // Patch des marques OSM dès qu'elles arrivent (souvent + lent)
     osmPromise.then(osm => {
+      clearTimeout(hintSafetyTimer);
       if (token !== currentSearchToken) return;
       $osmHint.classList.add('hidden');
       if (!osm.length) return;
@@ -489,6 +516,7 @@ async function runSearch(lat, lon, label) {
       });
       if (changed) renderStations();
     }).catch(() => {
+      clearTimeout(hintSafetyTimer);
       if (token === currentSearchToken) $osmHint.classList.add('hidden');
     });
   } catch (err) {

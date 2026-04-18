@@ -345,11 +345,13 @@ function buildStationCard(s, i, total, fuelField) {
   const freshness = formatRelativeTime(s[majField]);
   const dirUrl = directionsUrl(s.lat, s.lon, title);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
+  const sid = s.id != null ? String(s.id) : '';
 
   const el = document.createElement('div');
   el.className = 'station';
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
+  if (sid) el.dataset.stationId = sid;
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
@@ -367,6 +369,8 @@ function buildStationCard(s, i, total, fuelField) {
       <span class="unit">€ / L</span>
       ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
     </div>
+    ${sid ? `<button class="toggle-history" type="button" aria-expanded="false" aria-controls="hist-${sid}" aria-label="Afficher l'évolution du prix sur 12 semaines"><span class="th-label">Historique</span><span class="th-caret" aria-hidden="true">▾</span></button>
+    <div class="history-panel hidden" id="hist-${sid}" role="region" aria-label="Évolution du prix"></div>` : ''}
   `;
   return el;
 }
@@ -656,6 +660,121 @@ $geolocBtn.addEventListener('click', () => {
     (err) => showStatus(`Géoloc refusée: ${err.message}`, true),
     { enableHighAccuracy: true, timeout: 10000 }
   );
+});
+
+// ===== Historique des prix (3.2 — sparkline dépliable) =====
+const historyCache = {};   // fuelField → { weeks, stations } | null (404)
+const historyInflight = {};
+
+async function loadHistory(fuelField) {
+  if (fuelField in historyCache) return historyCache[fuelField];
+  if (historyInflight[fuelField]) return historyInflight[fuelField];
+  historyInflight[fuelField] = (async () => {
+    try {
+      const res = await fetch(`data/history/${fuelField}.json`, { cache: 'force-cache' });
+      if (!res.ok) throw new Error('404');
+      const data = await res.json();
+      historyCache[fuelField] = data;
+      return data;
+    } catch {
+      historyCache[fuelField] = null;
+      return null;
+    } finally {
+      delete historyInflight[fuelField];
+    }
+  })();
+  return historyInflight[fuelField];
+}
+
+function renderSparkline(pricesInMilli, weeks) {
+  const W = 260, H = 60, PAD_X = 6, PAD_Y = 10;
+  const pts = pricesInMilli
+    .map((p, i) => (p != null ? { i, p: p / 1000 } : null))
+    .filter(Boolean);
+  if (pts.length < 2) {
+    return `<div class="hist-empty">Pas assez de données pour tracer une courbe.</div>`;
+  }
+  const min = Math.min(...pts.map(x => x.p));
+  const max = Math.max(...pts.map(x => x.p));
+  const avg = pts.reduce((s, x) => s + x.p, 0) / pts.length;
+  const range = Math.max(max - min, 0.005);
+  const stepX = (W - PAD_X * 2) / Math.max(pricesInMilli.length - 1, 1);
+  const coord = (x) => ({
+    x: PAD_X + x.i * stepX,
+    y: PAD_Y + (H - PAD_Y * 2) * (1 - (x.p - min) / range)
+  });
+  const line = pts.map(p => {
+    const c = coord(p);
+    return `${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+  }).join(' ');
+  const last = coord(pts[pts.length - 1]);
+  const first = pts[0].p, now = pts[pts.length - 1].p;
+  const delta = now - first;
+  const sign = delta > 0.003 ? 'up' : delta < -0.003 ? 'down' : 'flat';
+  const arrow = sign === 'up' ? '↗' : sign === 'down' ? '↘' : '→';
+  const nbWeeks = pricesInMilli.length;
+  const firstWeek = weeks[0] || '';
+  const lastWeek = weeks[weeks.length - 1] || '';
+
+  return `
+    <svg viewBox="0 0 ${W} ${H}" class="sparkline" role="img" aria-label="Évolution hebdomadaire sur ${nbWeeks} semaines, de ${firstWeek} à ${lastWeek}">
+      <polyline points="${line}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="currentColor"/>
+    </svg>
+    <div class="hist-stats">
+      <span>min <strong>${min.toFixed(3)} €</strong></span>
+      <span>moy <strong>${avg.toFixed(3)} €</strong></span>
+      <span>max <strong>${max.toFixed(3)} €</strong></span>
+      <span class="hist-trend ${sign}">${arrow} ${delta >= 0 ? '+' : ''}${delta.toFixed(3)} € sur ${nbWeeks} sem.</span>
+    </div>
+  `;
+}
+
+async function expandHistoryPanel(card, btn) {
+  const sid = card.dataset.stationId;
+  if (!sid) return;
+  const panel = card.querySelector('.history-panel');
+  if (!panel) return;
+
+  panel.classList.remove('hidden');
+  btn.setAttribute('aria-expanded', 'true');
+  btn.querySelector('.th-caret').textContent = '▴';
+
+  if (panel.dataset.loaded) return;
+  panel.innerHTML = `<span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…`;
+  panel.dataset.loaded = 'loading';
+
+  const fuelField = currentResults?.fuelField;
+  const data = await loadHistory(fuelField);
+  if (!data) {
+    panel.innerHTML = `<div class="hist-empty">Historique indisponible. Lance le script <code>scripts/build-history.mjs</code> ou attends le prochain rafraîchissement.</div>`;
+    panel.dataset.loaded = '1';
+    return;
+  }
+  const prices = data.stations[sid];
+  if (!prices) {
+    panel.innerHTML = `<div class="hist-empty">Pas d'historique pour cette station dans les 12 dernières semaines.</div>`;
+  } else {
+    panel.innerHTML = renderSparkline(prices, data.weeks);
+  }
+  panel.dataset.loaded = '1';
+}
+
+function collapseHistoryPanel(card, btn) {
+  const panel = card.querySelector('.history-panel');
+  if (panel) panel.classList.add('hidden');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.querySelector('.th-caret').textContent = '▾';
+}
+
+$stationList.addEventListener('click', e => {
+  const btn = e.target.closest('.toggle-history');
+  if (!btn) return;
+  const card = btn.closest('.station');
+  if (!card) return;
+  const expanded = btn.getAttribute('aria-expanded') === 'true';
+  if (expanded) collapseHistoryPanel(card, btn);
+  else expandHistoryPanel(card, btn);
 });
 
 // ===== Carte Leaflet =====

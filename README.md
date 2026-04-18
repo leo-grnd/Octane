@@ -23,11 +23,33 @@ Ou ouvrir directement `index.html` dans un navigateur.
 
 Hébergé en live sur **GitHub Pages** depuis la branche `main`.
 
+## Historique des prix (sparklines)
+
+Chaque station peut afficher l'évolution hebdomadaire de son prix sur les 12 dernières semaines.
+Les données sont pré-calculées dans `data/history/<fuel>.json` à partir du dataset annuel
+`prix-des-carburants-fichier-annuel-YYYY` (data.economie.gouv.fr).
+
+**Rafraîchir localement :**
+```bash
+node scripts/build-history.mjs              # 12 dernières semaines, année en cours
+node scripts/build-history.mjs --weeks=24   # plus long historique
+```
+
+**Automatisation :** le workflow `.github/workflows/build-history.yml` tourne chaque lundi
+à 05:00 UTC et commit les JSONs rafraîchis sur `main`. Déclenchable manuellement via l'onglet
+Actions → Refresh price history → Run workflow.
+
+Si les JSONs sont absents (404), le client affiche simplement « Historique indisponible ».
+
 ## Fichiers
 
 | Fichier | Rôle |
 |--|--|
 | `index.html` | Structure + SEO |
 | `style.css` | Style (thème sombre/clair, responsive) |
-| `app.js` | Géocodage + appels API + rendu + cache |
-| `favicon.svg` | Icône du site |
+| `app.js` | Géocodage + appels API + rendu + cache + historique |
+| `sw.js` + `manifest.webmanifest` | Service worker et manifest PWA |
+| `favicon.svg` · `og-image.svg` | Icône + preview sociale |
+| `scripts/build-history.mjs` | Pré-calcul des sparklines par station |
+| `data/history/*.json` | Agrégats hebdomadaires (générés, commit) |
+| `.github/workflows/build-history.yml` | Cron hebdo GHA |

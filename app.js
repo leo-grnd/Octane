@@ -9,6 +9,28 @@ const updateTime = () => {
 updateTime();
 setInterval(updateTime, 30000);
 
+// Thème clair / sombre (persistence localStorage + prefers-color-scheme)
+const $themeToggle = document.getElementById('themeToggle');
+const $themeIcon = document.getElementById('themeIcon');
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    $themeIcon.textContent = '☀';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    $themeIcon.textContent = '☾';
+  }
+}
+const savedTheme = localStorage.getItem('octane-theme');
+const initialTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+applyTheme(initialTheme);
+$themeToggle.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  localStorage.setItem('octane-theme', next);
+  applyTheme(next);
+});
+
 // Éléments
 const $address = document.getElementById('address');
 const $fuel = document.getElementById('fuel');

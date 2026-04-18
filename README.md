@@ -26,8 +26,12 @@ Hébergé sur **GitHub Pages** depuis la branche `main`.
 ## Historique des prix (sparklines)
 
 Chaque station peut afficher l'évolution hebdomadaire de son prix sur les 12 dernières semaines.
-Les données sont pré-calculées dans `data/history/<fuel>.json` à partir du dataset annuel
-`prix-des-carburants-fichier-annuel-YYYY` (data.economie.gouv.fr).
+Les données sont pré-calculées dans `data/history/<fuel>.json` à partir de l'archive annuelle
+officielle `donnees.roulez-eco.fr/opendata/annee/YYYY` (ZIP + XML, Ministère de l'Économie).
+
+Le script Node requiert `unzip` dans le PATH (présent par défaut sur macOS, Linux, et les
+runners GitHub Actions `ubuntu-latest`). Le script Python est 100 % stdlib (pas de binaire
+externe requis, utile si `unzip` manque).
 
 **Rafraîchir localement (Node, recommandé) :**
 ```bash

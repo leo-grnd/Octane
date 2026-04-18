@@ -8,6 +8,26 @@
   --accent-soft: #ffb800;
   --grid: #222;
   --border: #2a2a2a;
+  --grid-opacity: 0.35;
+  --glow-opacity: 0.12;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f1e8;
+  --bg-soft: #ebe4d2;
+  --bg-card: #fbf8ef;
+  --ink: #141210;
+  --ink-dim: #6b6356;
+  --accent: #e85f00;
+  --accent-soft: #c88a00;
+  --grid: #d9d1bc;
+  --border: #ccc3ab;
+  --grid-opacity: 0.55;
+  --glow-opacity: 0.08;
+}
+
+html, body {
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +48,7 @@ body::before {
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 60px 60px;
-  opacity: 0.35;
+  opacity: var(--grid-opacity);
   pointer-events: none;
   z-index: 0;
 }
@@ -37,7 +57,7 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at top, rgba(255,107,0,0.12), transparent 60%);
+  background: radial-gradient(ellipse at top, rgba(255,107,0, var(--glow-opacity)), transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
@@ -194,6 +214,39 @@ header {
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   padding-right: 2rem;
+}
+
+:root[data-theme="light"] .field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%236b6356' stroke-width='1.5' fill='none'/></svg>");
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  margin-top: 0.6rem;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: rotate(15deg);
+}
+.meta .meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
 }
 
 .field select option {

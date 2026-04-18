@@ -102,12 +102,49 @@ function extractCoords(s) {
   return { lat: null, lon: null };
 }
 
+// Liste ordonnée des enseignes françaises (les plus spécifiques en premier)
+const KNOWN_BRANDS = [
+  { re: /total\s*acc[eé]ss?/i, name: 'Total Access' },
+  { re: /totalenergies/i, name: 'TotalEnergies' },
+  { re: /total/i, name: 'Total' },
+  { re: /e\.?\s*leclerc/i, name: 'E.Leclerc' },
+  { re: /leclerc/i, name: 'E.Leclerc' },
+  { re: /carrefour\s*market/i, name: 'Carrefour Market' },
+  { re: /carrefour\s*contact/i, name: 'Carrefour Contact' },
+  { re: /carrefour\s*express/i, name: 'Carrefour Express' },
+  { re: /carrefour/i, name: 'Carrefour' },
+  { re: /interm[aà]rch[eé]/i, name: 'Intermarché' },
+  { re: /auchan/i, name: 'Auchan' },
+  { re: /syst[eè]me\s*u|super\s*u|hyper\s*u|march[eé]\s*u\b|\bu\s*express/i, name: 'Super U' },
+  { re: /esso\s*express/i, name: 'Esso Express' },
+  { re: /\besso\b/i, name: 'Esso' },
+  { re: /\bshell\b/i, name: 'Shell' },
+  { re: /\bavia\b/i, name: 'Avia' },
+  { re: /g[eé]ant\s*casino/i, name: 'Géant Casino' },
+  { re: /\bcasino\b/i, name: 'Casino' },
+  { re: /\bcora\b/i, name: 'Cora' },
+  { re: /\bnetto\b/i, name: 'Netto' },
+  { re: /leader\s*price/i, name: 'Leader Price' },
+  { re: /colruyt/i, name: 'Colruyt' },
+  { re: /\bbp\b/i, name: 'BP' },
+  { re: /\belan\b/i, name: 'Elan' },
+  { re: /\bagip\b/i, name: 'Agip' }
+];
+
 // Nom commercial de la station (avec la ville si on peut)
 function extractStationName(s) {
+  // 1) Champs directs éventuels
   const raw = s.marque || s.brand || s.enseignes || s.nom_station || s.nom || null;
   if (raw && String(raw).trim()) {
     const brand = String(raw).trim();
     return s.ville ? `${brand} ${s.ville}` : brand;
+  }
+  // 2) Détection sur l'adresse (+ ville au cas où)
+  const haystack = `${s.adresse || ''} ${s.ville || ''}`;
+  for (const { re, name } of KNOWN_BRANDS) {
+    if (re.test(haystack)) {
+      return s.ville ? `${name} ${s.ville}` : name;
+    }
   }
   return null;
 }

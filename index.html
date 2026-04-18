@@ -12,6 +12,7 @@
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="canonical" href="/" />
 
   <!-- Open Graph -->
@@ -34,7 +35,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
   <link rel="preconnect" href="https://api-adresse.data.gouv.fr" />
+  <link rel="preconnect" href="https://unpkg.com" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -45,10 +48,10 @@
         <div class="tagline">— Prix carburants · Temps réel</div>
       </div>
       <div class="meta">
-        <div><span class="pulse"></span>Data.gouv · Live</div>
-        <div id="timestamp" style="margin-top: 0.3rem;"></div>
+        <div><span class="pulse" aria-hidden="true"></span>Data.gouv · Live</div>
+        <div id="timestamp" style="margin-top: 0.3rem;" aria-hidden="true"></div>
         <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
-          <span id="themeIcon">☾</span>
+          <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
       </div>
     </header>
@@ -63,7 +66,7 @@
         <div class="field field-address">
           <label for="address">→ Adresse ou ville</label>
           <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
-          <ul id="suggestions" class="suggestions hidden" role="listbox"></ul>
+          <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
         </div>
         <div class="field">
           <label for="fuel">→ Carburant</label>
@@ -80,22 +83,42 @@
           <label for="radius">→ Rayon (km)</label>
           <input id="radius" type="number" min="1" max="50" value="5" />
         </div>
-        <button id="searchBtn" class="btn-search">Chercher ↗</button>
+        <button id="searchBtn" class="btn-search" aria-label="Lancer la recherche">Chercher ↗</button>
       </div>
-      <button id="geolocBtn" class="geoloc-btn">⊙ Utiliser ma position actuelle</button>
+      <button id="geolocBtn" class="geoloc-btn" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
     </section>
 
-    <div id="status" class="status hidden"></div>
+    <div id="status" class="status hidden" role="status" aria-live="polite"></div>
 
-    <section id="results" class="hidden">
+    <section id="results" class="hidden" aria-label="Résultats de la recherche">
       <div class="results-header">
         <h2 id="resultsTitle">Résultats</h2>
-        <div id="resultsCount" class="results-count"></div>
+        <div class="results-actions">
+          <div id="resultsCount" class="results-count" aria-live="polite"></div>
+          <div class="view-toggle" role="tablist" aria-label="Mode d'affichage">
+            <button id="viewList" class="view-btn active" role="tab" aria-selected="true" aria-controls="stationList">☰ Liste</button>
+            <button id="viewMap" class="view-btn" role="tab" aria-selected="false" aria-controls="stationMap">⌖ Carte</button>
+          </div>
+        </div>
       </div>
-      <div id="osmHint" class="osm-hint hidden">
-        <span class="loader-sm"></span>Identification des enseignes en cours…
+      <div id="filterBar" class="filter-bar hidden" role="group" aria-label="Filtres de services">
+        <span class="filter-label">Filtres :</span>
+        <button class="chip" data-filter="h24" aria-pressed="false">24/7</button>
+        <button class="chip" data-filter="boutique" aria-pressed="false">Boutique</button>
+        <button class="chip" data-filter="restauration" aria-pressed="false">Restauration</button>
+        <button class="chip" data-filter="toilettes" aria-pressed="false">Toilettes</button>
+        <button class="chip" data-filter="laverie" aria-pressed="false">Lavage</button>
+        <button class="chip chip-reset" id="filtersReset" aria-label="Effacer les filtres">✕ Réinitialiser</button>
       </div>
-      <div id="stationList" class="station-list"></div>
+      <div id="osmHint" class="osm-hint hidden" aria-live="polite">
+        <span class="loader-sm" aria-hidden="true"></span>Identification des enseignes en cours…
+      </div>
+      <div id="favoritesSection" class="favorites-section hidden">
+        <h3 class="favorites-title">★ Favoris dans la zone</h3>
+        <div id="favoritesList" class="station-list"></div>
+      </div>
+      <div id="stationList" class="station-list" aria-live="polite" aria-busy="false"></div>
+      <div id="stationMap" class="station-map hidden" role="tabpanel" aria-label="Carte des stations"></div>
     </section>
 
     <footer>
@@ -103,6 +126,7 @@
     </footer>
   </div>
 
-  <script src="app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

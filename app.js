@@ -43,6 +43,13 @@ const $stationList = document.getElementById('stationList');
 const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
 const $osmHint = document.getElementById('osmHint');
+const $filterBar = document.getElementById('filterBar');
+const $filtersReset = document.getElementById('filtersReset');
+const $stationMap = document.getElementById('stationMap');
+const $viewList = document.getElementById('viewList');
+const $viewMap = document.getElementById('viewMap');
+const $favoritesSection = document.getElementById('favoritesSection');
+const $favoritesList = document.getElementById('favoritesList');
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -313,10 +320,181 @@ function directionsUrl(lat, lon, label) {
   return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=&travelmode=driving&query=${q}`;
 }
 
-function renderStations(stations, fuelField, userLat, userLon) {
-  $stationList.innerHTML = '';
+// ===== Favoris (localStorage) =====
+const FAVORITES_KEY = 'octane-favorites';
+function stationId(latOrStation, lon) {
+  const lat = typeof latOrStation === 'object' ? latOrStation.lat : latOrStation;
+  const ln = typeof latOrStation === 'object' ? latOrStation.lon : lon;
+  return `${Number(lat).toFixed(5)}:${Number(ln).toFixed(5)}`;
+}
+function loadFavorites() { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch { return []; } }
+function saveFavorites(arr) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr)); }
+function isFavorite(id) { return loadFavorites().some(f => f.id === id); }
+function toggleFavorite(station) {
+  const id = stationId(station);
+  const favs = loadFavorites();
+  const idx = favs.findIndex(f => f.id === id);
+  if (idx >= 0) { favs.splice(idx, 1); }
+  else {
+    favs.push({
+      id,
+      lat: station.lat,
+      lon: station.lon,
+      name: extractStationName(station) || station.adresse || 'Station',
+      addr: [station.adresse, station.cp, station.ville].filter(Boolean).join(' · '),
+      addedAt: Date.now()
+    });
+  }
+  saveFavorites(favs);
+  return idx < 0; // true = ajouté
+}
 
-  const enriched = stations.map(s => {
+// ===== Historique de recherches =====
+const HISTORY_KEY = 'octane-history';
+const HISTORY_MAX = 5;
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } }
+function pushHistory(query, label) {
+  const norm = (query || '').trim();
+  if (!norm) return;
+  const hist = loadHistory().filter(h => h.q.toLowerCase() !== norm.toLowerCase());
+  hist.unshift({ q: norm, label: label || norm, ts: Date.now() });
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, HISTORY_MAX))); } catch {}
+}
+
+// ===== Filtres services =====
+const activeFilters = new Set();
+function serviceBag(s) {
+  return Object.values(s)
+    .filter(v => typeof v === 'string')
+    .join(' | ')
+    .toLowerCase();
+}
+function matchesFilter(s, filter) {
+  const bag = serviceBag(s);
+  const h24 = ((s.horaires_automate_24_24 ?? '') + '').toLowerCase();
+  switch (filter) {
+    case 'h24': return h24 === 'oui' || /24\s*\/\s*24|24h|h24/.test(bag);
+    case 'boutique': return /boutique|alimentation|épicerie/.test(bag);
+    case 'restauration': return /restau|snack|sandwich/.test(bag);
+    case 'toilettes': return /toilett|\bwc\b/.test(bag);
+    case 'laverie': return /lavage|laverie/.test(bag);
+    default: return true;
+  }
+}
+function applyFilters(stations) {
+  if (!activeFilters.size) return stations;
+  return stations.filter(s => [...activeFilters].every(f => matchesFilter(s, f)));
+}
+
+// ===== État courant de la recherche (pour rerender) =====
+let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
+let currentView = 'list';
+
+function buildStationCard(s, i, total, fuelField, opts = {}) {
+  const color = getColorForRank(i, total);
+  const brandName = extractStationName(s);
+  const title = brandName || s.adresse || 'Station sans nom';
+  const subParts = [];
+  if (brandName && s.adresse) subParts.push(s.adresse);
+  const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
+  if (cpVille) subParts.push(cpVille);
+  const subtitle = subParts.join(' · ');
+  const majField = fuelField.replace('_prix', '_maj');
+  const freshness = formatRelativeTime(s[majField]);
+  const dirUrl = directionsUrl(s.lat, s.lon, title);
+  const id = stationId(s);
+  const fav = isFavorite(id);
+  const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
+
+  const el = document.createElement('div');
+  el.className = 'station';
+  el.style.setProperty('--rank-color', color);
+  el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
+  el.dataset.stationId = id;
+  el.innerHTML = `
+    <button class="fav-btn ${fav ? 'active' : ''}" aria-label="${fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" aria-pressed="${fav}" data-fav="${id}">${fav ? '★' : '☆'}</button>
+    <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
+    <span class="sr-only">${rankLabel}. </span>
+    <div class="info">
+      <div class="name">${title}</div>
+      <div class="addr">${subtitle}</div>
+    </div>
+    <div class="distance">
+      <strong>${s.distance.toFixed(1)} km</strong>
+      <span class="dist-label">à vol d'oiseau</span>
+      <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title} (ouvre Google Maps)">Itinéraire ↗</a>
+    </div>
+    <div class="price">
+      ${formatPrice(s.price)}
+      <span class="unit">€ / L</span>
+      ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
+    </div>
+  `;
+  return el;
+}
+
+function renderFavoritesInZone() {
+  if (!currentResults) { $favoritesSection.classList.add('hidden'); return; }
+  const favs = loadFavorites();
+  if (!favs.length) { $favoritesSection.classList.add('hidden'); return; }
+  const favIds = new Set(favs.map(f => f.id));
+  const inZone = currentResults.stations.filter(s => favIds.has(stationId(s)));
+  if (!inZone.length) { $favoritesSection.classList.add('hidden'); return; }
+
+  $favoritesSection.classList.remove('hidden');
+  $favoritesList.innerHTML = '';
+  const total = currentResults.stations.length;
+  inZone.forEach(s => {
+    const idx = currentResults.stations.indexOf(s);
+    $favoritesList.appendChild(buildStationCard(s, idx, total, currentResults.fuelField));
+  });
+}
+
+function renderStations() {
+  if (!currentResults) return;
+  const { fuelField } = currentResults;
+  const filtered = applyFilters(currentResults.stations);
+  const total = filtered.length;
+
+  $stationList.innerHTML = '';
+  $stationList.setAttribute('aria-busy', 'false');
+  $resultsTitle.textContent = FUEL_LABELS[fuelField];
+
+  if (currentResults.stations.length === 0) {
+    $filterBar.classList.add('hidden');
+    $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
+    $resultsCount.textContent = '0 station';
+    return;
+  }
+
+  $filterBar.classList.remove('hidden');
+
+  if (total === 0) {
+    $stationList.innerHTML = `<div class="status">Aucune station ne correspond aux filtres actifs. Essaie d'en retirer.</div>`;
+    $resultsCount.textContent = `0 / ${currentResults.stations.length} stations`;
+  } else {
+    filtered.forEach((s, i) => {
+      $stationList.appendChild(buildStationCard(s, i, total, fuelField));
+    });
+    const shown = total;
+    const base = currentResults.stations.length;
+    $resultsCount.textContent = shown === base
+      ? `${base} station${base > 1 ? 's' : ''} trouvée${base > 1 ? 's' : ''}`
+      : `${shown} / ${base} stations`;
+  }
+
+  renderFavoritesInZone();
+
+  if (currentView === 'map') {
+    renderMap(filtered);
+  }
+}
+
+// Token de la recherche en cours (évite les races si on relance avant la fin)
+let currentSearchToken = 0;
+
+function enrichStations(rawStations, fuelField, userLat, userLon) {
+  return rawStations.map(s => {
     const { lat, lon } = extractCoords(s);
     return {
       ...s,
@@ -327,60 +505,7 @@ function renderStations(stations, fuelField, userLat, userLon) {
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
     .sort((a, b) => a.price - b.price);
-
-  const total = enriched.length;
-
-  if (total === 0) {
-    $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
-    $resultsCount.textContent = '0 station';
-    $resultsTitle.textContent = FUEL_LABELS[fuelField];
-    return;
-  }
-
-  const majField = fuelField.replace('_prix', '_maj');
-
-  enriched.forEach((s, i) => {
-    const color = getColorForRank(i, total);
-    const brandName = extractStationName(s);
-    const title = brandName || s.adresse || 'Station sans nom';
-    const subParts = [];
-    if (brandName && s.adresse) subParts.push(s.adresse);
-    const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
-    if (cpVille) subParts.push(cpVille);
-    const subtitle = subParts.join(' · ');
-    const freshness = formatRelativeTime(s[majField]);
-    const dirUrl = directionsUrl(s.lat, s.lon, title);
-
-    const el = document.createElement('div');
-    el.className = 'station';
-    el.style.setProperty('--rank-color', color);
-    el.style.animationDelay = `${i * 0.04}s`;
-    el.innerHTML = `
-      <div class="rank">${String(i + 1).padStart(2, '0')}</div>
-      <div class="info">
-        <div class="name">${title}</div>
-        <div class="addr">${subtitle}</div>
-      </div>
-      <div class="distance">
-        <strong>${s.distance.toFixed(1)} km</strong>
-        <span class="dist-label">à vol d'oiseau</span>
-        <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title}">Itinéraire ↗</a>
-      </div>
-      <div class="price">
-        ${formatPrice(s.price)}
-        <span class="unit">€ / L</span>
-        ${freshness ? `<span class="freshness">${freshness}</span>` : ''}
-      </div>
-    `;
-    $stationList.appendChild(el);
-  });
-
-  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''} trouvée${total > 1 ? 's' : ''}`;
-  $resultsTitle.textContent = FUEL_LABELS[fuelField];
 }
-
-// Token de la recherche en cours (évite les races si on relance avant la fin)
-let currentSearchToken = 0;
 
 async function runSearch(lat, lon, label) {
   const fuelField = $fuel.value;
@@ -395,15 +520,25 @@ async function runSearch(lat, lon, label) {
 
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
+    $stationList.setAttribute('aria-busy', 'true');
     // Lance OSM en parallèle SANS attendre — on rendra dès que les prix arrivent
     const osmPromise = fetchOSMFuelStations(lat, lon, radiusKm);
-    const stations = await fetchStations(lat, lon, radiusKm, fuelField);
+    const rawStations = await fetchStations(lat, lon, radiusKm, fuelField);
     if (token !== currentSearchToken) return;
 
     hideStatus();
     $results.classList.remove('hidden');
     $osmHint.classList.remove('hidden');
-    renderStations(stations, fuelField, lat, lon);
+
+    currentResults = {
+      stations: enrichStations(rawStations, fuelField, lat, lon),
+      rawStations,
+      fuelField,
+      userLat: lat,
+      userLon: lon,
+      label
+    };
+    renderStations();
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     // Patch des marques OSM dès qu'elles arrivent (souvent + lent)
@@ -412,18 +547,17 @@ async function runSearch(lat, lon, label) {
       $osmHint.classList.add('hidden');
       if (!osm.length) return;
       let changed = false;
-      stations.forEach(s => {
-        const { lat: sLat, lon: sLon } = extractCoords(s);
-        if (sLat == null) return;
-        const brand = findNearestOSMBrand({ lat: sLat, lon: sLon }, osm);
+      currentResults.stations.forEach(s => {
+        const brand = findNearestOSMBrand({ lat: s.lat, lon: s.lon }, osm);
         if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
       });
-      if (changed) renderStations(stations, fuelField, lat, lon);
+      if (changed) renderStations();
     }).catch(() => {
       if (token === currentSearchToken) $osmHint.classList.add('hidden');
     });
   } catch (err) {
     if (token !== currentSearchToken) return;
+    $stationList.setAttribute('aria-busy', 'false');
     console.error(err);
     showStatus(`Erreur: ${err.message}`, true);
   }
@@ -450,6 +584,7 @@ async function doAddressSearch() {
   try {
     showStatus('Localisation de l\'adresse...');
     const { lat, lon, label } = await geocode(address);
+    pushHistory(address, label);
     await runSearch(lat, lon, label);
   } catch (err) {
     showStatus(`Erreur: ${err.message}`, true);
@@ -520,8 +655,31 @@ function selectSuggestion(feature) {
   closeSuggestions();
   // Cache le géocodage pour éviter un nouvel appel BAN
   cacheSet(localStorage, `geo:${label.toLowerCase().trim()}`, { lat, lon, label });
+  pushHistory(label, label);
   updateUrlParams();
   runSearch(lat, lon, label);
+}
+
+function renderHistory() {
+  const hist = loadHistory();
+  if (!hist.length) { closeSuggestions(); return; }
+  $suggestions.innerHTML =
+    `<li class="sg-history" aria-hidden="true">Recherches récentes</li>` +
+    hist.map((h, i) =>
+      `<li role="option" class="sg-hist-item" data-idx="${i}" aria-selected="false">${h.label}</li>`
+    ).join('');
+  $suggestions.classList.remove('hidden');
+  $address.setAttribute('aria-expanded', 'true');
+  suggestionIdx = -1;
+  $suggestions.querySelectorAll('li.sg-hist-item').forEach((li, i) => {
+    li.addEventListener('mousedown', e => {
+      e.preventDefault();
+      $address.value = hist[i].q;
+      closeSuggestions();
+      doAddressSearch();
+    });
+  });
+  $suggestions._history = hist;
 }
 
 const debouncedSuggest = debounce(async (q) => {
@@ -535,8 +693,13 @@ const debouncedSuggest = debounce(async (q) => {
 $address.addEventListener('input', () => {
   const q = $address.value.trim();
   lastSuggestionQuery = q;
+  if (q.length === 0) { renderHistory(); return; }
   if (q.length < 3) { closeSuggestions(); return; }
   debouncedSuggest(q);
+});
+
+$address.addEventListener('focus', () => {
+  if (!$address.value.trim()) renderHistory();
 });
 
 $address.addEventListener('keydown', e => {
@@ -588,6 +751,121 @@ $geolocBtn.addEventListener('click', () => {
     { enableHighAccuracy: true, timeout: 10000 }
   );
 });
+
+// ===== Filtres services (délégué) =====
+$filterBar.addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  if (btn.id === 'filtersReset') {
+    activeFilters.clear();
+    $filterBar.querySelectorAll('.chip[data-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    renderStations();
+    return;
+  }
+  const f = btn.dataset.filter;
+  if (!f) return;
+  if (activeFilters.has(f)) { activeFilters.delete(f); btn.setAttribute('aria-pressed', 'false'); }
+  else { activeFilters.add(f); btn.setAttribute('aria-pressed', 'true'); }
+  renderStations();
+});
+
+// ===== Favoris (clic délégué sur liste + favoris) =====
+function onFavClick(e) {
+  const btn = e.target.closest('.fav-btn');
+  if (!btn || !currentResults) return;
+  e.preventDefault();
+  const id = btn.dataset.fav;
+  const station = currentResults.stations.find(s => stationId(s) === id);
+  if (!station) return;
+  toggleFavorite(station);
+  renderStations();
+}
+$stationList.addEventListener('click', onFavClick);
+$favoritesList.addEventListener('click', onFavClick);
+
+// ===== Carte Leaflet =====
+let map = null;
+let mapMarkers = [];
+let userMarker = null;
+
+function ensureMap() {
+  if (map || typeof L === 'undefined') return map;
+  map = L.map($stationMap, { scrollWheelZoom: true, zoomControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+  return map;
+}
+
+function renderMap(stations) {
+  if (!currentResults) return;
+  const m = ensureMap();
+  if (!m) return;
+  const { userLat, userLon } = currentResults;
+
+  mapMarkers.forEach(mk => m.removeLayer(mk));
+  mapMarkers = [];
+  if (userMarker) { m.removeLayer(userMarker); userMarker = null; }
+
+  userMarker = L.circleMarker([userLat, userLon], {
+    radius: 8, color: '#ff6b00', fillColor: '#ff6b00', fillOpacity: 0.9, weight: 2
+  }).addTo(m).bindPopup('Ta position');
+
+  const bounds = L.latLngBounds([[userLat, userLon]]);
+
+  if (stations.length) {
+    stations.forEach((s, i) => {
+      const color = getColorForRank(i, stations.length);
+      const icon = L.divIcon({
+        className: 'map-pin',
+        html: `<div class="map-pin-inner" style="background:${color}"><span>${i + 1}</span></div>`,
+        iconSize: [28, 36],
+        iconAnchor: [14, 32]
+      });
+      const marker = L.marker([s.lat, s.lon], { icon }).addTo(m);
+      const name = extractStationName(s) || s.adresse || 'Station';
+      const addrLine = [s.adresse, s.cp, s.ville].filter(Boolean).join(' · ');
+      marker.bindPopup(
+        `<strong>${name}</strong><br>` +
+        (addrLine ? `<span style="color:#666;font-size:0.75rem">${addrLine}</span><br>` : '') +
+        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${s.distance.toFixed(1)} km`
+      );
+      mapMarkers.push(marker);
+      bounds.extend([s.lat, s.lon]);
+    });
+    m.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+  } else {
+    m.setView([userLat, userLon], 13);
+  }
+  setTimeout(() => m.invalidateSize(), 80);
+}
+
+function setView(view) {
+  currentView = view;
+  const isMap = view === 'map';
+  $stationList.classList.toggle('hidden', isMap);
+  $favoritesSection.classList.toggle('hidden', isMap || !loadFavorites().length);
+  $stationMap.classList.toggle('hidden', !isMap);
+  $viewList.classList.toggle('active', !isMap);
+  $viewMap.classList.toggle('active', isMap);
+  $viewList.setAttribute('aria-selected', !isMap);
+  $viewMap.setAttribute('aria-selected', isMap);
+  if (isMap && currentResults) {
+    renderMap(applyFilters(currentResults.stations));
+  } else if (!isMap && currentResults) {
+    renderFavoritesInZone();
+  }
+}
+$viewList.addEventListener('click', () => setView('list'));
+$viewMap.addEventListener('click', () => setView('map'));
+
+// ===== Service Worker (PWA) =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW register failed:', err));
+  });
+}
 
 // Deep-link : au chargement, si ?q=...&fuel=...&r=... → préremplit et lance la recherche
 (function applyUrlParams() {

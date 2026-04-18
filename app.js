@@ -44,8 +44,10 @@ const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
 const $osmHint = document.getElementById('osmHint');
 const $stationMap = document.getElementById('stationMap');
+const $historyList = document.getElementById('historyList');
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
+const $viewHistory = document.getElementById('viewHistory');
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -345,13 +347,11 @@ function buildStationCard(s, i, total, fuelField) {
   const freshness = formatRelativeTime(s[majField]);
   const dirUrl = directionsUrl(s.lat, s.lon, title);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
-  const sid = s.id != null ? String(s.id) : '';
 
   const el = document.createElement('div');
   el.className = 'station';
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
-  if (sid) el.dataset.stationId = sid;
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
@@ -369,8 +369,34 @@ function buildStationCard(s, i, total, fuelField) {
       <span class="unit">€ / L</span>
       ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
     </div>
-    ${sid ? `<button class="toggle-history" type="button" aria-expanded="false" aria-controls="hist-${sid}" aria-label="Afficher l'évolution du prix sur 12 semaines"><span class="th-label">Historique</span><span class="th-caret" aria-hidden="true">▾</span></button>
-    <div class="history-panel hidden" id="hist-${sid}" role="region" aria-label="Évolution du prix"></div>` : ''}
+  `;
+  return el;
+}
+
+function buildHistoryCard(s, i, total, prices, weeks) {
+  const color = getColorForRank(i, total);
+  const brandName = extractStationName(s);
+  const title = brandName || s.adresse || 'Station sans nom';
+  const subParts = [];
+  if (brandName && s.adresse) subParts.push(s.adresse);
+  const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
+  if (cpVille) subParts.push(cpVille);
+  const subtitle = subParts.join(' · ');
+
+  const el = document.createElement('div');
+  el.className = 'history-card';
+  el.style.setProperty('--rank-color', color);
+  el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
+  const body = prices
+    ? renderSparkline(prices, weeks)
+    : `<div class="hist-empty">Pas d'historique disponible pour cette station sur les 12 dernières semaines.</div>`;
+  el.innerHTML = `
+    <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
+    <div class="info">
+      <div class="name">${title}</div>
+      <div class="addr">${subtitle}</div>
+    </div>
+    <div class="hist-body">${body}</div>
   `;
   return el;
 }
@@ -730,52 +756,27 @@ function renderSparkline(pricesInMilli, weeks) {
   `;
 }
 
-async function expandHistoryPanel(card, btn) {
-  const sid = card.dataset.stationId;
-  if (!sid) return;
-  const panel = card.querySelector('.history-panel');
-  if (!panel) return;
-
-  panel.classList.remove('hidden');
-  btn.setAttribute('aria-expanded', 'true');
-  btn.querySelector('.th-caret').textContent = '▴';
-
-  if (panel.dataset.loaded) return;
-  panel.innerHTML = `<span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…`;
-  panel.dataset.loaded = 'loading';
-
-  const fuelField = currentResults?.fuelField;
+async function renderHistory() {
+  if (!currentResults) return;
+  const { stations, fuelField } = currentResults;
+  $historyList.innerHTML = `<div class="osm-hint"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div>`;
   const data = await loadHistory(fuelField);
   if (!data) {
-    panel.innerHTML = `<div class="hist-empty">Historique indisponible. Lance le script <code>scripts/build-history.mjs</code> ou attends le prochain rafraîchissement.</div>`;
-    panel.dataset.loaded = '1';
+    $historyList.innerHTML = `<div class="status">Historique indisponible. Lance <code>node scripts/build-history.mjs</code> ou <code>python3 scripts/build_history.py</code> pour générer les données, puis commit <code>data/history/*.json</code>.</div>`;
     return;
   }
-  const prices = data.stations[sid];
-  if (!prices) {
-    panel.innerHTML = `<div class="hist-empty">Pas d'historique pour cette station dans les 12 dernières semaines.</div>`;
-  } else {
-    panel.innerHTML = renderSparkline(prices, data.weeks);
+  $historyList.innerHTML = '';
+  const total = stations.length;
+  if (!total) {
+    $historyList.innerHTML = `<div class="status">Aucune station dans les résultats.</div>`;
+    return;
   }
-  panel.dataset.loaded = '1';
+  stations.forEach((s, i) => {
+    const sid = s.id != null ? String(s.id) : null;
+    const prices = sid ? data.stations[sid] : null;
+    $historyList.appendChild(buildHistoryCard(s, i, total, prices, data.weeks));
+  });
 }
-
-function collapseHistoryPanel(card, btn) {
-  const panel = card.querySelector('.history-panel');
-  if (panel) panel.classList.add('hidden');
-  btn.setAttribute('aria-expanded', 'false');
-  btn.querySelector('.th-caret').textContent = '▾';
-}
-
-$stationList.addEventListener('click', e => {
-  const btn = e.target.closest('.toggle-history');
-  if (!btn) return;
-  const card = btn.closest('.station');
-  if (!card) return;
-  const expanded = btn.getAttribute('aria-expanded') === 'true';
-  if (expanded) collapseHistoryPanel(card, btn);
-  else expandHistoryPanel(card, btn);
-});
 
 // ===== Carte Leaflet =====
 let map = null;
@@ -837,17 +838,20 @@ function renderMap(stations) {
 
 function setView(view) {
   currentView = view;
-  const isMap = view === 'map';
-  $stationList.classList.toggle('hidden', isMap);
-  $stationMap.classList.toggle('hidden', !isMap);
-  $viewList.classList.toggle('active', !isMap);
-  $viewMap.classList.toggle('active', isMap);
-  $viewList.setAttribute('aria-selected', !isMap);
-  $viewMap.setAttribute('aria-selected', isMap);
-  if (isMap && currentResults) renderMap(currentResults.stations);
+  const views = { list: $stationList, map: $stationMap, history: $historyList };
+  const buttons = { list: $viewList, map: $viewMap, history: $viewHistory };
+  for (const [name, el] of Object.entries(views)) el.classList.toggle('hidden', view !== name);
+  for (const [name, btn] of Object.entries(buttons)) {
+    const active = view === name;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  }
+  if (view === 'map' && currentResults) renderMap(currentResults.stations);
+  if (view === 'history' && currentResults) renderHistory();
 }
 $viewList.addEventListener('click', () => setView('list'));
 $viewMap.addEventListener('click', () => setView('map'));
+$viewHistory.addEventListener('click', () => setView('history'));
 
 // ===== Service Worker (PWA) =====
 if ('serviceWorker' in navigator) {

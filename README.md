@@ -29,10 +29,16 @@ Chaque station peut afficher l'évolution hebdomadaire de son prix sur les 12 de
 Les données sont pré-calculées dans `data/history/<fuel>.json` à partir du dataset annuel
 `prix-des-carburants-fichier-annuel-YYYY` (data.economie.gouv.fr).
 
-**Rafraîchir localement :**
+**Rafraîchir localement (Node, recommandé) :**
 ```bash
 node scripts/build-history.mjs              # 12 dernières semaines, année en cours
 node scripts/build-history.mjs --weeks=24   # plus long historique
+```
+
+**Alternative Python (stdlib uniquement, si Node n'est pas dispo) :**
+```bash
+python3 scripts/build_history.py
+python3 scripts/build_history.py --weeks 24 --year 2025
 ```
 
 **Automatisation :** le workflow `.github/workflows/build-history.yml` tourne chaque lundi
@@ -50,6 +56,7 @@ Si les JSONs sont absents (404), le client affiche simplement « Historique indi
 | `app.js` | Géocodage + appels API + rendu + cache + historique |
 | `sw.js` + `manifest.webmanifest` | Service worker et manifest PWA |
 | `favicon.svg` · `og-image.svg` | Icône + preview sociale |
-| `scripts/build-history.mjs` | Pré-calcul des sparklines par station |
+| `scripts/build-history.mjs` | Pré-calcul des sparklines par station (Node) |
+| `scripts/build_history.py` | Équivalent stdlib Python |
 | `data/history/*.json` | Agrégats hebdomadaires (générés, commit) |
 | `.github/workflows/build-history.yml` | Cron hebdo GHA |

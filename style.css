@@ -423,8 +423,7 @@ header {
 .station {
   display: grid;
   grid-template-columns: 60px 1fr auto auto;
-  grid-template-rows: auto auto auto;
-  gap: 0.3rem 1.2rem;
+  gap: 1.2rem;
   align-items: center;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -434,49 +433,54 @@ header {
   animation: slideIn 0.4s ease-out backwards;
 }
 
-.station > .rank,
-.station > .info,
-.station > .distance,
-.station > .price { grid-row: 1; }
-.station > .rank { grid-column: 1; }
-.station > .info { grid-column: 2; }
-.station > .distance { grid-column: 3; }
-.station > .price { grid-column: 4; }
-
-.toggle-history {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  justify-self: start;
-  margin-top: 0.5rem;
-  background: none;
-  border: none;
-  color: var(--ink-dim);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  cursor: pointer;
-  padding: 0.2rem 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.15s;
+/* ============ ONGLET HISTORIQUE ============ */
+.history-list {
+  display: grid;
+  gap: 0.6rem;
 }
-.toggle-history:hover { color: var(--accent); }
-.toggle-history .th-caret { transition: transform 0.15s; }
-.toggle-history[aria-expanded="true"] { color: var(--accent); }
-
-.history-panel {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  padding: 0.8rem 0 0.2rem;
+.history-card {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.3rem 1.2rem;
+  align-items: start;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--rank-color, var(--border));
+  padding: 1.1rem 1.4rem;
+  animation: slideIn 0.4s ease-out backwards;
+}
+.history-card .rank {
+  grid-row: 1 / 3;
+  align-self: center;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.5rem;
+  color: var(--rank-color, var(--ink-dim));
+  letter-spacing: -0.05em;
+}
+.history-card .info { grid-column: 2; grid-row: 1; }
+.history-card .info .name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+}
+.history-card .info .addr {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  line-height: 1.4;
+}
+.history-card .hist-body {
+  grid-column: 2;
+  grid-row: 2;
   color: var(--rank-color, var(--ink));
+  padding-top: 0.4rem;
   font-size: 0.75rem;
 }
-.history-panel .sparkline {
+.history-card .hist-body .sparkline {
   width: 100%;
   height: auto;
-  max-width: 420px;
+  max-width: 520px;
   display: block;
   margin-bottom: 0.5rem;
 }
@@ -652,13 +656,27 @@ header {
   /* Stations : rank + nom + prix en haut, adresse + distance en bas */
   .station {
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto;
     gap: 0.4rem 0.9rem;
     padding: 0.95rem 1rem;
   }
-  .toggle-history { grid-row: 3; grid-column: 1 / -1; margin-top: 0.3rem; font-size: 0.62rem; }
-  .history-panel { grid-row: 4; grid-column: 1 / -1; padding-top: 0.6rem; }
-  .history-panel .sparkline { max-width: 100%; }
+
+  /* History cards : rank + (name + sparkline) */
+  .history-card {
+    grid-template-columns: auto 1fr;
+    padding: 0.85rem 1rem;
+    gap: 0.2rem 0.7rem;
+  }
+  .history-card .rank { font-size: 1.05rem; }
+  .history-card .info .name {
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .history-card .info .addr { font-size: 0.7rem; }
+  .history-card .hist-body { font-size: 0.7rem; padding-top: 0.3rem; }
+  .history-card .hist-body .sparkline { max-width: 100%; }
   .hist-stats { gap: 0.25rem 0.7rem; font-size: 0.7rem; }
   .rank {
     grid-column: 1; grid-row: 1;

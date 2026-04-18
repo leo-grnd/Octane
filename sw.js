@@ -40,6 +40,19 @@ self.addEventListener('fetch', (e) => {
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
 
+  // Historique des prix : toujours frais (SWR) — ne pas servir depuis le cache SW
+  if (url.origin === self.location.origin && url.pathname.includes('/data/history/')) {
+    e.respondWith(
+      caches.open(VERSION).then(cache =>
+        fetch(req).then(res => {
+          if (res.ok) cache.put(req, res.clone()).catch(() => {});
+          return res;
+        }).catch(() => cache.match(req))
+      )
+    );
+    return;
+  }
+
   // Même origine → cache-first (shell), sinon stale-while-revalidate (fonts, leaflet)
   if (url.origin === self.location.origin) {
     e.respondWith(

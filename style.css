@@ -423,7 +423,8 @@ header {
 .station {
   display: grid;
   grid-template-columns: 60px 1fr auto auto;
-  gap: 1.2rem;
+  grid-template-rows: auto auto auto;
+  gap: 0.3rem 1.2rem;
   align-items: center;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -431,6 +432,83 @@ header {
   padding: 1.2rem 1.5rem;
   transition: transform 0.15s, background 0.15s;
   animation: slideIn 0.4s ease-out backwards;
+}
+
+.station > .rank,
+.station > .info,
+.station > .distance,
+.station > .price { grid-row: 1; }
+.station > .rank { grid-column: 1; }
+.station > .info { grid-column: 2; }
+.station > .distance { grid-column: 3; }
+.station > .price { grid-column: 4; }
+
+.toggle-history {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: start;
+  margin-top: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.15s;
+}
+.toggle-history:hover { color: var(--accent); }
+.toggle-history .th-caret { transition: transform 0.15s; }
+.toggle-history[aria-expanded="true"] { color: var(--accent); }
+
+.history-panel {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  padding: 0.8rem 0 0.2rem;
+  color: var(--rank-color, var(--ink));
+  font-size: 0.75rem;
+}
+.history-panel .sparkline {
+  width: 100%;
+  height: auto;
+  max-width: 420px;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.hist-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ink-dim);
+  letter-spacing: 0.03em;
+}
+.hist-stats strong {
+  color: var(--ink);
+  font-weight: 500;
+  margin-left: 0.2rem;
+}
+.hist-trend.up { color: #ef4444; }
+.hist-trend.down { color: #4ade80; }
+.hist-trend.flat { color: var(--ink-dim); }
+.hist-empty {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  font-style: italic;
+  padding: 0.4rem 0;
+}
+.hist-empty code {
+  font-family: 'JetBrains Mono', monospace;
+  font-style: normal;
+  background: var(--bg-soft);
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
 }
 
 .station:hover {
@@ -574,10 +652,14 @@ header {
   /* Stations : rank + nom + prix en haut, adresse + distance en bas */
   .station {
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto auto;
     gap: 0.4rem 0.9rem;
     padding: 0.95rem 1rem;
   }
+  .toggle-history { grid-row: 3; grid-column: 1 / -1; margin-top: 0.3rem; font-size: 0.62rem; }
+  .history-panel { grid-row: 4; grid-column: 1 / -1; padding-top: 0.6rem; }
+  .history-panel .sparkline { max-width: 100%; }
+  .hist-stats { gap: 0.25rem 0.7rem; font-size: 0.7rem; }
   .rank {
     grid-column: 1; grid-row: 1;
     font-size: 1.05rem;

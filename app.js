@@ -725,7 +725,9 @@ async function loadPriceHistory(fuelField) {
   if (historyInflight[fuelField]) return historyInflight[fuelField];
   historyInflight[fuelField] = (async () => {
     try {
-      const res = await fetch(`data/history/${fuelField}.json`, { cache: 'force-cache' });
+      // `no-cache` force la revalidation : évite qu'un 404 cached (avant que
+      // les JSONs soient déployés) ne reste figé dans le cache HTTP du navigateur.
+      const res = await fetch(`data/history/${fuelField}.json`, { cache: 'no-cache' });
       if (!res.ok) throw new Error('404');
       const data = await res.json();
       historyCache[fuelField] = data;

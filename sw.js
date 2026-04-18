@@ -1,6 +1,6 @@
 // Octane service worker — cache-first pour le shell, network-first pour les APIs.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v3';
+const VERSION = 'octane-v4';
 const SHELL = [
   './',
   './index.html',

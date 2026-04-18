@@ -21,7 +21,7 @@ Ou ouvrir directement `index.html` dans un navigateur.
 
 ## Déploiement
 
-Hébergé sur **GitHub Pages** depuis la branche `main`.
+Hébergé en live sur **GitHub Pages** depuis la branche `main`.
 
 ## Fichiers
 

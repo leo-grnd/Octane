@@ -43,13 +43,9 @@ const $stationList = document.getElementById('stationList');
 const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
 const $osmHint = document.getElementById('osmHint');
-const $filterBar = document.getElementById('filterBar');
-const $filtersReset = document.getElementById('filtersReset');
 const $stationMap = document.getElementById('stationMap');
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
-const $favoritesSection = document.getElementById('favoritesSection');
-const $favoritesList = document.getElementById('favoritesList');
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -320,35 +316,6 @@ function directionsUrl(lat, lon, label) {
   return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=&travelmode=driving&query=${q}`;
 }
 
-// ===== Favoris (localStorage) =====
-const FAVORITES_KEY = 'octane-favorites';
-function stationId(latOrStation, lon) {
-  const lat = typeof latOrStation === 'object' ? latOrStation.lat : latOrStation;
-  const ln = typeof latOrStation === 'object' ? latOrStation.lon : lon;
-  return `${Number(lat).toFixed(5)}:${Number(ln).toFixed(5)}`;
-}
-function loadFavorites() { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch { return []; } }
-function saveFavorites(arr) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr)); }
-function isFavorite(id) { return loadFavorites().some(f => f.id === id); }
-function toggleFavorite(station) {
-  const id = stationId(station);
-  const favs = loadFavorites();
-  const idx = favs.findIndex(f => f.id === id);
-  if (idx >= 0) { favs.splice(idx, 1); }
-  else {
-    favs.push({
-      id,
-      lat: station.lat,
-      lon: station.lon,
-      name: extractStationName(station) || station.adresse || 'Station',
-      addr: [station.adresse, station.cp, station.ville].filter(Boolean).join(' · '),
-      addedAt: Date.now()
-    });
-  }
-  saveFavorites(favs);
-  return idx < 0; // true = ajouté
-}
-
 // ===== Historique de recherches =====
 const HISTORY_KEY = 'octane-history';
 const HISTORY_MAX = 5;
@@ -361,36 +328,11 @@ function pushHistory(query, label) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, HISTORY_MAX))); } catch {}
 }
 
-// ===== Filtres services =====
-const activeFilters = new Set();
-function serviceBag(s) {
-  return Object.values(s)
-    .filter(v => typeof v === 'string')
-    .join(' | ')
-    .toLowerCase();
-}
-function matchesFilter(s, filter) {
-  const bag = serviceBag(s);
-  const h24 = ((s.horaires_automate_24_24 ?? '') + '').toLowerCase();
-  switch (filter) {
-    case 'h24': return h24 === 'oui' || /24\s*\/\s*24|24h|h24/.test(bag);
-    case 'boutique': return /boutique|alimentation|épicerie/.test(bag);
-    case 'restauration': return /restau|snack|sandwich/.test(bag);
-    case 'toilettes': return /toilett|\bwc\b/.test(bag);
-    case 'laverie': return /lavage|laverie/.test(bag);
-    default: return true;
-  }
-}
-function applyFilters(stations) {
-  if (!activeFilters.size) return stations;
-  return stations.filter(s => [...activeFilters].every(f => matchesFilter(s, f)));
-}
-
 // ===== État courant de la recherche (pour rerender) =====
 let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
 let currentView = 'list';
 
-function buildStationCard(s, i, total, fuelField, opts = {}) {
+function buildStationCard(s, i, total, fuelField) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
@@ -402,17 +344,13 @@ function buildStationCard(s, i, total, fuelField, opts = {}) {
   const majField = fuelField.replace('_prix', '_maj');
   const freshness = formatRelativeTime(s[majField]);
   const dirUrl = directionsUrl(s.lat, s.lon, title);
-  const id = stationId(s);
-  const fav = isFavorite(id);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
 
   const el = document.createElement('div');
   el.className = 'station';
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
-  el.dataset.stationId = id;
   el.innerHTML = `
-    <button class="fav-btn ${fav ? 'active' : ''}" aria-label="${fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" aria-pressed="${fav}" data-fav="${id}">${fav ? '★' : '☆'}</button>
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
@@ -433,60 +371,28 @@ function buildStationCard(s, i, total, fuelField, opts = {}) {
   return el;
 }
 
-function renderFavoritesInZone() {
-  if (!currentResults) { $favoritesSection.classList.add('hidden'); return; }
-  const favs = loadFavorites();
-  if (!favs.length) { $favoritesSection.classList.add('hidden'); return; }
-  const favIds = new Set(favs.map(f => f.id));
-  const inZone = currentResults.stations.filter(s => favIds.has(stationId(s)));
-  if (!inZone.length) { $favoritesSection.classList.add('hidden'); return; }
-
-  $favoritesSection.classList.remove('hidden');
-  $favoritesList.innerHTML = '';
-  const total = currentResults.stations.length;
-  inZone.forEach(s => {
-    const idx = currentResults.stations.indexOf(s);
-    $favoritesList.appendChild(buildStationCard(s, idx, total, currentResults.fuelField));
-  });
-}
-
 function renderStations() {
   if (!currentResults) return;
-  const { fuelField } = currentResults;
-  const filtered = applyFilters(currentResults.stations);
-  const total = filtered.length;
+  const { fuelField, stations } = currentResults;
+  const total = stations.length;
 
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
   $resultsTitle.textContent = FUEL_LABELS[fuelField];
 
-  if (currentResults.stations.length === 0) {
-    $filterBar.classList.add('hidden');
+  if (total === 0) {
     $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
     $resultsCount.textContent = '0 station';
     return;
   }
 
-  $filterBar.classList.remove('hidden');
-
-  if (total === 0) {
-    $stationList.innerHTML = `<div class="status">Aucune station ne correspond aux filtres actifs. Essaie d'en retirer.</div>`;
-    $resultsCount.textContent = `0 / ${currentResults.stations.length} stations`;
-  } else {
-    filtered.forEach((s, i) => {
-      $stationList.appendChild(buildStationCard(s, i, total, fuelField));
-    });
-    const shown = total;
-    const base = currentResults.stations.length;
-    $resultsCount.textContent = shown === base
-      ? `${base} station${base > 1 ? 's' : ''} trouvée${base > 1 ? 's' : ''}`
-      : `${shown} / ${base} stations`;
-  }
-
-  renderFavoritesInZone();
+  stations.forEach((s, i) => {
+    $stationList.appendChild(buildStationCard(s, i, total, fuelField));
+  });
+  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''} trouvée${total > 1 ? 's' : ''}`;
 
   if (currentView === 'map') {
-    renderMap(filtered);
+    renderMap(stations);
   }
 }
 
@@ -752,37 +658,6 @@ $geolocBtn.addEventListener('click', () => {
   );
 });
 
-// ===== Filtres services (délégué) =====
-$filterBar.addEventListener('click', e => {
-  const btn = e.target.closest('.chip');
-  if (!btn) return;
-  if (btn.id === 'filtersReset') {
-    activeFilters.clear();
-    $filterBar.querySelectorAll('.chip[data-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
-    renderStations();
-    return;
-  }
-  const f = btn.dataset.filter;
-  if (!f) return;
-  if (activeFilters.has(f)) { activeFilters.delete(f); btn.setAttribute('aria-pressed', 'false'); }
-  else { activeFilters.add(f); btn.setAttribute('aria-pressed', 'true'); }
-  renderStations();
-});
-
-// ===== Favoris (clic délégué sur liste + favoris) =====
-function onFavClick(e) {
-  const btn = e.target.closest('.fav-btn');
-  if (!btn || !currentResults) return;
-  e.preventDefault();
-  const id = btn.dataset.fav;
-  const station = currentResults.stations.find(s => stationId(s) === id);
-  if (!station) return;
-  toggleFavorite(station);
-  renderStations();
-}
-$stationList.addEventListener('click', onFavClick);
-$favoritesList.addEventListener('click', onFavClick);
-
 // ===== Carte Leaflet =====
 let map = null;
 let mapMarkers = [];
@@ -845,17 +720,12 @@ function setView(view) {
   currentView = view;
   const isMap = view === 'map';
   $stationList.classList.toggle('hidden', isMap);
-  $favoritesSection.classList.toggle('hidden', isMap || !loadFavorites().length);
   $stationMap.classList.toggle('hidden', !isMap);
   $viewList.classList.toggle('active', !isMap);
   $viewMap.classList.toggle('active', isMap);
   $viewList.setAttribute('aria-selected', !isMap);
   $viewMap.setAttribute('aria-selected', isMap);
-  if (isMap && currentResults) {
-    renderMap(applyFilters(currentResults.stations));
-  } else if (!isMap && currentResults) {
-    renderFavoritesInZone();
-  }
+  if (isMap && currentResults) renderMap(currentResults.stations);
 }
 $viewList.addEventListener('click', () => setView('list'));
 $viewMap.addEventListener('click', () => setView('map'));

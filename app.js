@@ -73,8 +73,28 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Cache léger (sessionStorage pour les données vivantes, localStorage pour OSM stable)
+function cacheGet(store, key, ttlMs) {
+  try {
+    const raw = store.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > ttlMs) { store.removeItem(key); return null; }
+    return data;
+  } catch { return null; }
+}
+function cacheSet(store, key, data) {
+  try { store.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
+const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
+const TTL_OSM = 7 * 24 * 60 * 60 * 1000; // marques OSM : très stables
+
 // Géocodage via API BAN (gouvernementale, gratuite)
 async function geocode(address) {
+  const key = `geo:${address.toLowerCase().trim()}`;
+  const cached = cacheGet(localStorage, key, TTL_GEO);
+  if (cached) return cached;
   const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Erreur géocodage');
@@ -83,11 +103,16 @@ async function geocode(address) {
     throw new Error('Adresse introuvable');
   }
   const [lon, lat] = data.features[0].geometry.coordinates;
-  return { lat, lon, label: data.features[0].properties.label };
+  const result = { lat, lon, label: data.features[0].properties.label };
+  cacheSet(localStorage, key, result);
+  return result;
 }
 
 // Appel API prix carburants
 async function fetchStations(lat, lon, radiusKm, fuelField) {
+  const key = `fuel:${lat.toFixed(3)}:${lon.toFixed(3)}:${radiusKm}:${fuelField}`;
+  const cached = cacheGet(sessionStorage, key, TTL_FUEL);
+  if (cached) return cached;
   const whereClause = `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km) AND ${fuelField} IS NOT NULL`;
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
@@ -99,23 +124,32 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
     throw new Error(`API carburants: ${res.status}`);
   }
   const data = await res.json();
-  return data.results || [];
+  const results = data.results || [];
+  cacheSet(sessionStorage, key, results);
+  return results;
 }
 
 // OSM Overpass : récupère toutes les stations essence de la zone avec leur marque
 async function fetchOSMFuelStations(lat, lon, radiusKm) {
-  const radiusM = Math.round(radiusKm * 1000 * 1.1); // marge pour bord de zone
-  const query = `[out:json][timeout:15];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
+  // Cache géo arrondi à 0.01° (~1 km) pour partager entre recherches voisines
+  const key = `osm:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
+  const cached = cacheGet(localStorage, key, TTL_OSM);
+  if (cached) return cached;
+  const radiusM = Math.round(radiusKm * 1000 * 1.1);
+  const query = `[out:json][timeout:10];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
   const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter'
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter'
   ];
   for (const ep of endpoints) {
     try {
-      const res = await fetch(`${ep}?data=${encodeURIComponent(query)}`);
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 12000);
+      const res = await fetch(`${ep}?data=${encodeURIComponent(query)}`, { signal: ctrl.signal });
+      clearTimeout(timeout);
       if (!res.ok) continue;
       const data = await res.json();
-      return (data.elements || []).map(e => {
+      const out = (data.elements || []).map(e => {
         const elat = e.lat ?? e.center?.lat;
         const elon = e.lon ?? e.center?.lon;
         const t = e.tags || {};
@@ -124,6 +158,8 @@ async function fetchOSMFuelStations(lat, lon, radiusKm) {
           ? { lat: elat, lon: elon, brand: brand.trim() }
           : null;
       }).filter(Boolean);
+      cacheSet(localStorage, key, out);
+      return out;
     } catch (err) {
       console.warn('Overpass endpoint failed:', ep, err);
     }
@@ -311,6 +347,9 @@ function renderStations(stations, fuelField, userLat, userLon) {
   $resultsTitle.textContent = FUEL_LABELS[fuelField];
 }
 
+// Token de la recherche en cours (évite les races si on relance avant la fin)
+let currentSearchToken = 0;
+
 async function runSearch(lat, lon, label) {
   const fuelField = $fuel.value;
   const radiusKm = parseInt($radius.value, 10);
@@ -320,24 +359,34 @@ async function runSearch(lat, lon, label) {
     return;
   }
 
+  const token = ++currentSearchToken;
+
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
-    const [stations, osmStations] = await Promise.all([
-      fetchStations(lat, lon, radiusKm, fuelField),
-      fetchOSMFuelStations(lat, lon, radiusKm)
-    ]);
-    // Enrichit chaque station avec sa marque OSM (match par proximité < 150 m)
-    stations.forEach(s => {
-      const { lat: sLat, lon: sLon } = extractCoords(s);
-      if (sLat != null && sLon != null) {
-        s._osmBrand = findNearestOSMBrand({ lat: sLat, lon: sLon }, osmStations);
-      }
-    });
+    // Lance OSM en parallèle SANS attendre — on rendra dès que les prix arrivent
+    const osmPromise = fetchOSMFuelStations(lat, lon, radiusKm);
+    const stations = await fetchStations(lat, lon, radiusKm, fuelField);
+    if (token !== currentSearchToken) return;
+
     hideStatus();
     $results.classList.remove('hidden');
     renderStations(stations, fuelField, lat, lon);
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Patch des marques OSM dès qu'elles arrivent (souvent + lent)
+    osmPromise.then(osm => {
+      if (token !== currentSearchToken || !osm.length) return;
+      let changed = false;
+      stations.forEach(s => {
+        const { lat: sLat, lon: sLon } = extractCoords(s);
+        if (sLat == null) return;
+        const brand = findNearestOSMBrand({ lat: sLat, lon: sLon }, osm);
+        if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
+      });
+      if (changed) renderStations(stations, fuelField, lat, lon);
+    });
   } catch (err) {
+    if (token !== currentSearchToken) return;
     console.error(err);
     showStatus(`Erreur: ${err.message}`, true);
   }

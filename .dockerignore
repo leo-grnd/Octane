@@ -1,8 +1,0 @@
-.git
-.gitignore
-README.md
-*.md
-node_modules
-.DS_Store
-.vscode
-.idea

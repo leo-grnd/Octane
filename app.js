@@ -692,7 +692,7 @@ $geolocBtn.addEventListener('click', () => {
 const historyCache = {};   // fuelField → { weeks, stations } | null (404)
 const historyInflight = {};
 
-async function loadHistory(fuelField) {
+async function loadPriceHistory(fuelField) {
   if (fuelField in historyCache) return historyCache[fuelField];
   if (historyInflight[fuelField]) return historyInflight[fuelField];
   historyInflight[fuelField] = (async () => {
@@ -756,11 +756,11 @@ function renderSparkline(pricesInMilli, weeks) {
   `;
 }
 
-async function renderHistory() {
+async function renderPriceHistory() {
   if (!currentResults) return;
   const { stations, fuelField } = currentResults;
   $historyList.innerHTML = `<div class="osm-hint"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div>`;
-  const data = await loadHistory(fuelField);
+  const data = await loadPriceHistory(fuelField);
   if (!data) {
     $historyList.innerHTML = `<div class="status">Historique indisponible. Lance <code>node scripts/build-history.mjs</code> ou <code>python3 scripts/build_history.py</code> pour générer les données, puis commit <code>data/history/*.json</code>.</div>`;
     return;
@@ -847,7 +847,7 @@ function setView(view) {
     btn.setAttribute('aria-selected', String(active));
   }
   if (view === 'map' && currentResults) renderMap(currentResults.stations);
-  if (view === 'history' && currentResults) renderHistory();
+  if (view === 'history' && currentResults) renderPriceHistory();
 }
 $viewList.addEventListener('click', () => setView('list'));
 $viewMap.addEventListener('click', () => setView('map'));

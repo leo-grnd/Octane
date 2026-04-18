@@ -4,9 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OCTANE — Trouve ton carburant le moins cher</title>
-  <meta name="description" content="Comparateur en temps réel des prix du carburant en France. Données officielles du Ministère de l'Économie." />
+  <meta name="description" content="Comparateur en temps réel des prix du carburant en France. Trouve la station la moins chère autour de toi grâce aux données officielles du Ministère de l'Économie." />
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
+  <meta name="author" content="Octane" />
+  <meta name="keywords" content="prix carburant, essence, gazole, SP95, SP98, E85, comparateur, station service, France, data.gouv" />
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="canonical" href="/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="OCTANE — Trouve ton carburant le moins cher" />
+  <meta property="og:description" content="Comparateur en temps réel des prix du carburant en France. Données officielles du Ministère de l'Économie." />
+  <meta property="og:image" content="og-image.svg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:site_name" content="Octane" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="OCTANE — Le plein, le moins cher" />
+  <meta name="twitter:description" content="Comparateur en temps réel des prix du carburant en France." />
+  <meta name="twitter:image" content="og-image.svg" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://data.economie.gouv.fr" />
+  <link rel="preconnect" href="https://api-adresse.data.gouv.fr" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -33,9 +60,10 @@
 
     <section class="search-panel">
       <div class="form-grid">
-        <div class="field">
+        <div class="field field-address">
           <label for="address">→ Adresse ou ville</label>
-          <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" />
+          <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          <ul id="suggestions" class="suggestions hidden" role="listbox"></ul>
         </div>
         <div class="field">
           <label for="fuel">→ Carburant</label>

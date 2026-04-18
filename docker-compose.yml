@@ -1,6 +1,0 @@
-services:
-  octane:
-    build: .
-    restart: unless-stopped
-    expose:
-      - "80"

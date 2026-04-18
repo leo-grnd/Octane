@@ -291,6 +291,28 @@ function formatPrice(price) {
   return `${euros}<span class="cents">,${cents}</span> €`;
 }
 
+// "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour
+function formatRelativeTime(iso) {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (isNaN(then)) return null;
+  const diffMin = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (diffMin < 2) return 'à l\'instant';
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `il y a ${diffH} h`;
+  const diffD = Math.round(diffH / 24);
+  if (diffD < 30) return `il y a ${diffD} j`;
+  return `il y a ${Math.round(diffD / 30)} mois`;
+}
+
+// URL Google Maps pour itinéraire depuis la position de l'utilisateur
+function directionsUrl(lat, lon, label) {
+  const dest = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+  const q = encodeURIComponent(label || dest);
+  return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=&travelmode=driving&query=${q}`;
+}
+
 function renderStations(stations, fuelField, userLat, userLon) {
   $stationList.innerHTML = '';
 
@@ -315,6 +337,8 @@ function renderStations(stations, fuelField, userLat, userLon) {
     return;
   }
 
+  const majField = fuelField.replace('_prix', '_maj');
+
   enriched.forEach((s, i) => {
     const color = getColorForRank(i, total);
     const brandName = extractStationName(s);
@@ -324,6 +348,8 @@ function renderStations(stations, fuelField, userLat, userLon) {
     const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
     if (cpVille) subParts.push(cpVille);
     const subtitle = subParts.join(' · ');
+    const freshness = formatRelativeTime(s[majField]);
+    const dirUrl = directionsUrl(s.lat, s.lon, title);
 
     const el = document.createElement('div');
     el.className = 'station';
@@ -337,11 +363,13 @@ function renderStations(stations, fuelField, userLat, userLon) {
       </div>
       <div class="distance">
         <strong>${s.distance.toFixed(1)} km</strong>
-        à vol d'oiseau
+        <span class="dist-label">à vol d'oiseau</span>
+        <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title}">Itinéraire ↗</a>
       </div>
       <div class="price">
         ${formatPrice(s.price)}
         <span class="unit">€ / L</span>
+        ${freshness ? `<span class="freshness">${freshness}</span>` : ''}
       </div>
     `;
     $stationList.appendChild(el);
@@ -401,12 +429,24 @@ async function runSearch(lat, lon, label) {
   }
 }
 
-$searchBtn.addEventListener('click', async () => {
+// Sérialise la recherche courante dans l'URL pour partage / reload (sans scroll, sans reload)
+function updateUrlParams() {
+  const params = new URLSearchParams();
+  const q = $address.value.trim();
+  if (q) params.set('q', q);
+  params.set('fuel', $fuel.value);
+  params.set('r', $radius.value);
+  const url = `${location.pathname}?${params.toString()}${location.hash}`;
+  history.replaceState(null, '', url);
+}
+
+async function doAddressSearch() {
   const address = $address.value.trim();
   if (!address) {
     showStatus('Entre une adresse ou une ville', true);
     return;
   }
+  updateUrlParams();
   try {
     showStatus('Localisation de l\'adresse...');
     const { lat, lon, label } = await geocode(address);
@@ -414,10 +454,121 @@ $searchBtn.addEventListener('click', async () => {
   } catch (err) {
     showStatus(`Erreur: ${err.message}`, true);
   }
+}
+
+$searchBtn.addEventListener('click', doAddressSearch);
+
+// ================== AUTOCOMPLETE BAN ==================
+const $suggestions = document.getElementById('suggestions');
+let suggestionIdx = -1;
+let lastSuggestionQuery = '';
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function closeSuggestions() {
+  $suggestions.classList.add('hidden');
+  $suggestions.innerHTML = '';
+  $address.setAttribute('aria-expanded', 'false');
+  suggestionIdx = -1;
+}
+
+function highlightSuggestion(idx) {
+  const items = $suggestions.querySelectorAll('li');
+  items.forEach((li, i) => li.setAttribute('aria-selected', i === idx ? 'true' : 'false'));
+  if (idx >= 0 && items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+  suggestionIdx = idx;
+}
+
+async function fetchSuggestions(q) {
+  try {
+    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.features || [];
+  } catch { return []; }
+}
+
+function renderSuggestions(features) {
+  if (!features.length) { closeSuggestions(); return; }
+  $suggestions.innerHTML = features.map((f, i) => {
+    const label = f.properties.label || '';
+    const context = f.properties.context || '';
+    return `<li role="option" data-idx="${i}" aria-selected="false">${label}<span class="sg-ctx">${context}</span></li>`;
+  }).join('');
+  $suggestions.classList.remove('hidden');
+  $address.setAttribute('aria-expanded', 'true');
+  suggestionIdx = -1;
+  // Click (utilise mousedown pour devancer le blur)
+  $suggestions.querySelectorAll('li').forEach((li, i) => {
+    li.addEventListener('mousedown', e => {
+      e.preventDefault();
+      selectSuggestion(features[i]);
+    });
+  });
+  // Memorize features on the element for keyboard selection
+  $suggestions._features = features;
+}
+
+function selectSuggestion(feature) {
+  const label = feature.properties.label;
+  const [lon, lat] = feature.geometry.coordinates;
+  $address.value = label;
+  closeSuggestions();
+  // Cache le géocodage pour éviter un nouvel appel BAN
+  cacheSet(localStorage, `geo:${label.toLowerCase().trim()}`, { lat, lon, label });
+  updateUrlParams();
+  runSearch(lat, lon, label);
+}
+
+const debouncedSuggest = debounce(async (q) => {
+  if (q !== lastSuggestionQuery) return; // une frappe plus récente a pris la main
+  if (q.length < 3) { closeSuggestions(); return; }
+  const features = await fetchSuggestions(q);
+  if (q !== lastSuggestionQuery) return;
+  renderSuggestions(features);
+}, 220);
+
+$address.addEventListener('input', () => {
+  const q = $address.value.trim();
+  lastSuggestionQuery = q;
+  if (q.length < 3) { closeSuggestions(); return; }
+  debouncedSuggest(q);
 });
 
 $address.addEventListener('keydown', e => {
-  if (e.key === 'Enter') $searchBtn.click();
+  const items = $suggestions.querySelectorAll('li');
+  const open = !$suggestions.classList.contains('hidden') && items.length > 0;
+
+  if (e.key === 'ArrowDown' && open) {
+    e.preventDefault();
+    highlightSuggestion((suggestionIdx + 1) % items.length);
+  } else if (e.key === 'ArrowUp' && open) {
+    e.preventDefault();
+    highlightSuggestion((suggestionIdx - 1 + items.length) % items.length);
+  } else if (e.key === 'Escape' && open) {
+    closeSuggestions();
+  } else if (e.key === 'Enter') {
+    if (open && suggestionIdx >= 0 && $suggestions._features?.[suggestionIdx]) {
+      e.preventDefault();
+      selectSuggestion($suggestions._features[suggestionIdx]);
+    } else {
+      closeSuggestions();
+      doAddressSearch();
+    }
+  }
+});
+
+$address.addEventListener('blur', () => {
+  // Léger délai pour laisser passer le mousedown des items
+  setTimeout(closeSuggestions, 150);
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.field-address')) closeSuggestions();
 });
 
 $geolocBtn.addEventListener('click', () => {
@@ -430,9 +581,25 @@ $geolocBtn.addEventListener('click', () => {
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
       $address.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      updateUrlParams();
       await runSearch(lat, lon, 'ta position actuelle');
     },
     (err) => showStatus(`Géoloc refusée: ${err.message}`, true),
     { enableHighAccuracy: true, timeout: 10000 }
   );
 });
+
+// Deep-link : au chargement, si ?q=...&fuel=...&r=... → préremplit et lance la recherche
+(function applyUrlParams() {
+  const params = new URLSearchParams(location.search);
+  const q = params.get('q');
+  const fuel = params.get('fuel');
+  const r = params.get('r');
+  if (fuel && [...$fuel.options].some(o => o.value === fuel)) $fuel.value = fuel;
+  if (r && !isNaN(parseInt(r, 10))) $radius.value = r;
+  if (q) {
+    $address.value = q;
+    // Laisse le temps au DOM / cache de s'initialiser avant de lancer
+    setTimeout(doAddressSearch, 50);
+  }
+})();

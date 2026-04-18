@@ -80,6 +80,51 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   return data.results || [];
 }
 
+// OSM Overpass : récupère toutes les stations essence de la zone avec leur marque
+async function fetchOSMFuelStations(lat, lon, radiusKm) {
+  const radiusM = Math.round(radiusKm * 1000 * 1.1); // marge pour bord de zone
+  const query = `[out:json][timeout:15];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+  ];
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(`${ep}?data=${encodeURIComponent(query)}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      return (data.elements || []).map(e => {
+        const elat = e.lat ?? e.center?.lat;
+        const elon = e.lon ?? e.center?.lon;
+        const t = e.tags || {};
+        const brand = t.brand || t.operator || t.name || null;
+        return elat != null && elon != null && brand
+          ? { lat: elat, lon: elon, brand: brand.trim() }
+          : null;
+      }).filter(Boolean);
+    } catch (err) {
+      console.warn('Overpass endpoint failed:', ep, err);
+    }
+  }
+  return [];
+}
+
+// Trouve la station OSM la plus proche (< 150 m) d'une station donnée
+function findNearestOSMBrand(station, osmStations) {
+  if (!osmStations.length || station.lat == null) return null;
+  const MAX_KM = 0.15;
+  let nearest = null;
+  let minDist = Infinity;
+  for (const osm of osmStations) {
+    const d = haversine(station.lat, station.lon, osm.lat, osm.lon);
+    if (d < minDist && d <= MAX_KM) {
+      minDist = d;
+      nearest = osm;
+    }
+  }
+  return nearest?.brand || null;
+}
+
 // Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
 function extractCoords(s) {
   const g = s.geom;
@@ -133,13 +178,17 @@ const KNOWN_BRANDS = [
 
 // Nom commercial de la station (avec la ville si on peut)
 function extractStationName(s) {
-  // 1) Champs directs éventuels
+  // 1) Marque déjà matchée via OSM (priorité absolue, géospatial)
+  if (s._osmBrand) {
+    return s.ville ? `${s._osmBrand} ${s.ville}` : s._osmBrand;
+  }
+  // 2) Champs directs éventuels
   const raw = s.marque || s.brand || s.enseignes || s.nom_station || s.nom || null;
   if (raw && String(raw).trim()) {
     const brand = String(raw).trim();
     return s.ville ? `${brand} ${s.ville}` : brand;
   }
-  // 2) Détection sur l'adresse (+ ville au cas où)
+  // 3) Détection sur l'adresse (+ ville au cas où)
   const haystack = `${s.adresse || ''} ${s.ville || ''}`;
   for (const { re, name } of KNOWN_BRANDS) {
     if (re.test(haystack)) {
@@ -251,7 +300,17 @@ async function runSearch(lat, lon, label) {
 
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
-    const stations = await fetchStations(lat, lon, radiusKm, fuelField);
+    const [stations, osmStations] = await Promise.all([
+      fetchStations(lat, lon, radiusKm, fuelField),
+      fetchOSMFuelStations(lat, lon, radiusKm)
+    ]);
+    // Enrichit chaque station avec sa marque OSM (match par proximité < 150 m)
+    stations.forEach(s => {
+      const { lat: sLat, lon: sLon } = extractCoords(s);
+      if (sLat != null && sLon != null) {
+        s._osmBrand = findNearestOSMBrand({ lat: sLat, lon: sLon }, osmStations);
+      }
+    });
     hideStatus();
     $results.classList.remove('hidden');
     renderStations(stations, fuelField, lat, lon);

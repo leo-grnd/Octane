@@ -176,8 +176,16 @@ header {
   align-items: end;
 }
 
-@media (max-width: 768px) {
-  .form-grid { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .field:first-child { grid-column: 1 / -1; }
+  .btn-search { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .form-grid { grid-template-columns: 1fr; gap: 1.1rem; }
+  .field:first-child,
+  .btn-search { grid-column: auto; }
+  .btn-search { width: 100%; padding: 1rem; }
 }
 
 .field label {
@@ -433,16 +441,111 @@ header {
   font-weight: 400;
 }
 
+/* ============ RESPONSIVE ============ */
+
+/* Tablette (≤ 900px) */
+@media (max-width: 900px) {
+  .container { padding: 1.5rem 1.2rem 3rem; }
+  header { margin-bottom: 2rem; }
+  .hero { margin-bottom: 2rem; }
+  .search-panel { padding: 1.5rem; }
+}
+
+/* Mobile (≤ 640px) */
 @media (max-width: 640px) {
-  .station {
-    grid-template-columns: 40px 1fr auto;
-    gap: 0.8rem;
-    padding: 1rem;
+  .container { padding: 1.2rem 1rem 2.5rem; }
+
+  /* Header : logo à gauche, bouton thème seul à droite, tagline/timestamp sous le logo */
+  header {
+    margin-bottom: 1.8rem;
+    padding-bottom: 1.2rem;
   }
-  .distance { grid-column: 2; text-align: left; min-width: 0; }
-  .info { grid-column: 2 / span 2; }
-  .price { grid-column: 3; grid-row: 1 / 3; font-size: 1.3rem; }
-  .rank { font-size: 1.2rem; }
+  .meta { font-size: 0.6rem; }
+  .meta > div:first-child,
+  .meta #timestamp { display: none; }
+  .theme-toggle { margin-top: 0; width: 40px; height: 40px; }
+
+  /* Hero plus compacte */
+  .hero h1 { font-size: clamp(2rem, 9vw, 3rem); }
+  .hero p { font-size: 0.85rem; }
+
+  /* Search panel */
+  .search-panel { padding: 1.25rem 1rem 1.3rem; }
+  .search-panel::before,
+  .search-panel::after { width: 14px; height: 14px; }
+  .field input,
+  .field select { font-size: 16px; padding: 0.7rem 0; } /* 16px = pas de zoom iOS */
+  .field select { padding-right: 2rem; }
+
+  /* Status */
+  .status { padding: 1rem 1.1rem; font-size: 0.8rem; }
+
+  /* Results header */
+  .results-header { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .results-header h2 { font-size: 1.05rem; }
+
+  /* Stations : rank + nom + prix en haut, adresse + distance en bas */
+  .station {
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.4rem 0.9rem;
+    padding: 0.95rem 1rem;
+  }
+  .rank {
+    grid-column: 1; grid-row: 1;
+    font-size: 1.05rem;
+    align-self: center;
+  }
+  .info {
+    grid-column: 2; grid-row: 1;
+    min-width: 0;
+  }
+  .info .name {
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .info .addr { font-size: 0.7rem; }
+  .price {
+    grid-column: 3; grid-row: 1 / 3;
+    font-size: 1.35rem;
+    min-width: 0;
+    align-self: center;
+  }
+  .distance {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    text-align: left;
+    font-size: 0.65rem;
+    padding-top: 0.4rem;
+    margin-top: 0.1rem;
+    border-top: 1px dashed var(--border);
+    min-width: 0;
+  }
+  .distance strong {
+    display: inline;
+    font-size: 0.8rem;
+    color: var(--ink);
+    margin-right: 0.35rem;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 2.5rem;
+    font-size: 0.6rem;
+    line-height: 1.8;
+  }
+}
+
+/* Très petits écrans (≤ 380px) */
+@media (max-width: 380px) {
+  .logo { font-size: 1.8rem; }
+  .hero h1 { font-size: 1.85rem; }
+  .station { padding: 0.85rem 0.9rem; gap: 0.3rem 0.7rem; }
+  .price { font-size: 1.2rem; }
+  .info .name { font-size: 0.85rem; }
 }
 
 footer {

@@ -102,6 +102,16 @@ function extractCoords(s) {
   return { lat: null, lon: null };
 }
 
+// Nom commercial de la station (avec la ville si on peut)
+function extractStationName(s) {
+  const raw = s.marque || s.brand || s.enseignes || s.nom_station || s.nom || null;
+  if (raw && String(raw).trim()) {
+    const brand = String(raw).trim();
+    return s.ville ? `${brand} ${s.ville}` : brand;
+  }
+  return null;
+}
+
 // Couleur par rang (vert → rouge)
 function getColorForRank(rank, total) {
   if (total === 1) return '#4ade80';
@@ -159,6 +169,14 @@ function renderStations(stations, fuelField, userLat, userLon) {
 
   enriched.forEach((s, i) => {
     const color = getColorForRank(i, total);
+    const brandName = extractStationName(s);
+    const title = brandName || s.adresse || 'Station sans nom';
+    const subParts = [];
+    if (brandName && s.adresse) subParts.push(s.adresse);
+    const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
+    if (cpVille) subParts.push(cpVille);
+    const subtitle = subParts.join(' · ');
+
     const el = document.createElement('div');
     el.className = 'station';
     el.style.setProperty('--rank-color', color);
@@ -166,8 +184,8 @@ function renderStations(stations, fuelField, userLat, userLon) {
     el.innerHTML = `
       <div class="rank">${String(i + 1).padStart(2, '0')}</div>
       <div class="info">
-        <div class="name">${s.adresse || 'Station sans nom'}</div>
-        <div class="addr">${s.cp || ''} ${s.ville || ''}</div>
+        <div class="name">${title}</div>
+        <div class="addr">${subtitle}</div>
       </div>
       <div class="distance">
         <strong>${s.distance.toFixed(1)} km</strong>

@@ -199,6 +199,74 @@ function lookupOSMBrand(lat, lon, data) {
   return nearest ? data.brands[nearest[2]] : null;
 }
 
+// Fallback n°4 : Overpass runtime. Appelé uniquement quand la base shippée +
+// regex n'ont rien trouvé pour certaines stations (ex: POIs OSM ajoutés après
+// notre dernier scrape mensuel). Silencieux, non bloquant.
+const runtimeOverpassCache = {}; // session-only, par zone arrondie
+async function fetchOSMFuelStationsRuntime(lat, lon, radiusKm) {
+  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
+  if (key in runtimeOverpassCache) return runtimeOverpassCache[key];
+
+  const radiusM = Math.round(radiusKm * 1000 * 1.1);
+  const query = `[out:json][timeout:20];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+  ];
+  const tryOne = (ep) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    return fetch(ep, {
+      method: 'POST',
+      body: `data=${encodeURIComponent(query)}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: ctrl.signal
+    }).then(res => {
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }).then(data => {
+      const out = (data.elements || []).map(e => {
+        const elat = e.lat ?? e.center?.lat;
+        const elon = e.lon ?? e.center?.lon;
+        const t = e.tags || {};
+        const brand = t.brand || t.operator || t.name || null;
+        return elat != null && elon != null && brand
+          ? { lat: elat, lon: elon, brand: brand.trim() }
+          : null;
+      }).filter(Boolean);
+      if (!out.length) throw new Error('empty');
+      return out;
+    });
+  };
+
+  try {
+    const out = await Promise.any(endpoints.map(tryOne));
+    runtimeOverpassCache[key] = out;
+    return out;
+  } catch {
+    runtimeOverpassCache[key] = [];
+    return [];
+  }
+}
+
+function findNearestRuntimeBrand(lat, lon, osmStations) {
+  if (!osmStations.length || lat == null) return null;
+  const MAX_KM = 0.15;
+  let nearest = null;
+  let minDist = Infinity;
+  for (const osm of osmStations) {
+    const d = haversine(lat, lon, osm.lat, osm.lon);
+    if (d < minDist && d <= MAX_KM) {
+      minDist = d;
+      nearest = osm;
+    }
+  }
+  return nearest?.brand || null;
+}
+
 // Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
 function extractCoords(s) {
   const g = s.geom;
@@ -504,13 +572,28 @@ async function runSearch(lat, lon, label) {
     brandsPromise.then(data => {
       if (token !== currentSearchToken) return;
       $osmHint.classList.add('hidden');
-      if (!data) return;
-      let changed = false;
-      currentResults.stations.forEach(s => {
-        const brand = lookupOSMBrand(s.lat, s.lon, data);
-        if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
+      if (data) {
+        let changed = false;
+        currentResults.stations.forEach(s => {
+          const brand = lookupOSMBrand(s.lat, s.lon, data);
+          if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
+        });
+        if (changed) renderStations();
+      }
+      // Fallback n°4 : si certaines stations n'ont toujours ni marque OSM ni
+      // match regex, on tente un Overpass runtime ciblé (zone de recherche).
+      // Silencieux et non bloquant — si Overpass est HS ou lent, on s'en fout.
+      const unmatched = currentResults.stations.filter(s => extractStationName(s) === null);
+      if (!unmatched.length) return;
+      fetchOSMFuelStationsRuntime(lat, lon, radiusKm).then(osm => {
+        if (token !== currentSearchToken || !osm.length) return;
+        let changed = false;
+        unmatched.forEach(s => {
+          const brand = findNearestRuntimeBrand(s.lat, s.lon, osm);
+          if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
+        });
+        if (changed) renderStations();
       });
-      if (changed) renderStations();
     });
   } catch (err) {
     if (token !== currentSearchToken) return;

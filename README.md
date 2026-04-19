@@ -4,6 +4,7 @@ Comparateur de prix de carburant en France, en temps réel.
 
 Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
+- **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
 - **Géocodage** · `api-adresse.data.gouv.fr` (Base Adresse Nationale)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
 
@@ -25,31 +26,16 @@ Hébergé sur **GitHub Pages** depuis la branche `main`.
 
 ## Historique des prix (sparklines)
 
-Chaque station peut afficher l'évolution hebdomadaire de son prix sur les 12 dernières semaines.
-Les données sont pré-calculées dans `data/history/<fuel>.json` à partir de l'archive annuelle
-officielle `donnees.roulez-eco.fr/opendata/annee/YYYY` (ZIP + XML, Ministère de l'Économie).
+Chaque station affiche l'évolution de son prix sur les **30 dernières mises à jour**, calculée
+en temps réel à partir du dataset public `prix-des-carburants-j-1`
+(`public.opendatasoft.com`, 12 mois glissants, Ministère de l'Économie).
 
-Le script Node requiert `unzip` dans le PATH (présent par défaut sur macOS, Linux, et les
-runners GitHub Actions `ubuntu-latest`). Le script Python est 100 % stdlib (pas de binaire
-externe requis, utile si `unzip` manque).
+Pas de fichier généré, pas de cron : dès qu'une recherche retourne des stations, le client
+pré-charge l'historique de chacune en arrière-plan (4 requêtes en parallèle), dédupli­que les
+relevés consécutifs identiques, et met en cache le résultat dans `localStorage` (TTL 24 h).
 
-**Rafraîchir localement (Node, recommandé) :**
-```bash
-node scripts/build-history.mjs              # 12 dernières semaines, année en cours
-node scripts/build-history.mjs --weeks=24   # plus long historique
-```
-
-**Alternative Python (stdlib uniquement, si Node n'est pas dispo) :**
-```bash
-python3 scripts/build_history.py
-python3 scripts/build_history.py --weeks 24 --year 2025
-```
-
-**Automatisation :** le workflow `.github/workflows/build-history.yml` tourne chaque lundi
-à 05:00 UTC et commit les JSONs rafraîchis sur `main`. Déclenchable manuellement via l'onglet
-Actions → Refresh price history → Run workflow.
-
-Si les JSONs sont absents (404), le client affiche simplement « Historique indisponible ».
+Si le dataset ne retourne pas assez de points pour une station, le client affiche simplement
+« Historique indisponible ».
 
 ## Base de marques OSM
 
@@ -79,14 +65,10 @@ via l'onglet Actions → Refresh OSM brands → Run workflow.
 |--|--|
 | `index.html` | Structure + SEO |
 | `style.css` | Style (thème sombre/clair, responsive) |
-| `app.js` | Géocodage + appels API + rendu + cache + historique |
+| `app.js` | Géocodage + appels API + rendu + cache + historique runtime |
 | `sw.js` + `manifest.webmanifest` | Service worker et manifest PWA |
 | `favicon.svg` · `og-image.svg` | Icône + preview sociale |
-| `scripts/build-history.mjs` | Pré-calcul des sparklines par station (Node) |
-| `scripts/build_history.py` | Équivalent stdlib Python |
 | `scripts/build-brands.mjs` | Scrape OSM → `data/osm/brands.json` (Node) |
 | `scripts/build_brands.py` | Équivalent stdlib Python |
-| `data/history/*.json` | Agrégats hebdomadaires (générés, commit) |
 | `data/osm/brands.json` | Base des marques OSM (généré, commit) |
-| `.github/workflows/build-history.yml` | Cron hebdo GHA (historique) |
 | `.github/workflows/build-brands.yml` | Cron mensuel GHA (marques) |

@@ -5,7 +5,7 @@ Comparateur de prix de carburant en France, en temps réel.
 Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
 - **Géocodage** · `api-adresse.data.gouv.fr` (Base Adresse Nationale)
-- **Enseignes** · Overpass OSM (`amenity=fuel` + tag `brand`)
+- **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
 
 Pas de backend, pas de base de données, pas de clé API.
 
@@ -51,6 +51,28 @@ Actions → Refresh price history → Run workflow.
 
 Si les JSONs sont absents (404), le client affiche simplement « Historique indisponible ».
 
+## Base de marques OSM
+
+Pour éviter d'appeler Overpass au runtime (latence + dépendance à des miroirs pas
+toujours dispo), on scrape **une fois** toutes les stations `amenity=fuel` de France
+avec leur tag `brand`/`operator`/`name`, et on ship le résultat dans
+`data/osm/brands.json`. Le client le charge une seule fois par session et cherche
+la marque la plus proche (≤ 150 m) en local.
+
+**Rafraîchir localement (Node) :**
+```bash
+node scripts/build-brands.mjs
+```
+
+**Alternative Python (stdlib uniquement) :**
+```bash
+python3 scripts/build_brands.py
+```
+
+**Automatisation :** le workflow `.github/workflows/build-brands.yml` tourne le 1er
+de chaque mois à 04:00 UTC (les marques OSM bougent lentement). Déclenchable manuellement
+via l'onglet Actions → Refresh OSM brands → Run workflow.
+
 ## Fichiers
 
 | Fichier | Rôle |
@@ -62,5 +84,9 @@ Si les JSONs sont absents (404), le client affiche simplement « Historique indi
 | `favicon.svg` · `og-image.svg` | Icône + preview sociale |
 | `scripts/build-history.mjs` | Pré-calcul des sparklines par station (Node) |
 | `scripts/build_history.py` | Équivalent stdlib Python |
+| `scripts/build-brands.mjs` | Scrape OSM → `data/osm/brands.json` (Node) |
+| `scripts/build_brands.py` | Équivalent stdlib Python |
 | `data/history/*.json` | Agrégats hebdomadaires (générés, commit) |
-| `.github/workflows/build-history.yml` | Cron hebdo GHA |
+| `data/osm/brands.json` | Base des marques OSM (généré, commit) |
+| `.github/workflows/build-history.yml` | Cron hebdo GHA (historique) |
+| `.github/workflows/build-brands.yml` | Cron mensuel GHA (marques) |

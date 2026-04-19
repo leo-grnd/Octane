@@ -1,0 +1,38 @@
+name: Refresh OSM brands
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'   # 1er du mois à 04:00 UTC
+  workflow_dispatch:       # bouton manuel
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-brands
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scrape OSM brands
+        run: node scripts/build-brands.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "octane-bot"
+          git config user.email "octane-bot@users.noreply.github.com"
+          git add data/osm
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore(data): refresh OSM brands"
+          git push

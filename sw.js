@@ -1,6 +1,6 @@
 // Octane service worker — cache-first pour le shell, network-first pour les APIs.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v4';
+const VERSION = 'octane-v5';
 const SHELL = [
   './',
   './index.html',
@@ -40,8 +40,12 @@ self.addEventListener('fetch', (e) => {
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
 
-  // Historique des prix : toujours frais (SWR) — ne pas servir depuis le cache SW
-  if (url.origin === self.location.origin && url.pathname.includes('/data/history/')) {
+  // Données précalculées (historique, marques OSM) : toujours frais côté réseau,
+  // fallback cache si offline. Évite de servir un 404 figé après redeploy.
+  if (url.origin === self.location.origin && (
+    url.pathname.includes('/data/history/') ||
+    url.pathname.includes('/data/osm/')
+  )) {
     e.respondWith(
       caches.open(VERSION).then(cache =>
         fetch(req).then(res => {

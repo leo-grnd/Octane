@@ -805,25 +805,20 @@ const HIST_KEEP = 30;                 // nb de points gardés après dédup
 const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge pour dédup)
 const HIST_PREFETCH_CONCURRENCY = 4;
 
-// Mapping entre les champs du flux instantané (gazole_prix, sp95_prix…) et les
-// colonnes prix du dataset j-1 (prix_gazole, prix_sp95…). Le j-1 est un snapshot
-// quotidien large : 1 ligne par station par jour, 1 colonne par carburant.
-const HIST_FUEL_COL = {
-  gazole_prix: 'prix_gazole',
-  sp95_prix: 'prix_sp95',
-  sp95_e10_prix: 'prix_e10',
-  sp98_prix: 'prix_sp98',
-  e85_prix: 'prix_e85',
-  gplc_prix: 'prix_gplc'
-};
+// Le dataset `prix-carburants-quotidien` (data.economie.gouv.fr, même schéma
+// que le flux instantané et CORS-friendly contrairement à public.opendatasoft.com)
+// est un snapshot quotidien : 1 ligne par station par jour, 1 colonne par
+// carburant (gazole_prix, sp95_prix, sp95_e10_prix, sp98_prix, e85_prix, gplc_prix).
+// Donc le `fuelField` qu'on a déjà côté flux est utilisable tel quel.
+const HIST_FUELS = new Set([
+  'gazole_prix', 'sp95_prix', 'sp95_e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
+]);
 
 const historyMemCache = {};           // `${id}:${fuel}` → points[] | null
 const historyInflight = {};
 
 async function loadStationHistory(stationId, fuelField) {
-  if (stationId == null) return null;
-  const col = HIST_FUEL_COL[fuelField];
-  if (!col) return null;
+  if (stationId == null || !HIST_FUELS.has(fuelField)) return null;
   const key = `${stationId}:${fuelField}`;
   if (key in historyMemCache) return historyMemCache[key];
   if (historyInflight[key]) return historyInflight[key];
@@ -834,23 +829,25 @@ async function loadStationHistory(stationId, fuelField) {
 
   historyInflight[key] = (async () => {
     try {
-      // Le j-1 = 1 ligne par station par jour. Filtre sur `id` (même nomenclature
-      // que le flux instantané) et sur `${col} IS NOT NULL` pour éliminer les
-      // jours où le carburant n'était pas vendu.
-      const where = `id="${stationId}" AND ${col} IS NOT NULL`;
-      const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
+      // Filtre sur `id` (même nomenclature que le flux instantané) et sur
+      // `${fuelField} IS NOT NULL` pour éliminer les jours où le carburant
+      // n'était pas vendu. `${fuelField}_maj` donne la date de la mise à jour
+      // du prix (sinon on retomberait sur la date du snapshot quotidien).
+      const majField = `${fuelField}_maj`;
+      const where = `id="${stationId}" AND ${fuelField} IS NOT NULL`;
+      const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-carburants-quotidien/records?` +
         `where=${encodeURIComponent(where)}` +
-        `&order_by=${encodeURIComponent('date DESC')}` +
-        `&select=${encodeURIComponent(`date,${col}`)}` +
+        `&order_by=${encodeURIComponent(`${majField} DESC`)}` +
+        `&select=${encodeURIComponent(`${majField},${fuelField}`)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`API j-1: ${res.status}`);
+      if (!res.ok) throw new Error(`API quotidien: ${res.status}`);
       const data = await res.json();
       const raw = data.results || [];
       // Tri chronologique asc, points valides uniquement, puis dédup consécutif.
       const sorted = raw.map(r => {
-        const ts = r.date ? Date.parse(r.date) : NaN;
-        const v = r[col] != null ? Number(r[col]) : NaN;
+        const ts = r[majField] ? Date.parse(r[majField]) : NaN;
+        const v = r[fuelField] != null ? Number(r[fuelField]) : NaN;
         if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
       }).filter(Boolean).sort((a, b) => a[0] - b[0]);
@@ -920,7 +917,7 @@ function renderSparklineFromPoints(points) {
 // après un render de liste : quand l'utilisateur ouvre l'onglet Historique, les
 // données sont déjà en cache. Stoppe si la recherche courante a changé.
 function prefetchHistory(stations, fuelField, tokenCheck) {
-  if (!HIST_FUEL_COL[fuelField]) return;
+  if (!HIST_FUELS.has(fuelField)) return;
   const ids = stations.map(s => s.id != null ? String(s.id) : null).filter(Boolean);
   let cursor = 0;
   const worker = async () => {
@@ -942,7 +939,7 @@ function renderPriceHistory() {
     $historyList.innerHTML = `<div class="status">Aucune station dans les résultats.</div>`;
     return;
   }
-  if (!HIST_FUEL_COL[fuelField]) {
+  if (!HIST_FUELS.has(fuelField)) {
     $historyList.innerHTML = `<div class="status">Historique non disponible pour ce carburant.</div>`;
     return;
   }

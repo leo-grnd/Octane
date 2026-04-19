@@ -4,7 +4,7 @@ Comparateur de prix de carburant en France, en temps réel.
 
 Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
-- **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
+- **Historique prix** · `data.economie.gouv.fr/prix-carburants-quotidien` (snapshot quotidien, runtime)
 - **Géocodage** · `api-adresse.data.gouv.fr` (Base Adresse Nationale)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
 
@@ -27,8 +27,9 @@ Hébergé sur **GitHub Pages** depuis la branche `main`.
 ## Historique des prix (sparklines)
 
 Chaque station affiche l'évolution de son prix sur les **30 dernières mises à jour**, calculée
-en temps réel à partir du dataset public `prix-des-carburants-j-1`
-(`public.opendatasoft.com`, 12 mois glissants, Ministère de l'Économie).
+en temps réel à partir du dataset public `prix-carburants-quotidien`
+(`data.economie.gouv.fr`, Ministère de l'Économie — même portail que le flux instantané,
+CORS-friendly).
 
 Pas de fichier généré, pas de cron : dès qu'une recherche retourne des stations, le client
 pré-charge l'historique de chacune en arrière-plan (4 requêtes en parallèle), dédupli­que les

@@ -1,6 +1,6 @@
 // Octane service worker — cache-first pour le shell, network-first pour les APIs.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v6';
+const VERSION = 'octane-v7';
 const SHELL = [
   './',
   './index.html',
@@ -33,6 +33,7 @@ self.addEventListener('fetch', (e) => {
   // Ne jamais cacher les appels data / géocodage / overpass — on laisse passer.
   const bypass = [
     'data.economie.gouv.fr',
+    'public.opendatasoft.com',
     'api-adresse.data.gouv.fr',
     'overpass.kumi.systems',
     'overpass-api.de',
@@ -40,12 +41,9 @@ self.addEventListener('fetch', (e) => {
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
 
-  // Données précalculées (historique, marques OSM) : toujours frais côté réseau,
+  // Données précalculées (marques OSM) : toujours frais côté réseau,
   // fallback cache si offline. Évite de servir un 404 figé après redeploy.
-  if (url.origin === self.location.origin && (
-    url.pathname.includes('/data/history/') ||
-    url.pathname.includes('/data/osm/')
-  )) {
+  if (url.origin === self.location.origin && url.pathname.includes('/data/osm/')) {
     e.respondWith(
       caches.open(VERSION).then(cache =>
         fetch(req).then(res => {

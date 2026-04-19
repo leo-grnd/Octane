@@ -448,7 +448,7 @@ function buildStationCard(s, i, total, fuelField) {
   return el;
 }
 
-function buildHistoryCard(s, i, total, prices, weeks) {
+function buildHistoryCard(s, i, total) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
@@ -462,16 +462,13 @@ function buildHistoryCard(s, i, total, prices, weeks) {
   el.className = 'history-card';
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
-  const body = prices
-    ? renderSparkline(prices, weeks)
-    : `<div class="hist-empty">Pas d'historique disponible pour cette station sur les 12 dernières semaines.</div>`;
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <div class="info">
       <div class="name">${title}</div>
       <div class="addr">${subtitle}</div>
     </div>
-    <div class="hist-body">${body}</div>
+    <div class="hist-body"><div class="hist-empty"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div></div>
   `;
   return el;
 }
@@ -567,6 +564,10 @@ async function runSearch(lat, lon, label) {
 
     renderStations();
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Pré-chauffe l'historique de chaque station en arrière-plan (pool de 4)
+    // pour que l'onglet Historique soit instantané.
+    prefetchHistory(enriched, fuelField, () => token === currentSearchToken);
 
     // Patch des marques quand le JSON finit d'arriver (1re visite uniquement)
     brandsPromise.then(data => {
@@ -792,64 +793,112 @@ $geolocBtn.addEventListener('click', () => {
   );
 });
 
-// ===== Historique des prix (3.2 — sparkline dépliable) =====
-const historyCache = {};   // fuelField → { weeks, stations } | null (404)
+// ===== Historique des prix (runtime, dataset j-1 d'Opendatasoft) =====
+// Pour chaque station, on récupère les 30 dernières mises à jour de prix sur
+// le dataset public `prix-des-carburants-j-1` (12 mois glissants). Cache mémoire
+// + localStorage (TTL 24h) + dédup des requêtes en vol. Aucun fichier généré :
+// tout est calculé à la volée côté client, et pré-chargé en arrière-plan dès
+// qu'une recherche retourne des résultats.
+
+const TTL_HISTORY = 24 * 60 * 60 * 1000;
+const HIST_KEEP = 30;                 // nb de points gardés après dédup
+const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge pour dédup)
+const HIST_PREFETCH_CONCURRENCY = 4;
+
+// Mapping entre les champs du flux instantané et les libellés `prix_nom` du j-1.
+const FUEL_API_NAMES = {
+  gazole_prix: 'Gazole',
+  sp95_prix: 'SP95',
+  sp95_e10_prix: 'SP95-E10',
+  sp98_prix: 'SP98',
+  e85_prix: 'E85',
+  gplc_prix: 'GPLc'
+};
+
+const historyMemCache = {};           // `${id}:${fuel}` → points[] | null
 const historyInflight = {};
 
-async function loadPriceHistory(fuelField) {
-  if (fuelField in historyCache) return historyCache[fuelField];
-  if (historyInflight[fuelField]) return historyInflight[fuelField];
-  historyInflight[fuelField] = (async () => {
+async function loadStationHistory(stationId, fuelField) {
+  if (stationId == null) return null;
+  const fuelName = FUEL_API_NAMES[fuelField];
+  if (!fuelName) return null;
+  const key = `${stationId}:${fuelField}`;
+  if (key in historyMemCache) return historyMemCache[key];
+  if (historyInflight[key]) return historyInflight[key];
+
+  const storageKey = `hist:${key}`;
+  const persisted = cacheGet(localStorage, storageKey, TTL_HISTORY);
+  if (persisted) { historyMemCache[key] = persisted; return persisted; }
+
+  historyInflight[key] = (async () => {
     try {
-      // `no-cache` force la revalidation : évite qu'un 404 cached (avant que
-      // les JSONs soient déployés) ne reste figé dans le cache HTTP du navigateur.
-      const res = await fetch(`data/history/${fuelField}.json`, { cache: 'no-cache' });
-      if (!res.ok) throw new Error('404');
+      const where = `id="${stationId}" AND prix_nom="${fuelName}"`;
+      const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
+        `where=${encodeURIComponent(where)}` +
+        `&order_by=${encodeURIComponent('prix_maj DESC')}` +
+        `&select=${encodeURIComponent('prix_maj,prix_valeur')}` +
+        `&limit=${HIST_FETCH_LIMIT}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API j-1: ${res.status}`);
       const data = await res.json();
-      historyCache[fuelField] = data;
-      return data;
+      const raw = data.results || [];
+      // Tri chronologique asc, points valides uniquement, puis dédup consécutif
+      // (supprime les répétitions du même prix quand seule l'heure change).
+      const sorted = raw.map(r => {
+        const ts = r.prix_maj ? Date.parse(r.prix_maj) : NaN;
+        const v = r.prix_valeur != null ? Number(r.prix_valeur) : NaN;
+        if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
+        return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
+      }).filter(Boolean).sort((a, b) => a[0] - b[0]);
+      const dedup = [];
+      for (const p of sorted) {
+        const prev = dedup[dedup.length - 1];
+        if (!prev || prev[1] !== p[1]) dedup.push(p);
+      }
+      const points = dedup.slice(-HIST_KEEP);
+      historyMemCache[key] = points;
+      cacheSet(localStorage, storageKey, points);
+      return points;
     } catch {
-      historyCache[fuelField] = null;
+      historyMemCache[key] = null;
       return null;
     } finally {
-      delete historyInflight[fuelField];
+      delete historyInflight[key];
     }
   })();
-  return historyInflight[fuelField];
+  return historyInflight[key];
 }
 
-function renderSparkline(pricesInMilli, weeks) {
-  const W = 260, H = 60, PAD_X = 6, PAD_Y = 10;
-  const pts = pricesInMilli
-    .map((p, i) => (p != null ? { i, p: p / 1000 } : null))
-    .filter(Boolean);
-  if (pts.length < 2) {
+function renderSparklineFromPoints(points) {
+  if (!points || points.length < 2) {
     return `<div class="hist-empty">Pas assez de données pour tracer une courbe.</div>`;
   }
-  const min = Math.min(...pts.map(x => x.p));
-  const max = Math.max(...pts.map(x => x.p));
-  const avg = pts.reduce((s, x) => s + x.p, 0) / pts.length;
+  const W = 260, H = 60, PAD_X = 6, PAD_Y = 10;
+  const priceEur = points.map(p => p[1] / 1000);
+  const min = Math.min(...priceEur);
+  const max = Math.max(...priceEur);
+  const avg = priceEur.reduce((s, v) => s + v, 0) / priceEur.length;
   const range = Math.max(max - min, 0.005);
-  const stepX = (W - PAD_X * 2) / Math.max(pricesInMilli.length - 1, 1);
-  const coord = (x) => ({
-    x: PAD_X + x.i * stepX,
-    y: PAD_Y + (H - PAD_Y * 2) * (1 - (x.p - min) / range)
+  const tMin = points[0][0], tMax = points[points.length - 1][0];
+  const tRange = Math.max(tMax - tMin, 1);
+  const coord = (pt) => ({
+    x: PAD_X + (pt[0] - tMin) / tRange * (W - PAD_X * 2),
+    y: PAD_Y + (H - PAD_Y * 2) * (1 - (pt[1] / 1000 - min) / range)
   });
-  const line = pts.map(p => {
+  const line = points.map(p => {
     const c = coord(p);
     return `${c.x.toFixed(1)},${c.y.toFixed(1)}`;
   }).join(' ');
-  const last = coord(pts[pts.length - 1]);
-  const first = pts[0].p, now = pts[pts.length - 1].p;
+  const last = coord(points[points.length - 1]);
+  const first = priceEur[0], now = priceEur[priceEur.length - 1];
   const delta = now - first;
   const sign = delta > 0.003 ? 'up' : delta < -0.003 ? 'down' : 'flat';
   const arrow = sign === 'up' ? '↗' : sign === 'down' ? '↘' : '→';
-  const nbWeeks = pricesInMilli.length;
-  const firstWeek = weeks[0] || '';
-  const lastWeek = weeks[weeks.length - 1] || '';
+  const fmt = (ts) => new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const firstDate = fmt(tMin), lastDate = fmt(tMax);
 
   return `
-    <svg viewBox="0 0 ${W} ${H}" class="sparkline" role="img" aria-label="Évolution hebdomadaire sur ${nbWeeks} semaines, de ${firstWeek} à ${lastWeek}">
+    <svg viewBox="0 0 ${W} ${H}" class="sparkline" role="img" aria-label="Évolution de prix sur ${points.length} relevés, du ${firstDate} au ${lastDate}">
       <polyline points="${line}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="currentColor"/>
     </svg>
@@ -857,30 +906,57 @@ function renderSparkline(pricesInMilli, weeks) {
       <span>min <strong>${min.toFixed(3)} €</strong></span>
       <span>moy <strong>${avg.toFixed(3)} €</strong></span>
       <span>max <strong>${max.toFixed(3)} €</strong></span>
-      <span class="hist-trend ${sign}">${arrow} ${delta >= 0 ? '+' : ''}${delta.toFixed(3)} € sur ${nbWeeks} sem.</span>
+      <span class="hist-trend ${sign}">${arrow} ${delta >= 0 ? '+' : ''}${delta.toFixed(3)} € · ${firstDate} → ${lastDate}</span>
     </div>
   `;
 }
 
-async function renderPriceHistory() {
+// Pré-charge en arrière-plan (pool de N) l'historique de chaque station juste
+// après un render de liste : quand l'utilisateur ouvre l'onglet Historique, les
+// données sont déjà en cache. Stoppe si la recherche courante a changé.
+function prefetchHistory(stations, fuelField, tokenCheck) {
+  if (!FUEL_API_NAMES[fuelField]) return;
+  const ids = stations.map(s => s.id != null ? String(s.id) : null).filter(Boolean);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < ids.length) {
+      if (tokenCheck && !tokenCheck()) return;
+      const id = ids[cursor++];
+      await loadStationHistory(id, fuelField);
+    }
+  };
+  for (let w = 0; w < HIST_PREFETCH_CONCURRENCY; w++) worker();
+}
+
+function renderPriceHistory() {
   if (!currentResults) return;
   const { stations, fuelField } = currentResults;
-  $historyList.innerHTML = `<div class="osm-hint"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div>`;
-  const data = await loadPriceHistory(fuelField);
-  if (!data) {
-    $historyList.innerHTML = `<div class="status">Historique indisponible. Lance <code>node scripts/build-history.mjs</code> ou <code>python3 scripts/build_history.py</code> pour générer les données, puis commit <code>data/history/*.json</code>.</div>`;
-    return;
-  }
-  $historyList.innerHTML = '';
   const total = stations.length;
+  $historyList.innerHTML = '';
   if (!total) {
     $historyList.innerHTML = `<div class="status">Aucune station dans les résultats.</div>`;
     return;
   }
+  if (!FUEL_API_NAMES[fuelField]) {
+    $historyList.innerHTML = `<div class="status">Historique non disponible pour ce carburant.</div>`;
+    return;
+  }
+  const pendingToken = currentSearchToken;
   stations.forEach((s, i) => {
+    const card = buildHistoryCard(s, i, total);
+    $historyList.appendChild(card);
+    const body = card.querySelector('.hist-body');
     const sid = s.id != null ? String(s.id) : null;
-    const prices = sid ? data.stations[sid] : null;
-    $historyList.appendChild(buildHistoryCard(s, i, total, prices, data.weeks));
+    if (!sid) {
+      body.innerHTML = `<div class="hist-empty">Station sans identifiant, historique indisponible.</div>`;
+      return;
+    }
+    loadStationHistory(sid, fuelField).then(points => {
+      if (pendingToken !== currentSearchToken) return;
+      body.innerHTML = points && points.length >= 2
+        ? renderSparklineFromPoints(points)
+        : `<div class="hist-empty">Historique indisponible pour cette station.</div>`;
+    });
   });
 }
 

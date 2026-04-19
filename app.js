@@ -94,7 +94,6 @@ function cacheSet(store, key, data) {
 }
 const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
 const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
-const TTL_OSM = 7 * 24 * 60 * 60 * 1000; // marques OSM : très stables
 
 // Géocodage via API BAN (gouvernementale, gratuite)
 async function geocode(address) {
@@ -135,82 +134,69 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   return results;
 }
 
-// OSM Overpass : récupère toutes les stations essence de la zone avec leur marque.
-// Stratégie : course parallèle (Promise.any) sur plusieurs endpoints — le 1er qui
-// répond gagne. Ça évite d'attendre 15-30 s quand un miroir est lent/HS.
-async function fetchOSMFuelStations(lat, lon, radiusKm) {
-  // Cache géo arrondi à 0.01° (~1 km) pour partager entre recherches voisines.
-  // `v3` = bump après refactor Promise.any (invalide anciens caches pot. incomplets).
-  const key = `osm:v3:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
-  const cached = cacheGet(localStorage, key, TTL_OSM);
-  if (cached && cached.length) return cached;
+// Base de marques OSM pré-calculée et shippée dans `data/osm/brands.json`.
+// Généré par `scripts/build-brands.mjs` (ou `.py`). Format :
+//   { brands: ["Total", "Shell", ...], stations: [[lat, lon, brandIdx], ...] }
+// On la charge une seule fois par session (mise en cache mémoire), puis on
+// cherche le plus proche voisin par haversine (≤ 150 m).
+let osmBrandsData = null;     // { brands, stations, grid? } | null (404 / indispo)
+let osmBrandsInflight = null; // Promise<...>
 
-  const radiusM = Math.round(radiusKm * 1000 * 1.1);
-  const query = `[out:json][timeout:20];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.openstreetmap.fr/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter'
-  ];
-  const PER_ENDPOINT_TIMEOUT = 12000;
-
-  const tryOne = (ep) => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), PER_ENDPOINT_TIMEOUT);
-    // POST évite les problèmes de taille d'URL et est plus fiable côté Overpass
-    return fetch(ep, {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      signal: ctrl.signal
-    }).then(res => {
-      clearTimeout(timer);
+async function loadOSMBrands() {
+  if (osmBrandsData !== null) return osmBrandsData;
+  if (osmBrandsInflight) return osmBrandsInflight;
+  osmBrandsInflight = (async () => {
+    try {
+      const res = await fetch('data/osm/brands.json', { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }).then(data => {
-      const out = (data.elements || []).map(e => {
-        const elat = e.lat ?? e.center?.lat;
-        const elon = e.lon ?? e.center?.lon;
-        const t = e.tags || {};
-        const brand = t.brand || t.operator || t.name || null;
-        return elat != null && elon != null && brand
-          ? { lat: elat, lon: elon, brand: brand.trim() }
-          : null;
-      }).filter(Boolean);
-      if (!out.length) throw new Error('empty');
-      console.log(`OSM: ${out.length} stations avec marque via ${ep}`);
-      return { ep, out };
-    }).catch(err => {
-      clearTimeout(timer);
-      throw err;
-    });
-  };
-
-  try {
-    const { out } = await Promise.any(endpoints.map(tryOne));
-    cacheSet(localStorage, key, out);
-    return out;
-  } catch {
-    console.warn('Overpass: tous les endpoints ont échoué');
-    return [];
-  }
+      const data = await res.json();
+      // Index spatial ultra simple : bucket par cellule de 0.1° (~10 km) pour
+      // réduire le lookup de 12k candidats à ~dizaines.
+      const grid = new Map();
+      for (const st of data.stations) {
+        const key = `${Math.round(st[0] * 10)}:${Math.round(st[1] * 10)}`;
+        let bucket = grid.get(key);
+        if (!bucket) { bucket = []; grid.set(key, bucket); }
+        bucket.push(st);
+      }
+      data.grid = grid;
+      osmBrandsData = data;
+      console.log(`OSM brands : ${data.stations.length} stations, ${data.brands.length} marques`);
+      return data;
+    } catch (err) {
+      console.warn('OSM brands JSON indispo :', err.message);
+      osmBrandsData = false; // false = déjà tenté, inutile de retry
+      return null;
+    }
+  })();
+  const out = await osmBrandsInflight;
+  osmBrandsInflight = null;
+  return out;
 }
 
-// Trouve la station OSM la plus proche (< 150 m) d'une station donnée
-function findNearestOSMBrand(station, osmStations) {
-  if (!osmStations.length || station.lat == null) return null;
+// Cherche la marque OSM la plus proche (≤ 150 m) d'une station, via l'index grille.
+function lookupOSMBrand(lat, lon, data) {
+  if (!data || lat == null) return null;
   const MAX_KM = 0.15;
+  // On inspecte la cellule + les 8 voisines pour couvrir les points près des bords
+  const gi = Math.round(lat * 10);
+  const gj = Math.round(lon * 10);
   let nearest = null;
   let minDist = Infinity;
-  for (const osm of osmStations) {
-    const d = haversine(station.lat, station.lon, osm.lat, osm.lon);
-    if (d < minDist && d <= MAX_KM) {
-      minDist = d;
-      nearest = osm;
+  for (let di = -1; di <= 1; di++) {
+    for (let dj = -1; dj <= 1; dj++) {
+      const bucket = data.grid.get(`${gi + di}:${gj + dj}`);
+      if (!bucket) continue;
+      for (const st of bucket) {
+        const d = haversine(lat, lon, st[0], st[1]);
+        if (d < minDist && d <= MAX_KM) {
+          minDist = d;
+          nearest = st;
+        }
+      }
     }
   }
-  return nearest?.brand || null;
+  return nearest ? data.brands[nearest[2]] : null;
 }
 
 // Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
@@ -478,46 +464,53 @@ async function runSearch(lat, lon, label) {
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
     $stationList.setAttribute('aria-busy', 'true');
-    // Lance OSM en parallèle SANS attendre — on rendra dès que les prix arrivent
-    const osmPromise = fetchOSMFuelStations(lat, lon, radiusKm);
+    // Base de marques shippée statiquement : chargée une fois par session, < 1 s
+    // même sur la toute première visite grâce à la taille (~200 Ko gzip).
+    const brandsPromise = loadOSMBrands();
     const rawStations = await fetchStations(lat, lon, radiusKm, fuelField);
     if (token !== currentSearchToken) return;
 
     hideStatus();
     $results.classList.remove('hidden');
-    $osmHint.classList.remove('hidden');
-    // Filet de sécurité : on cache le hint après 12 s même si Overpass pédale encore,
-    // pour ne pas laisser l'utilisateur croire que l'app est bloquée.
-    const hintSafetyTimer = setTimeout(() => {
-      if (token === currentSearchToken) $osmHint.classList.add('hidden');
-    }, 12000);
+    // Si les marques sont déjà en mémoire, on les applique avant le premier render
+    if (osmBrandsData && osmBrandsData.grid) {
+      // pass: les stations seront enrichies juste en bas
+    } else {
+      $osmHint.classList.remove('hidden');
+    }
 
+    const enriched = enrichStations(rawStations, fuelField, lat, lon);
     currentResults = {
-      stations: enrichStations(rawStations, fuelField, lat, lon),
+      stations: enriched,
       rawStations,
       fuelField,
       userLat: lat,
       userLon: lon,
       label
     };
+
+    // Applique les marques déjà chargées (cas 2e+ recherche)
+    if (osmBrandsData && osmBrandsData.grid) {
+      enriched.forEach(s => {
+        const b = lookupOSMBrand(s.lat, s.lon, osmBrandsData);
+        if (b) s._osmBrand = b;
+      });
+    }
+
     renderStations();
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Patch des marques OSM dès qu'elles arrivent (souvent + lent)
-    osmPromise.then(osm => {
-      clearTimeout(hintSafetyTimer);
+    // Patch des marques quand le JSON finit d'arriver (1re visite uniquement)
+    brandsPromise.then(data => {
       if (token !== currentSearchToken) return;
       $osmHint.classList.add('hidden');
-      if (!osm.length) return;
+      if (!data) return;
       let changed = false;
       currentResults.stations.forEach(s => {
-        const brand = findNearestOSMBrand({ lat: s.lat, lon: s.lon }, osm);
+        const brand = lookupOSMBrand(s.lat, s.lon, data);
         if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
       });
       if (changed) renderStations();
-    }).catch(() => {
-      clearTimeout(hintSafetyTimer);
-      if (token === currentSearchToken) $osmHint.classList.add('hidden');
     });
   } catch (err) {
     if (token !== currentSearchToken) return;

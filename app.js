@@ -869,38 +869,56 @@ async function loadStationHistory(stationId, fuelField) {
       const raw = data.results || [];
       if (raw.length && !window._histSchemaLogged) {
         window._histSchemaLogged = true;
-        console.info('[history] sample record keys:', Object.keys(raw[0]));
+        // JSON.stringify pour éviter la troncature `…` du DevTools — on a besoin
+        // de TOUS les noms de champs (27 au total).
+        console.info('[history] all record keys:', JSON.stringify(Object.keys(raw[0])));
         console.info('[history] sample record:', raw[0]);
-        if (Array.isArray(raw[0].fuel) && raw[0].fuel[0]) {
-          console.info('[history] sample fuel[0]:', raw[0].fuel[0]);
-        }
       }
-      // Extraction tolérante : pour chaque record, on cherche dans r.fuel
-      // l'entrée qui matche `fuelLabel` (ex: "gazole", "sp95", "e10", "e85", "sp98", "gplc").
-      // On tente plusieurs clés pour le nom et le prix car le schéma interne
-      // n'est pas stable (name/nom/id, price/prix/valeur).
-      const matchFuel = (entry) => {
-        if (!entry || typeof entry !== 'object') return false;
-        const name = String(entry.name ?? entry.nom ?? entry.id ?? entry.type ?? '')
-          .toLowerCase().replace(/[\s\-_]/g, '');
-        const needle = fuelLabel.toLowerCase().replace(/[\s\-_]/g, '');
-        if (name === needle) return true;
-        // sp95 ne doit pas matcher sp95e10 et inversement : check exact ou préfixe strict
-        if (fuelLabel === 'e10') return name === 'e10' || name === 'sp95e10';
-        if (fuelLabel === 'sp95') return name === 'sp95';
-        return name.includes(needle);
+      // Schéma j-1 : `fuel` est un tableau de labels ["Gazole","SP95","E10",…].
+      // Les prix sont soit dans un tableau parallèle (`price`/`prix`/`valeur`),
+      // soit dans des champs plats (`gazole`, `sp95`, …). On essaie les deux.
+      const norm = (s) => String(s ?? '').toLowerCase().replace(/[\s\-_]/g, '');
+      const needle = norm(fuelLabel);
+      const matchName = (label) => {
+        const n = norm(label);
+        if (n === needle) return true;
+        if (fuelLabel === 'e10') return n === 'e10' || n === 'sp95e10';
+        if (fuelLabel === 'sp95') return n === 'sp95';
+        return n.includes(needle);
       };
-      const pickPrice = (entry) => {
-        const v = entry.price ?? entry.prix ?? entry.valeur ?? entry.value;
-        return v != null ? Number(v) : NaN;
+      // Clés plates candidates : gazole, sp95, e10, sp98, e85, gplc + variantes.
+      const flatKeys = [
+        fuelLabel,                               // 'gazole'
+        `prix_${fuelLabel}`,                     // 'prix_gazole'
+        `${fuelLabel}_prix`,                     // 'gazole_prix'
+        fuelField,                               // 'gazole_prix'
+      ];
+      const extractPrice = (r) => {
+        // 1. Tableau parallèle à `fuel[]`
+        const fuels = Array.isArray(r.fuel) ? r.fuel : [];
+        const idx = fuels.findIndex(matchName);
+        if (idx >= 0) {
+          for (const arrKey of ['price', 'prix', 'valeur', 'prices', 'fuel_price']) {
+            const arr = r[arrKey];
+            if (Array.isArray(arr) && arr[idx] != null) {
+              const v = Number(arr[idx]);
+              if (Number.isFinite(v) && v > 0) return v;
+            }
+          }
+        }
+        // 2. Champs plats sur le record
+        for (const k of flatKeys) {
+          if (r[k] != null) {
+            const v = Number(r[k]);
+            if (Number.isFinite(v) && v > 0) return v;
+          }
+        }
+        return NaN;
       };
       const sorted = raw.map(r => {
         const ts = r.update ? Date.parse(r.update) : NaN;
         if (!Number.isFinite(ts)) return null;
-        const fuels = Array.isArray(r.fuel) ? r.fuel : [];
-        const entry = fuels.find(matchFuel);
-        if (!entry) return null;
-        const v = pickPrice(entry);
+        const v = extractPrice(r);
         if (!Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
       }).filter(Boolean).sort((a, b) => a[0] - b[0]);

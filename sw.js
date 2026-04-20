@@ -1,6 +1,8 @@
-// Octane service worker — cache-first pour le shell, network-first pour les APIs.
+// Octane service worker — network-first pour le shell (déploiements visibles
+// sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
+// pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v13';
+const VERSION = 'octane-v14';
 const SHELL = [
   './',
   './index.html',
@@ -56,14 +58,18 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Même origine → cache-first (shell), sinon stale-while-revalidate (fonts, leaflet)
+  // Même origine (shell) → network-first avec fallback cache pour l'offline.
+  // Garantit qu'un push se propage au prochain reload, sans avoir à unregister
+  // le SW manuellement côté client.
   if (url.origin === self.location.origin) {
     e.respondWith(
-      caches.match(req).then(cached => cached || fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(VERSION).then(c => c.put(req, copy)).catch(() => {});
+      fetch(req).then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(VERSION).then(c => c.put(req, copy)).catch(() => {});
+        }
         return res;
-      }).catch(() => cached))
+      }).catch(() => caches.match(req))
     );
     return;
   }

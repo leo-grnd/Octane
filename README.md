@@ -30,11 +30,12 @@ Chaque station affiche l'évolution de son prix sur les **30 dernières mises à
 en temps réel à partir du dataset public `prix-des-carburants-j-1` (`public.opendatasoft.com`,
 12 mois glissants, Ministère de l'Économie).
 
-> ⚠️ Le portail `public.opendatasoft.com` refuse les origins non-allowlistés avec un 403
-> `host_not_allowed` (le browser affiche alors « CORS Missing Allow Origin »). **Ça marche
-> depuis un domaine public comme `*.github.io`**, mais pas depuis `file://` ni `localhost`
-> sans configuration. Pour tester en local, utilise `python3 -m http.server` et accède via
-> `http://localhost:8080` — si tu vois encore le 403, l'historique s'affichera une fois en prod.
+> ⚠️ Les deux portails Opendatasoft (`data.economie.gouv.fr` + `public.opendatasoft.com`)
+> refusent les origins non-allowlistées avec un 403 `x-deny-reason: host_not_allowed`.
+> `leo-grnd.github.io` n'étant pas dans leur allowlist, **toutes les requêtes données sont
+> routées via `corsproxy.io`** (proxy public gratuit, sans auth). Voir `CORS_PROXY` dans
+> `app.js` — remplace par ton propre Worker Cloudflare si tu veux éliminer la dépendance
+> externe, ou ouvre un ticket chez Opendatasoft pour être whitelisté.
 
 Pas de fichier généré, pas de cron : dès qu'une recherche retourne des stations, le client
 pré-charge l'historique de chacune en arrière-plan (4 requêtes en parallèle), dédupli­que les

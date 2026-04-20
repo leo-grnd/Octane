@@ -850,7 +850,9 @@ async function loadStationHistory(stationId, fuelField) {
   historyInflight[key] = (async () => {
     try {
       const col = HIST_FUEL_COL[fuelField];
-      const where = `id="${stationId}" AND ${col} IS NOT NULL`;
+      // where réduit à l'id : on ne connaît pas encore le vrai nom du champ
+      // prix sur le j-1 — on filtrera les records non pertinents côté client.
+      const where = `id="${stationId}"`;
       const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
         `where=${encodeURIComponent(where)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
@@ -861,17 +863,20 @@ async function loadStationHistory(stationId, fuelField) {
       }
       const data = await res.json();
       const raw = data.results || [];
-      // Log une fois le schéma de la 1re réponse valide pour vérifier les champs.
       if (raw.length && !window._histSchemaLogged) {
         window._histSchemaLogged = true;
         console.info('[history] sample record keys:', Object.keys(raw[0]));
         console.info('[history] sample record:', raw[0]);
       }
-      // Parse tolérant sur le nom du champ date (selon le portail ODS).
+      // Parse tolérant : on tente plusieurs variantes de nom pour le prix et la date.
+      const priceKeys = [col, fuelField, col.replace(/^prix_/, ''), `prix_${fuelField.replace(/_prix$/, '')}`];
+      const dateKeys = ['date', 'date_maj', 'maj', `${col}_maj`, `${fuelField.replace(/_prix$/, '')}_maj`];
+      const pick = (r, keys) => { for (const k of keys) if (r[k] != null) return r[k]; return null; };
       const sorted = raw.map(r => {
-        const rawTs = r.date || r.date_maj || r.maj || r[`${col}_maj`];
+        const rawTs = pick(r, dateKeys);
+        const rawV = pick(r, priceKeys);
         const ts = rawTs ? Date.parse(rawTs) : NaN;
-        const v = r[col] != null ? Number(r[col]) : NaN;
+        const v = rawV != null ? Number(rawV) : NaN;
         if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
       }).filter(Boolean).sort((a, b) => a[0] - b[0]);

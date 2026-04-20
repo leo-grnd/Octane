@@ -818,13 +818,21 @@ const HIST_KEEP = 30;                 // nb de points gardés après dédup
 const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge pour dédup)
 const HIST_PREFETCH_CONCURRENCY = 4;
 
-// Dataset `prix-des-carburants-j-1` (public.opendatasoft.com, 12 mois glissants,
-// même schéma que le flux instantané de data.economie.gouv.fr : 1 colonne par
-// carburant avec suffix `_prix` et son `_maj` associé). Donc `fuelField`
-// (gazole_prix, sp95_prix, etc.) est utilisable tel quel.
+// Dataset `prix-des-carburants-j-1` (public.opendatasoft.com, 12 mois glissants).
+// Attention : contrairement au flux instantané (`gazole_prix`, `gazole_maj`), le j-1
+// préfixe les colonnes : `prix_gazole`, `prix_sp95`, etc. Pas de `_maj` par carburant,
+// un seul `date` pour le snapshot quotidien.
 const HIST_FUELS = new Set([
   'gazole_prix', 'sp95_prix', 'sp95_e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
 ]);
+const HIST_FUEL_COL = {
+  gazole_prix: 'prix_gazole',
+  sp95_prix: 'prix_sp95',
+  sp95_e10_prix: 'prix_e10',
+  sp98_prix: 'prix_sp98',
+  e85_prix: 'prix_e85',
+  gplc_prix: 'prix_gplc'
+};
 
 const historyMemCache = {};           // `${id}:${fuel}` → points[] | null
 const historyInflight = {};
@@ -841,13 +849,8 @@ async function loadStationHistory(stationId, fuelField) {
 
   historyInflight[key] = (async () => {
     try {
-      // Dataset `prix-des-carburants-j-1` sur public.opendatasoft.com : 12 mois
-      // glissants, même schéma que le flux instantané (suffix `_prix` / `_maj`).
-      // NB : le portail refuse les origins non-allowlistés (localhost, file://)
-      // avec un 403 host_not_allowed → le browser affiche « CORS Missing ».
-      // Depuis *.github.io en prod, les CORS headers passent bien.
-      const majField = fuelField.replace(/_prix$/, '_maj');
-      const where = `id="${stationId}" AND ${fuelField} IS NOT NULL`;
+      const col = HIST_FUEL_COL[fuelField];
+      const where = `id="${stationId}" AND ${col} IS NOT NULL`;
       const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
         `where=${encodeURIComponent(where)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
@@ -858,20 +861,17 @@ async function loadStationHistory(stationId, fuelField) {
       }
       const data = await res.json();
       const raw = data.results || [];
-      // Logue le schéma de la 1re station qu'on voit passer (une fois suffit)
-      // pour vérifier instantanément les noms de champs si les points manquent.
+      // Log une fois le schéma de la 1re réponse valide pour vérifier les champs.
       if (raw.length && !window._histSchemaLogged) {
         window._histSchemaLogged = true;
         console.info('[history] sample record keys:', Object.keys(raw[0]));
         console.info('[history] sample record:', raw[0]);
       }
-      // Parse robuste : on cherche la date dans plusieurs champs possibles
-      // (`<fuel>_maj` en priorité, sinon `date`, `date_maj`, `maj`) pour être
-      // tolérant aux variations de schéma entre portails ODS.
+      // Parse tolérant sur le nom du champ date (selon le portail ODS).
       const sorted = raw.map(r => {
-        const rawTs = r[majField] || r.date || r.date_maj || r.maj;
+        const rawTs = r.date || r.date_maj || r.maj || r[`${col}_maj`];
         const ts = rawTs ? Date.parse(rawTs) : NaN;
-        const v = r[fuelField] != null ? Number(r[fuelField]) : NaN;
+        const v = r[col] != null ? Number(r[col]) : NaN;
         if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
       }).filter(Boolean).sort((a, b) => a[0] - b[0]);

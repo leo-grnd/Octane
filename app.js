@@ -819,22 +819,19 @@ const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge po
 const HIST_PREFETCH_CONCURRENCY = 4;
 
 // Dataset `prix-des-carburants-j-1` (public.opendatasoft.com, 12 mois glissants).
-// Structure imbriquée : 1 ligne par station par jour, avec un champ `fuel` qui
-// est un tableau d'objets {name, price, ...} — un par carburant vendu. Le
-// timestamp de la ligne est `update`. Champs observés : id, cp, pop, address,
-// com_arm_name, automate_24_24, timetable, fuel, shortage, update, …
+// Schéma confirmé : champs plats `price_gazole`, `price_sp95`, `price_sp98`,
+// `price_gplc`, `price_e10`, `price_e85` (préfixe `price_`, pas `prix_`).
+// Timestamp ligne = `update`. 1 ligne par station par jour.
 const HIST_FUELS = new Set([
   'gazole_prix', 'sp95_prix', 'sp95_e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
 ]);
-// Mapping vers le `name` attendu dans l'élément du tableau `fuel`. Le parse
-// utilise une comparaison case-insensitive et tolère SP95-E10/E10/Sp95-E10 etc.
-const HIST_FUEL_LABEL = {
-  gazole_prix: 'gazole',
-  sp95_prix: 'sp95',
-  sp95_e10_prix: 'e10',
-  sp98_prix: 'sp98',
-  e85_prix: 'e85',
-  gplc_prix: 'gplc'
+const HIST_FUEL_COL = {
+  gazole_prix: 'price_gazole',
+  sp95_prix: 'price_sp95',
+  sp95_e10_prix: 'price_e10',
+  sp98_prix: 'price_sp98',
+  e85_prix: 'price_e85',
+  gplc_prix: 'price_gplc'
 };
 
 const historyMemCache = {};           // `${id}:${fuel}` → points[] | null
@@ -852,10 +849,10 @@ async function loadStationHistory(stationId, fuelField) {
 
   historyInflight[key] = (async () => {
     try {
-      const fuelLabel = HIST_FUEL_LABEL[fuelField];
-      // Le j-1 a une structure imbriquée : on filtre seulement par id station,
-      // et on extrait le bon carburant du tableau `fuel` côté client.
-      const where = `id="${stationId}"`;
+      const col = HIST_FUEL_COL[fuelField];
+      // On filtre par id station ET exige un prix non-null pour ce carburant
+      // (sinon on récupère 365 lignes dont la majorité inutiles).
+      const where = `id="${stationId}" AND ${col} IS NOT NULL`;
       const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
         `where=${encodeURIComponent(where)}` +
         `&order_by=${encodeURIComponent('update desc')}` +
@@ -867,59 +864,10 @@ async function loadStationHistory(stationId, fuelField) {
       }
       const data = await res.json();
       const raw = data.results || [];
-      if (raw.length && !window._histSchemaLogged) {
-        window._histSchemaLogged = true;
-        // JSON.stringify pour éviter la troncature `…` du DevTools — on a besoin
-        // de TOUS les noms de champs (27 au total).
-        console.info('[history] all record keys:', JSON.stringify(Object.keys(raw[0])));
-        console.info('[history] sample record:', raw[0]);
-      }
-      // Schéma j-1 : `fuel` est un tableau de labels ["Gazole","SP95","E10",…].
-      // Les prix sont soit dans un tableau parallèle (`price`/`prix`/`valeur`),
-      // soit dans des champs plats (`gazole`, `sp95`, …). On essaie les deux.
-      const norm = (s) => String(s ?? '').toLowerCase().replace(/[\s\-_]/g, '');
-      const needle = norm(fuelLabel);
-      const matchName = (label) => {
-        const n = norm(label);
-        if (n === needle) return true;
-        if (fuelLabel === 'e10') return n === 'e10' || n === 'sp95e10';
-        if (fuelLabel === 'sp95') return n === 'sp95';
-        return n.includes(needle);
-      };
-      // Clés plates candidates : gazole, sp95, e10, sp98, e85, gplc + variantes.
-      const flatKeys = [
-        fuelLabel,                               // 'gazole'
-        `prix_${fuelLabel}`,                     // 'prix_gazole'
-        `${fuelLabel}_prix`,                     // 'gazole_prix'
-        fuelField,                               // 'gazole_prix'
-      ];
-      const extractPrice = (r) => {
-        // 1. Tableau parallèle à `fuel[]`
-        const fuels = Array.isArray(r.fuel) ? r.fuel : [];
-        const idx = fuels.findIndex(matchName);
-        if (idx >= 0) {
-          for (const arrKey of ['price', 'prix', 'valeur', 'prices', 'fuel_price']) {
-            const arr = r[arrKey];
-            if (Array.isArray(arr) && arr[idx] != null) {
-              const v = Number(arr[idx]);
-              if (Number.isFinite(v) && v > 0) return v;
-            }
-          }
-        }
-        // 2. Champs plats sur le record
-        for (const k of flatKeys) {
-          if (r[k] != null) {
-            const v = Number(r[k]);
-            if (Number.isFinite(v) && v > 0) return v;
-          }
-        }
-        return NaN;
-      };
       const sorted = raw.map(r => {
         const ts = r.update ? Date.parse(r.update) : NaN;
-        if (!Number.isFinite(ts)) return null;
-        const v = extractPrice(r);
-        if (!Number.isFinite(v) || v <= 0) return null;
+        const v = r[col] != null ? Number(r[col]) : NaN;
+        if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€
       }).filter(Boolean).sort((a, b) => a[0] - b[0]);
       const dedup = [];

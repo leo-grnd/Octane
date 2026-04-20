@@ -805,11 +805,10 @@ const HIST_KEEP = 30;                 // nb de points gardés après dédup
 const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge pour dédup)
 const HIST_PREFETCH_CONCURRENCY = 4;
 
-// Le dataset `prix-carburants-quotidien` (data.economie.gouv.fr, même schéma
-// que le flux instantané et CORS-friendly contrairement à public.opendatasoft.com)
-// est un snapshot quotidien : 1 ligne par station par jour, 1 colonne par
-// carburant (gazole_prix, sp95_prix, sp95_e10_prix, sp98_prix, e85_prix, gplc_prix).
-// Donc le `fuelField` qu'on a déjà côté flux est utilisable tel quel.
+// Dataset `prix-des-carburants-j-1` (public.opendatasoft.com, 12 mois glissants,
+// même schéma que le flux instantané de data.economie.gouv.fr : 1 colonne par
+// carburant avec suffix `_prix` et son `_maj` associé). Donc `fuelField`
+// (gazole_prix, sp95_prix, etc.) est utilisable tel quel.
 const HIST_FUELS = new Set([
   'gazole_prix', 'sp95_prix', 'sp95_e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
 ]);
@@ -829,24 +828,26 @@ async function loadStationHistory(stationId, fuelField) {
 
   historyInflight[key] = (async () => {
     try {
-      // Filtre sur `id` (même nomenclature que le flux instantané) et sur
-      // `${fuelField} IS NOT NULL` pour éliminer les jours où le carburant
-      // n'était pas vendu. `${fuelField}_maj` donne la date de la mise à jour
-      // du prix (sinon on retomberait sur la date du snapshot quotidien).
-      const majField = `${fuelField}_maj`;
+      // Dataset `prix-des-carburants-j-1` sur public.opendatasoft.com : 12 mois
+      // glissants, même schéma que le flux instantané (suffix `_prix` / `_maj`).
+      // NB : le portail refuse les origins non-allowlistés (localhost, file://)
+      // avec un 403 host_not_allowed → le browser affiche « CORS Missing ».
+      // Depuis *.github.io en prod, les CORS headers passent bien.
+      const majField = fuelField.replace(/_prix$/, '_maj');
       const where = `id="${stationId}" AND ${fuelField} IS NOT NULL`;
-      const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-carburants-quotidien/records?` +
+      const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
         `where=${encodeURIComponent(where)}` +
-        `&order_by=${encodeURIComponent(`${majField} DESC`)}` +
-        `&select=${encodeURIComponent(`${majField},${fuelField}`)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`API quotidien: ${res.status}`);
+      if (!res.ok) throw new Error(`API j-1: ${res.status}`);
       const data = await res.json();
       const raw = data.results || [];
-      // Tri chronologique asc, points valides uniquement, puis dédup consécutif.
+      // Parse robuste : on cherche la date dans plusieurs champs possibles
+      // (`<fuel>_maj` en priorité, sinon `date`, `date_maj`, `maj`) pour être
+      // tolérant aux variations de schéma entre portails ODS.
       const sorted = raw.map(r => {
-        const ts = r[majField] ? Date.parse(r[majField]) : NaN;
+        const rawTs = r[majField] || r.date || r.date_maj || r.maj;
+        const ts = rawTs ? Date.parse(rawTs) : NaN;
         const v = r[fuelField] != null ? Number(r[fuelField]) : NaN;
         if (!Number.isFinite(ts) || !Number.isFinite(v) || v <= 0) return null;
         return [ts, Math.round(v * 1000)]; // ms epoch, millièmes d'€

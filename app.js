@@ -113,6 +113,19 @@ async function geocode(address) {
   return result;
 }
 
+// Opendatasoft (data.economie.gouv.fr + public.opendatasoft.com) refuse les
+// origins non-allowlistées avec un 403 `x-deny-reason: host_not_allowed`. En
+// attendant un whitelisting officiel, on route ces deux hosts via corsproxy.io
+// — gratuit, pas d'auth, pas de setup côté nous. Si tu as un domaine custom
+// ou une Cloudflare Worker dédié, remplace simplement CORS_PROXY ci-dessous.
+const CORS_PROXY = 'https://corsproxy.io/?url=';
+const PROXIED_HOSTS = /(?:data\.economie\.gouv\.fr|public\.opendatasoft\.com)/;
+function proxyFetch(url, opts) {
+  return PROXIED_HOSTS.test(url)
+    ? fetch(CORS_PROXY + encodeURIComponent(url), opts)
+    : fetch(url, opts);
+}
+
 // Appel API prix carburants
 async function fetchStations(lat, lon, radiusKm, fuelField) {
   const key = `fuel:${lat.toFixed(3)}:${lon.toFixed(3)}:${radiusKm}:${fuelField}`;
@@ -122,7 +135,7 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
     `&limit=100`;
-  const res = await fetch(url);
+  const res = await proxyFetch(url);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     console.error('API 4xx body:', body);
@@ -838,7 +851,7 @@ async function loadStationHistory(stationId, fuelField) {
       const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
         `where=${encodeURIComponent(where)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
-      const res = await fetch(url);
+      const res = await proxyFetch(url);
       if (!res.ok) throw new Error(`API j-1: ${res.status}`);
       const data = await res.json();
       const raw = data.results || [];

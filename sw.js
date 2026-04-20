@@ -1,6 +1,6 @@
 // Octane service worker — cache-first pour le shell, network-first pour les APIs.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v9';
+const VERSION = 'octane-v10';
 const SHELL = [
   './',
   './index.html',
@@ -33,6 +33,7 @@ self.addEventListener('fetch', (e) => {
   // Ne jamais cacher les appels data / géocodage / overpass — on laisse passer.
   const bypass = [
     'data.economie.gouv.fr',
+    'public.opendatasoft.com',
     'api-adresse.data.gouv.fr',
     'overpass.kumi.systems',
     'overpass-api.de',

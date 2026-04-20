@@ -852,9 +852,19 @@ async function loadStationHistory(stationId, fuelField) {
         `where=${encodeURIComponent(where)}` +
         `&limit=${HIST_FETCH_LIMIT}`;
       const res = await proxyFetch(url);
-      if (!res.ok) throw new Error(`API j-1: ${res.status}`);
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`API j-1: ${res.status} — ${body.slice(0, 200)}`);
+      }
       const data = await res.json();
       const raw = data.results || [];
+      // Logue le schéma de la 1re station qu'on voit passer (une fois suffit)
+      // pour vérifier instantanément les noms de champs si les points manquent.
+      if (raw.length && !window._histSchemaLogged) {
+        window._histSchemaLogged = true;
+        console.info('[history] sample record keys:', Object.keys(raw[0]));
+        console.info('[history] sample record:', raw[0]);
+      }
       // Parse robuste : on cherche la date dans plusieurs champs possibles
       // (`<fuel>_maj` en priorité, sinon `date`, `date_maj`, `maj`) pour être
       // tolérant aux variations de schéma entre portails ODS.

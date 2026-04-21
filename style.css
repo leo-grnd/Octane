@@ -70,6 +70,22 @@ body::after {
   padding: 2rem 1.5rem 4rem;
 }
 
+/* Banner offline — fixé en haut, discret, apparaît si la connexion chute */
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #b04a00;
+  color: #fff;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.offline-banner.hidden { display: none; }
+
 header {
   display: flex;
   justify-content: space-between;
@@ -609,6 +625,92 @@ header {
 }
 .dir-link:hover { border-bottom-color: var(--accent); }
 .dist-label { display: block; }
+
+/* ============ Bandeau "gain potentiel" ============ */
+.savings-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+  background: linear-gradient(135deg, rgba(255,107,0,0.12), rgba(255,107,0,0.04));
+  border: 1px solid rgba(255,107,0,0.25);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.savings-delta {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+.savings-tank {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+}
+.savings-tank strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ============ Autres carburants sur la card ============ */
+.other-fuels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  margin-top: 0.5rem;
+}
+.other-fuel {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
+}
+.other-fuel-label {
+  color: var(--ink-dim);
+  opacity: 0.75;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+.other-fuel-price {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ============ Bouton copier adresse ============ */
+.addr {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.addr-text { flex: 1 1 auto; min-width: 0; }
+.copy-addr {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.copy-addr:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.copy-addr.copied {
+  color: #3b9d3b;
+  border-color: #3b9d3b;
+}
 
 /* ============ RESPONSIVE ============ */
 

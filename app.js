@@ -90,7 +90,29 @@ function cacheGet(store, key, ttlMs) {
   } catch { return null; }
 }
 function cacheSet(store, key, data) {
-  try { store.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+  const payload = JSON.stringify({ ts: Date.now(), data });
+  try {
+    store.setItem(key, payload);
+  } catch (err) {
+    // QuotaExceededError : on purge les entrées les plus vieilles (hist:*, fuel:*, geo:*)
+    // puis on retente une fois. Sans ça, le cache se bloque silencieusement et
+    // toutes les écritures suivantes échouent aussi.
+    if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
+      const victims = [];
+      for (let i = 0; i < store.length; i++) {
+        const k = store.key(i);
+        if (!k || !/^(hist:|fuel:|geo:)/.test(k)) continue;
+        try {
+          const { ts } = JSON.parse(store.getItem(k)) || {};
+          victims.push({ k, ts: ts || 0 });
+        } catch { victims.push({ k, ts: 0 }); }
+      }
+      victims.sort((a, b) => a.ts - b.ts);
+      const toDrop = Math.max(1, Math.floor(victims.length / 2));
+      victims.slice(0, toDrop).forEach(v => { try { store.removeItem(v.k); } catch {} });
+      try { store.setItem(key, payload); } catch {}
+    }
+  }
 }
 const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
 const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
@@ -101,7 +123,7 @@ async function geocode(address) {
   const cached = cacheGet(localStorage, key, TTL_GEO);
   if (cached) return cached;
   const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`;
-  const res = await fetch(url);
+  const res = await fetchWithRetry(signal => fetch(url, { signal }));
   if (!res.ok) throw new Error('Erreur géocodage');
   const data = await res.json();
   if (!data.features || data.features.length === 0) {
@@ -115,15 +137,50 @@ async function geocode(address) {
 
 // Opendatasoft (data.economie.gouv.fr + public.opendatasoft.com) refuse les
 // origins non-allowlistées avec un 403 `x-deny-reason: host_not_allowed`. En
-// attendant un whitelisting officiel, on route ces deux hosts via corsproxy.io
-// — gratuit, pas d'auth, pas de setup côté nous. Si tu as un domaine custom
-// ou une Cloudflare Worker dédié, remplace simplement CORS_PROXY ci-dessous.
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+// attendant un whitelisting officiel, on route ces deux hosts via un proxy CORS
+// public. On garde une liste de miroirs : si le premier tombe (corsproxy.io
+// monte/descend régulièrement), on bascule automatiquement sur le suivant.
+const CORS_PROXIES = [
+  (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+];
 const PROXIED_HOSTS = /(?:data\.economie\.gouv\.fr|public\.opendatasoft\.com)/;
-function proxyFetch(url, opts) {
-  return PROXIED_HOSTS.test(url)
-    ? fetch(CORS_PROXY + encodeURIComponent(url), opts)
-    : fetch(url, opts);
+
+async function proxyFetch(url, opts) {
+  if (!PROXIED_HOSTS.test(url)) return fetch(url, opts);
+  let lastErr;
+  for (const wrap of CORS_PROXIES) {
+    try {
+      const res = await fetch(wrap(url), opts);
+      // 5xx côté proxy → essaie le suivant. 4xx côté API cible = vrai erreur, on propage.
+      if (res.status >= 500 && res.status < 600) { lastErr = new Error(`proxy ${res.status}`); continue; }
+      return res;
+    } catch (err) { lastErr = err; }
+  }
+  throw lastErr || new Error('Tous les proxies CORS sont indisponibles');
+}
+
+// Retry générique avec backoff exponentiel + timeout global. À utiliser pour
+// les APIs publiques sans redondance native (BAN, Opendatasoft). Overpass a
+// déjà sa propre stratégie multi-endpoint via Promise.any.
+async function fetchWithRetry(fetcher, { tries = 3, backoff = [400, 1200, 2500], timeoutMs = 8000 } = {}) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetcher(ctrl.signal);
+      clearTimeout(t);
+      // On ne retry que les 5xx / erreurs réseau — 4xx c'est une vraie erreur.
+      if (res.status >= 500 && res.status < 600) { lastErr = new Error(`HTTP ${res.status}`); }
+      else return res;
+    } catch (err) {
+      clearTimeout(t);
+      lastErr = err;
+    }
+    if (i < tries - 1) await new Promise(r => setTimeout(r, backoff[i] || 2500));
+  }
+  throw lastErr;
 }
 
 // Appel API prix carburants
@@ -135,7 +192,7 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
     `&limit=100`;
-  const res = await proxyFetch(url);
+  const res = await fetchWithRetry(signal => proxyFetch(url, { signal }));
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     console.error('API 4xx body:', body);
@@ -422,6 +479,24 @@ function pushHistory(query, label) {
 let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
 let currentView = 'list';
 
+// Autres carburants proposés par la station (hors celui filtré) : on affiche
+// leur prix en petit sous la card si l'info est présente dans le record brut.
+function buildOtherFuels(s, fuelField) {
+  const others = Object.keys(FUEL_LABELS).filter(f => f !== fuelField);
+  const items = others
+    .map(f => ({ f, price: parseFloat(s[f]) }))
+    .filter(x => !isNaN(x.price) && x.price > 0);
+  if (!items.length) return '';
+  return `<div class="other-fuels" aria-label="Autres carburants disponibles">
+    ${items.map(x => `
+      <span class="other-fuel">
+        <span class="other-fuel-label">${FUEL_LABELS[x.f]}</span>
+        <span class="other-fuel-price">${x.price.toFixed(3)} €</span>
+      </span>
+    `).join('')}
+  </div>`;
+}
+
 function buildStationCard(s, i, total, fuelField) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
@@ -431,10 +506,12 @@ function buildStationCard(s, i, total, fuelField) {
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   if (cpVille) subParts.push(cpVille);
   const subtitle = subParts.join(' · ');
+  const fullAddr = [s.adresse, cpVille].filter(Boolean).join(', ');
   const majField = fuelField.replace('_prix', '_maj');
   const freshness = formatRelativeTime(s[majField]);
   const dirUrl = directionsUrl(s.lat, s.lon, title);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
+  const otherFuels = buildOtherFuels(s, fuelField);
 
   const el = document.createElement('div');
   el.className = 'station';
@@ -445,7 +522,11 @@ function buildStationCard(s, i, total, fuelField) {
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
       <div class="name">${title}</div>
-      <div class="addr">${subtitle}</div>
+      <div class="addr">
+        <span class="addr-text">${subtitle}</span>
+        ${fullAddr ? `<button type="button" class="copy-addr" data-addr="${fullAddr.replace(/"/g, '&quot;')}" aria-label="Copier l'adresse" title="Copier l'adresse">⧉</button>` : ''}
+      </div>
+      ${otherFuels}
     </div>
     <div class="distance">
       <strong>${s.distance.toFixed(1)} km</strong>
@@ -458,6 +539,28 @@ function buildStationCard(s, i, total, fuelField) {
       ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
     </div>
   `;
+  const copyBtn = el.querySelector('.copy-addr');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const addr = copyBtn.dataset.addr || '';
+      try { await navigator.clipboard.writeText(addr); }
+      catch {
+        // Fallback si clipboard API refuse (http, iframe sandboxé…)
+        const ta = document.createElement('textarea');
+        ta.value = addr; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.top = '-999px';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch {}
+        document.body.removeChild(ta);
+      }
+      const prev = copyBtn.textContent;
+      copyBtn.textContent = '✓';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = prev; copyBtn.classList.remove('copied'); }, 1200);
+    });
+  }
   return el;
 }
 
@@ -486,6 +589,24 @@ function buildHistoryCard(s, i, total) {
   return el;
 }
 
+// Calcule et insère le bandeau "gain potentiel" : écart max de prix × 60L.
+// Seulement si on a au moins 2 stations avec un vrai écart (> 1 ct/L).
+function buildSavingsBanner(stations) {
+  if (!stations || stations.length < 2) return null;
+  const min = stations[0].price;
+  const max = stations[stations.length - 1].price;
+  const delta = max - min;
+  if (delta < 0.01) return null;
+  const tankEur = delta * 60;
+  const el = document.createElement('div');
+  el.className = 'savings-banner';
+  el.innerHTML = `
+    <div class="savings-delta">${delta.toFixed(2).replace('.', ',')} € / L d'écart</div>
+    <div class="savings-tank">soit <strong>${tankEur.toFixed(2).replace('.', ',')} €</strong> économisés sur un plein de 60 L</div>
+  `;
+  return el;
+}
+
 function renderStations() {
   if (!currentResults) return;
   const { fuelField, stations } = currentResults;
@@ -500,6 +621,9 @@ function renderStations() {
     $resultsCount.textContent = '0 station';
     return;
   }
+
+  const savings = buildSavingsBanner(stations);
+  if (savings) $stationList.appendChild(savings);
 
   stations.forEach((s, i) => {
     $stationList.appendChild(buildStationCard(s, i, total, fuelField));
@@ -628,13 +752,25 @@ function updateUrlParams() {
   history.replaceState(null, '', url);
 }
 
+// Garde anti-double-submit : désactivée pendant une recherche en cours pour
+// éviter de lancer 3 fetch en parallèle si l'user clique plusieurs fois.
+let searchBusy = false;
+function setSearchBusy(busy) {
+  searchBusy = busy;
+  $searchBtn.disabled = busy;
+  $geolocBtn.disabled = busy;
+  $searchBtn.setAttribute('aria-busy', String(busy));
+}
+
 async function doAddressSearch() {
+  if (searchBusy) return;
   const address = $address.value.trim();
-  if (!address) {
-    showStatus('Entre une adresse ou une ville', true);
+  if (!address || address.length < 2) {
+    showStatus('Entre une adresse ou une ville (2 caractères minimum)', true);
     return;
   }
   updateUrlParams();
+  setSearchBusy(true);
   try {
     showStatus('Localisation de l\'adresse...');
     const { lat, lon, label } = await geocode(address);
@@ -642,6 +778,8 @@ async function doAddressSearch() {
     await runSearch(lat, lon, label);
   } catch (err) {
     showStatus(`Erreur: ${err.message}`, true);
+  } finally {
+    setSearchBusy(false);
   }
 }
 
@@ -789,19 +927,25 @@ document.addEventListener('click', e => {
 });
 
 $geolocBtn.addEventListener('click', () => {
+  if (searchBusy) return;
   if (!navigator.geolocation) {
     showStatus('Géolocalisation non supportée par ton navigateur', true);
     return;
   }
+  setSearchBusy(true);
   showStatus('Récupération de ta position...');
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
       $address.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
       updateUrlParams();
-      await runSearch(lat, lon, 'ta position actuelle');
+      try { await runSearch(lat, lon, 'ta position actuelle'); }
+      finally { setSearchBusy(false); }
     },
-    (err) => showStatus(`Géoloc refusée: ${err.message}`, true),
+    (err) => {
+      showStatus(`Géoloc refusée: ${err.message}`, true);
+      setSearchBusy(false);
+    },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 });
@@ -857,7 +1001,7 @@ async function loadStationHistory(stationId, fuelField) {
         `where=${encodeURIComponent(where)}` +
         `&order_by=${encodeURIComponent('update desc')}` +
         `&limit=${HIST_FETCH_LIMIT}`;
-      const res = await proxyFetch(url);
+      const res = await fetchWithRetry(signal => proxyFetch(url, { signal }));
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`API j-1: ${res.status} — ${body.slice(0, 200)}`);
@@ -983,7 +1127,7 @@ function renderPriceHistory() {
 
 // ===== Carte Leaflet =====
 let map = null;
-let mapMarkers = [];
+let markersLayer = null;     // L.markerClusterGroup | L.layerGroup (fallback)
 let userMarker = null;
 
 function ensureMap() {
@@ -993,6 +1137,12 @@ function ensureMap() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
+  // Cluster si le plugin a chargé, sinon layerGroup simple. Le cluster ne se
+  // déclenche qu'au-delà de 20 markers proches (default spiderfy/cluster radius).
+  markersLayer = (typeof L.markerClusterGroup === 'function')
+    ? L.markerClusterGroup({ showCoverageOnHover: false, spiderfyOnMaxZoom: true, maxClusterRadius: 50 })
+    : L.layerGroup();
+  markersLayer.addTo(map);
   return map;
 }
 
@@ -1002,8 +1152,7 @@ function renderMap(stations) {
   if (!m) return;
   const { userLat, userLon } = currentResults;
 
-  mapMarkers.forEach(mk => m.removeLayer(mk));
-  mapMarkers = [];
+  markersLayer.clearLayers();
   if (userMarker) { m.removeLayer(userMarker); userMarker = null; }
 
   userMarker = L.circleMarker([userLat, userLon], {
@@ -1021,7 +1170,7 @@ function renderMap(stations) {
         iconSize: [28, 36],
         iconAnchor: [14, 32]
       });
-      const marker = L.marker([s.lat, s.lon], { icon }).addTo(m);
+      const marker = L.marker([s.lat, s.lon], { icon });
       const name = extractStationName(s) || s.adresse || 'Station';
       const addrLine = [s.adresse, s.cp, s.ville].filter(Boolean).join(' · ');
       marker.bindPopup(
@@ -1029,7 +1178,7 @@ function renderMap(stations) {
         (addrLine ? `<span style="color:#666;font-size:0.75rem">${addrLine}</span><br>` : '') +
         `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${s.distance.toFixed(1)} km`
       );
-      mapMarkers.push(marker);
+      markersLayer.addLayer(marker);
       bounds.extend([s.lat, s.lon]);
     });
     m.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
@@ -1055,6 +1204,18 @@ function setView(view) {
 $viewList.addEventListener('click', () => setView('list'));
 $viewMap.addEventListener('click', () => setView('map'));
 $viewHistory.addEventListener('click', () => setView('history'));
+
+// ===== Détection offline =====
+// On s'appuie sur navigator.onLine + les events online/offline. Ça couvre le
+// cas "WiFi coupé" sans tracking bidon. Pas d'alerte quand on est online au
+// reload — uniquement si la connexion chute pendant la session.
+const $offlineBanner = document.getElementById('offlineBanner');
+function syncOfflineBanner() {
+  if ($offlineBanner) $offlineBanner.classList.toggle('hidden', navigator.onLine);
+}
+window.addEventListener('offline', syncOfflineBanner);
+window.addEventListener('online', syncOfflineBanner);
+syncOfflineBanner();
 
 // ===== Service Worker (PWA) =====
 if ('serviceWorker' in navigator) {

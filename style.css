@@ -655,62 +655,6 @@ header {
   font-weight: 600;
 }
 
-/* ============ Autres carburants sur la card ============ */
-.other-fuels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.8rem;
-  margin-top: 0.5rem;
-}
-.other-fuel {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.02em;
-}
-.other-fuel-label {
-  color: var(--ink-dim);
-  opacity: 0.75;
-  text-transform: uppercase;
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-}
-.other-fuel-price {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-/* ============ Bouton copier adresse ============ */
-.addr {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-.addr-text { flex: 1 1 auto; min-width: 0; }
-.copy-addr {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--ink-dim);
-  font-size: 0.8rem;
-  line-height: 1;
-  padding: 0.15rem 0.35rem;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-.copy-addr:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.copy-addr.copied {
-  color: #3b9d3b;
-  border-color: #3b9d3b;
-}
 
 /* ============ RESPONSIVE ============ */
 

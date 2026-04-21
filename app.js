@@ -479,24 +479,6 @@ function pushHistory(query, label) {
 let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
 let currentView = 'list';
 
-// Autres carburants proposés par la station (hors celui filtré) : on affiche
-// leur prix en petit sous la card si l'info est présente dans le record brut.
-function buildOtherFuels(s, fuelField) {
-  const others = Object.keys(FUEL_LABELS).filter(f => f !== fuelField);
-  const items = others
-    .map(f => ({ f, price: parseFloat(s[f]) }))
-    .filter(x => !isNaN(x.price) && x.price > 0);
-  if (!items.length) return '';
-  return `<div class="other-fuels" aria-label="Autres carburants disponibles">
-    ${items.map(x => `
-      <span class="other-fuel">
-        <span class="other-fuel-label">${FUEL_LABELS[x.f]}</span>
-        <span class="other-fuel-price">${x.price.toFixed(3)} €</span>
-      </span>
-    `).join('')}
-  </div>`;
-}
-
 function buildStationCard(s, i, total, fuelField) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
@@ -506,12 +488,10 @@ function buildStationCard(s, i, total, fuelField) {
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   if (cpVille) subParts.push(cpVille);
   const subtitle = subParts.join(' · ');
-  const fullAddr = [s.adresse, cpVille].filter(Boolean).join(', ');
   const majField = fuelField.replace('_prix', '_maj');
   const freshness = formatRelativeTime(s[majField]);
   const dirUrl = directionsUrl(s.lat, s.lon, title);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
-  const otherFuels = buildOtherFuels(s, fuelField);
 
   const el = document.createElement('div');
   el.className = 'station';
@@ -522,11 +502,7 @@ function buildStationCard(s, i, total, fuelField) {
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
       <div class="name">${title}</div>
-      <div class="addr">
-        <span class="addr-text">${subtitle}</span>
-        ${fullAddr ? `<button type="button" class="copy-addr" data-addr="${fullAddr.replace(/"/g, '&quot;')}" aria-label="Copier l'adresse" title="Copier l'adresse">⧉</button>` : ''}
-      </div>
-      ${otherFuels}
+      <div class="addr">${subtitle}</div>
     </div>
     <div class="distance">
       <strong>${s.distance.toFixed(1)} km</strong>
@@ -539,28 +515,6 @@ function buildStationCard(s, i, total, fuelField) {
       ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
     </div>
   `;
-  const copyBtn = el.querySelector('.copy-addr');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const addr = copyBtn.dataset.addr || '';
-      try { await navigator.clipboard.writeText(addr); }
-      catch {
-        // Fallback si clipboard API refuse (http, iframe sandboxé…)
-        const ta = document.createElement('textarea');
-        ta.value = addr; ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed'; ta.style.top = '-999px';
-        document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); } catch {}
-        document.body.removeChild(ta);
-      }
-      const prev = copyBtn.textContent;
-      copyBtn.textContent = '✓';
-      copyBtn.classList.add('copied');
-      setTimeout(() => { copyBtn.textContent = prev; copyBtn.classList.remove('copied'); }, 1200);
-    });
-  }
   return el;
 }
 

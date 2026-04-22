@@ -111,7 +111,7 @@ function cacheSet(store, key, data) {
       const victims = [];
       for (let i = 0; i < store.length; i++) {
         const k = store.key(i);
-        if (!k || !/^(hist:|fuel:|geo:|drive:)/.test(k)) continue;
+        if (!k || !/^(hist:|fuel:|geo:|drive:|drive2:)/.test(k)) continue;
         try {
           const { ts } = JSON.parse(store.getItem(k)) || {};
           victims.push({ k, ts: ts || 0 });
@@ -214,26 +214,55 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   return results;
 }
 
-// ===== Routage routier (OSRM) =====
+// ===== Routage routier (Valhalla primaire + OSRM fallback) =====
 // Opendatasoft ne filtre qu'en haversine, donc pour le mode "voiture" on
-// surfetch puis on mesure la distance routière via OSRM `/table`. 1 seul
-// appel → matrice 1 origine × N destinations. Gratuit, sans clé.
-// Sources : public demo + miroir FOSSGIS. Fallback crow-flies si les deux down.
+// surfetch puis on mesure la distance routière via une matrice 1 origine × N.
+// Valhalla (FOSSGIS) en primaire : costing plus nuancé qu'OSRM, respecte mieux
+// les restrictions de virages et les classes de routes, donc précision > OSRM
+// sur le terrain urbain. OSRM reste en fallback si Valhalla flanche.
+const VALHALLA_ENDPOINT = 'https://valhalla.openstreetmap.de';
 const OSRM_ENDPOINTS = [
   'https://router.project-osrm.org',
   'https://routing.openstreetmap.de/routed-car'
 ];
-const OSRM_BATCH_MAX = 90;               // limite douce côté démo
+const ROUTING_BATCH_MAX = 90;            // limite douce côté démos publics
 const TTL_DRIVE = 30 * 24 * 60 * 60 * 1000;  // distances routières ≈ stables
 const DRIVE_INFLATE = 1.8;               // ratio max crow → route en France
 const DRIVE_SAFETY_KM = 0.5;             // marge absolue pour zones tortueuses
 
 function driveCacheKey(lat, lon, stationId) {
-  return `drive:${lat.toFixed(3)}:${lon.toFixed(3)}:${stationId}`;
+  // `drive2:` = v2 du schéma : les entrées v1 (OSRM pur) sont ignorées pour
+  // forcer un recalcul via Valhalla au premier accès. Elles expireront seules.
+  return `drive2:${lat.toFixed(3)}:${lon.toFixed(3)}:${stationId}`;
 }
 
-// Appelle OSRM /table. Retourne [{stationId, meters}] pour ceux routables,
-// `null` sur timeout/5xx des deux endpoints.
+// Valhalla `/sources_to_targets` : 1 origine × N destinations, JSON via GET
+// pour éviter le preflight CORS (POST JSON déclenche un OPTIONS qui échoue
+// parfois sur les démos publics). Distances en kilomètres.
+async function valhallaMatrix(originLat, originLon, stations, signal) {
+  if (!stations.length) return [];
+  const body = {
+    sources: [{ lat: originLat, lon: originLon }],
+    targets: stations.map(s => ({ lat: s.lat, lon: s.lon })),
+    costing: 'auto',
+    units: 'kilometers'
+  };
+  const url = `${VALHALLA_ENDPOINT}/sources_to_targets?json=${encodeURIComponent(JSON.stringify(body))}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`Valhalla ${res.status}`);
+  const data = await res.json();
+  const row = (data.sources_to_targets && data.sources_to_targets[0]) || [];
+  return stations.map((s, i) => {
+    const cell = row[i];
+    // `distance` null/undefined = destination inatteignable
+    return {
+      stationId: s.id,
+      meters: cell && cell.distance != null ? Math.round(cell.distance * 1000) : null
+    };
+  });
+}
+
+// OSRM `/table` : 1 seul appel → matrice. Distances en mètres directement.
 async function osrmTable(originLat, originLon, stations, signal) {
   if (!stations.length) return [];
   // Format OSRM : "lon,lat;lon,lat;..." — origine en index 0
@@ -265,8 +294,8 @@ async function osrmTable(originLat, originLon, stations, signal) {
 }
 
 // Entrée publique : résout les distances routières pour un batch de stations,
-// en utilisant le cache localStorage et en splittant si > 90 items. Renvoie
-// Map<stationId, metersOrNull>. `metersOrNull === null` = station non routable.
+// en utilisant le cache localStorage. Essaie Valhalla d'abord, fallback OSRM.
+// Renvoie Map<stationId, metersOrNull>. `null` = station non routable.
 async function fetchDrivingDistances(originLat, originLon, stations, signal) {
   const result = new Map();
   const toQuery = [];
@@ -280,9 +309,30 @@ async function fetchDrivingDistances(originLat, originLon, stations, signal) {
       toQuery.push(s);
     }
   }
-  for (let i = 0; i < toQuery.length; i += OSRM_BATCH_MAX) {
-    const batch = toQuery.slice(i, i + OSRM_BATCH_MAX);
-    const rows = await osrmTable(originLat, originLon, batch, signal);
+  // Ordre : Valhalla (primaire, + précis) → OSRM (fallback rapide)
+  const backends = [
+    { name: 'valhalla', fn: valhallaMatrix },
+    { name: 'osrm', fn: osrmTable }
+  ];
+  for (let i = 0; i < toQuery.length; i += ROUTING_BATCH_MAX) {
+    const batch = toQuery.slice(i, i + ROUTING_BATCH_MAX);
+    let rows = null;
+    let lastErr = null;
+    for (const b of backends) {
+      try {
+        rows = await b.fn(originLat, originLon, batch, signal);
+        if (!window._routingBackendLogged) {
+          window._routingBackendLogged = true;
+          console.info(`[routing] backend actif : ${b.name}`);
+        }
+        break;
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        console.warn(`[routing] ${b.name} échec :`, err.message);
+        lastErr = err;
+      }
+    }
+    if (!rows) throw lastErr || new Error('Tous les backends de routage sont down');
     for (const row of rows) {
       result.set(row.stationId, row.meters);
       cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters });

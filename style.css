@@ -192,6 +192,50 @@ header {
   align-items: end;
 }
 
+/* Toggle mode de distance : ligne dédiée en dessous du grid principal */
+.field-distance-mode { grid-column: 1 / -1; }
+.distance-mode {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+}
+.distance-mode input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.distance-mode .mode-option {
+  padding: 0.55rem 1.1rem;
+  color: var(--ink-dim);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  letter-spacing: 0.04em;
+  display: block;
+  margin: 0;
+}
+.distance-mode input[type="radio"]:checked + .mode-option {
+  background: var(--accent);
+  color: #fff;
+}
+:root[data-theme="light"] .distance-mode input[type="radio"]:checked + .mode-option {
+  color: #fff;
+}
+.distance-mode .mode-option:hover {
+  background: var(--bg-card);
+}
+.distance-mode input[type="radio"]:checked + .mode-option:hover {
+  background: var(--accent);
+}
+.distance-mode input[type="radio"]:focus-visible + .mode-option {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 900px) {
   .form-grid { grid-template-columns: 1fr 1fr; }
   .field:first-child { grid-column: 1 / -1; }
@@ -574,6 +618,14 @@ header {
   font-size: 1.1rem;
   font-weight: 500;
   display: block;
+}
+.dist-warn {
+  display: block;
+  font-size: 0.55rem;
+  color: var(--accent-soft);
+  letter-spacing: 0.05em;
+  margin-top: 0.15rem;
+  cursor: help;
 }
 
 .price {

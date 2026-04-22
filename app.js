@@ -45,6 +45,16 @@ const $resultsCount = document.getElementById('resultsCount');
 const $osmHint = document.getElementById('osmHint');
 const $stationMap = document.getElementById('stationMap');
 const $historyList = document.getElementById('historyList');
+const $modeRadios = document.querySelectorAll('input[name="distanceMode"]');
+const DISTANCE_MODE_KEY = 'octane-distance-mode';
+function getDistanceMode() {
+  const r = document.querySelector('input[name="distanceMode"]:checked');
+  return r ? r.value : 'crow';
+}
+function setDistanceMode(mode) {
+  const r = document.querySelector(`input[name="distanceMode"][value="${mode}"]`);
+  if (r) r.checked = true;
+}
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
@@ -101,7 +111,7 @@ function cacheSet(store, key, data) {
       const victims = [];
       for (let i = 0; i < store.length; i++) {
         const k = store.key(i);
-        if (!k || !/^(hist:|fuel:|geo:)/.test(k)) continue;
+        if (!k || !/^(hist:|fuel:|geo:|drive:)/.test(k)) continue;
         try {
           const { ts } = JSON.parse(store.getItem(k)) || {};
           victims.push({ k, ts: ts || 0 });
@@ -202,6 +212,83 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const results = data.results || [];
   cacheSet(sessionStorage, key, results);
   return results;
+}
+
+// ===== Routage routier (OSRM) =====
+// Opendatasoft ne filtre qu'en haversine, donc pour le mode "voiture" on
+// surfetch puis on mesure la distance routière via OSRM `/table`. 1 seul
+// appel → matrice 1 origine × N destinations. Gratuit, sans clé.
+// Sources : public demo + miroir FOSSGIS. Fallback crow-flies si les deux down.
+const OSRM_ENDPOINTS = [
+  'https://router.project-osrm.org',
+  'https://routing.openstreetmap.de/routed-car'
+];
+const OSRM_BATCH_MAX = 90;               // limite douce côté démo
+const TTL_DRIVE = 30 * 24 * 60 * 60 * 1000;  // distances routières ≈ stables
+const DRIVE_INFLATE = 1.8;               // ratio max crow → route en France
+const DRIVE_SAFETY_KM = 0.5;             // marge absolue pour zones tortueuses
+
+function driveCacheKey(lat, lon, stationId) {
+  return `drive:${lat.toFixed(3)}:${lon.toFixed(3)}:${stationId}`;
+}
+
+// Appelle OSRM /table. Retourne [{stationId, meters}] pour ceux routables,
+// `null` sur timeout/5xx des deux endpoints.
+async function osrmTable(originLat, originLon, stations, signal) {
+  if (!stations.length) return [];
+  // Format OSRM : "lon,lat;lon,lat;..." — origine en index 0
+  const coordParts = [`${originLon},${originLat}`]
+    .concat(stations.map(s => `${s.lon},${s.lat}`));
+  const destIdxs = stations.map((_, i) => i + 1).join(';');
+  const path = `/table/v1/driving/${coordParts.join(';')}?sources=0&destinations=${destIdxs}&annotations=distance`;
+  let lastErr;
+  for (const base of OSRM_ENDPOINTS) {
+    try {
+      const res = await fetch(base + path, { signal });
+      if (!res.ok) { lastErr = new Error(`OSRM ${res.status}`); continue; }
+      const data = await res.json();
+      if (data.code !== 'Ok' || !data.distances || !data.distances[0]) {
+        lastErr = new Error(`OSRM code=${data.code}`);
+        continue;
+      }
+      const row = data.distances[0]; // distances[source][destination]
+      return stations.map((s, i) => ({
+        stationId: s.id,
+        meters: row[i] // null si OSRM n'a pas trouvé de route
+      }));
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('OSRM indisponible');
+}
+
+// Entrée publique : résout les distances routières pour un batch de stations,
+// en utilisant le cache localStorage et en splittant si > 90 items. Renvoie
+// Map<stationId, metersOrNull>. `metersOrNull === null` = station non routable.
+async function fetchDrivingDistances(originLat, originLon, stations, signal) {
+  const result = new Map();
+  const toQuery = [];
+  for (const s of stations) {
+    if (s.id == null) continue;
+    const k = driveCacheKey(originLat, originLon, s.id);
+    const cached = cacheGet(localStorage, k, TTL_DRIVE);
+    if (cached && typeof cached.meters !== 'undefined') {
+      result.set(s.id, cached.meters);
+    } else {
+      toQuery.push(s);
+    }
+  }
+  for (let i = 0; i < toQuery.length; i += OSRM_BATCH_MAX) {
+    const batch = toQuery.slice(i, i + OSRM_BATCH_MAX);
+    const rows = await osrmTable(originLat, originLon, batch, signal);
+    for (const row of rows) {
+      result.set(row.stationId, row.meters);
+      cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters });
+    }
+  }
+  return result;
 }
 
 // Base de marques OSM pré-calculée et shippée dans `data/osm/brands.json`.
@@ -505,8 +592,9 @@ function buildStationCard(s, i, total, fuelField) {
       <div class="addr">${subtitle}</div>
     </div>
     <div class="distance">
-      <strong>${s.distance.toFixed(1)} km</strong>
-      <span class="dist-label">à vol d'oiseau</span>
+      <strong>${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km</strong>
+      <span class="dist-label">${s.driveKm != null ? 'par la route' : 'à vol d\'oiseau'}</span>
+      ${s.driveUnavailable ? `<span class="dist-warn" title="Trajet routier non disponible pour cette station — distance affichée à vol d'oiseau">⚠ routage indispo</span>` : ''}
       <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title} (ouvre Google Maps)">Itinéraire ↗</a>
     </div>
     <div class="price">
@@ -606,9 +694,57 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
     .sort((a, b) => a.price - b.price);
 }
 
+// Pipeline drive-mode : enrichit les stations avec `driveKm`, filtre celles
+// au-dessus du rayon, marque les non-routables comme `driveUnavailable` et
+// refiltre par distance crow-flies pour leur appliquer le rayon demandé.
+async function applyDrivingDistances(stations, userLat, userLon, radiusKm, fuelField, token) {
+  if (!stations.length) return;
+  const ctrl = new AbortController();
+  try {
+    showStatus(`Calcul des distances routières pour ${stations.length} stations…`);
+    const distMap = await fetchDrivingDistances(userLat, userLon, stations, ctrl.signal);
+    if (token !== currentSearchToken) return;
+    hideStatus();
+
+    const kept = [];
+    for (const s of stations) {
+      const meters = distMap.get(s.id);
+      if (meters == null) {
+        // Station non routable : on la garde SI elle est dans le rayon crow-flies
+        // (sinon elle vient du surfetch uniquement, pas pertinente).
+        if (s.distance != null && s.distance <= radiusKm + 0.05) {
+          s.driveKm = null;
+          s.driveUnavailable = true;
+          kept.push(s);
+        }
+        continue;
+      }
+      const km = meters / 1000;
+      if (km <= radiusKm + 0.05) {
+        s.driveKm = km;
+        s.driveUnavailable = false;
+        kept.push(s);
+      }
+    }
+    // On garde le tri par prix (rang n°1 = moins cher) — inchangé.
+    currentResults.stations = kept.sort((a, b) => a.price - b.price);
+    renderStations();
+  } catch (err) {
+    if (token !== currentSearchToken) return;
+    console.warn('Routage indisponible, fallback vol d\'oiseau :', err);
+    // Fallback : on applique le rayon en crow-flies sur le superset déjà fetché.
+    const kept = stations.filter(s => s.distance != null && s.distance <= radiusKm + 0.05);
+    currentResults.stations = kept;
+    renderStations();
+    showStatus('Routage indisponible — distances affichées à vol d\'oiseau', true);
+    setTimeout(() => { if (token === currentSearchToken) hideStatus(); }, 4000);
+  }
+}
+
 async function runSearch(lat, lon, label) {
   const fuelField = $fuel.value;
   const radiusKm = parseInt($radius.value, 10);
+  const distanceMode = getDistanceMode(); // 'crow' | 'drive'
 
   if (!radiusKm || radiusKm <= 0) {
     showStatus('Rayon invalide', true);
@@ -616,6 +752,11 @@ async function runSearch(lat, lon, label) {
   }
 
   const token = ++currentSearchToken;
+  // En mode voiture, on sur-fetch en vol d'oiseau pour ne pas manquer de
+  // stations accessibles qui sont au-delà du cercle haversine.
+  const fetchRadiusKm = distanceMode === 'drive'
+    ? Math.min(50, Math.ceil(radiusKm * DRIVE_INFLATE + DRIVE_SAFETY_KM))
+    : radiusKm;
 
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
@@ -623,7 +764,7 @@ async function runSearch(lat, lon, label) {
     // Base de marques shippée statiquement : chargée une fois par session, < 1 s
     // même sur la toute première visite grâce à la taille (~200 Ko gzip).
     const brandsPromise = loadOSMBrands();
-    const rawStations = await fetchStations(lat, lon, radiusKm, fuelField);
+    const rawStations = await fetchStations(lat, lon, fetchRadiusKm, fuelField);
     if (token !== currentSearchToken) return;
 
     hideStatus();
@@ -635,19 +776,26 @@ async function runSearch(lat, lon, label) {
       $osmHint.classList.remove('hidden');
     }
 
-    const enriched = enrichStations(rawStations, fuelField, lat, lon);
+    const enrichedAll = enrichStations(rawStations, fuelField, lat, lon);
+    // Affichage initial : toujours filtré au rayon crow-flies demandé (même en
+    // mode drive, pour ne pas montrer des stations "trop loin" en attendant le
+    // routage). Le superset `enrichedAll` sert uniquement au routage ensuite.
+    const enriched = enrichedAll.filter(s => s.distance != null && s.distance <= radiusKm + 0.05);
     currentResults = {
       stations: enriched,
       rawStations,
       fuelField,
       userLat: lat,
       userLon: lon,
-      label
+      label,
+      distanceMode,
+      radiusKm
     };
 
-    // Applique les marques déjà chargées (cas 2e+ recherche)
+    // Applique les marques déjà chargées sur TOUT le superset (les objets sont
+    // partagés par référence avec `enriched`, donc le display en profite aussi).
     if (osmBrandsData && osmBrandsData.grid) {
-      enriched.forEach(s => {
+      enrichedAll.forEach(s => {
         const b = lookupOSMBrand(s.lat, s.lon, osmBrandsData);
         if (b) s._osmBrand = b;
       });
@@ -655,6 +803,13 @@ async function runSearch(lat, lon, label) {
 
     renderStations();
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Mode voiture : en tâche de fond, on calcule les distances routières
+    // via OSRM sur le SUPERSET (inclut les stations hors cercle crow-flies
+    // qui peuvent néanmoins être accessibles en < radiusKm par la route).
+    if (distanceMode === 'drive') {
+      applyDrivingDistances(enrichedAll, lat, lon, radiusKm, fuelField, token);
+    }
 
     // Pré-chauffe l'historique de chaque station en arrière-plan (pool de 4)
     // pour que l'onglet Historique soit instantané.
@@ -666,7 +821,9 @@ async function runSearch(lat, lon, label) {
       $osmHint.classList.add('hidden');
       if (data) {
         let changed = false;
-        currentResults.stations.forEach(s => {
+        // Itère sur le SUPERSET (enrichedAll) pour que les stations qui
+        // apparaîtront après routage héritent aussi des marques.
+        enrichedAll.forEach(s => {
           const brand = lookupOSMBrand(s.lat, s.lon, data);
           if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
         });
@@ -702,6 +859,8 @@ function updateUrlParams() {
   if (q) params.set('q', q);
   params.set('fuel', $fuel.value);
   params.set('r', $radius.value);
+  const mode = getDistanceMode();
+  if (mode !== 'crow') params.set('mode', mode);
   const url = `${location.pathname}?${params.toString()}${location.hash}`;
   history.replaceState(null, '', url);
 }
@@ -1130,7 +1289,7 @@ function renderMap(stations) {
       marker.bindPopup(
         `<strong>${name}</strong><br>` +
         (addrLine ? `<span style="color:#666;font-size:0.75rem">${addrLine}</span><br>` : '') +
-        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${s.distance.toFixed(1)} km`
+        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km${s.driveKm != null ? ' (route)' : ''}`
       );
       markersLayer.addLayer(marker);
       bounds.extend([s.lat, s.lon]);
@@ -1180,7 +1339,15 @@ if ('serviceWorker' in navigator) {
 
 // Deep-link : au chargement, si ?q=...&fuel=...&r=... → préremplit et lance la recherche
 (function applyUrlParams() {
+  // Mode de distance : URL > localStorage > défaut (crow)
   const params = new URLSearchParams(location.search);
+  const urlMode = params.get('mode');
+  const storedMode = (() => { try { return localStorage.getItem(DISTANCE_MODE_KEY); } catch { return null; } })();
+  const mode = (urlMode === 'drive' || urlMode === 'crow') ? urlMode
+             : (storedMode === 'drive' || storedMode === 'crow') ? storedMode
+             : 'crow';
+  setDistanceMode(mode);
+
   const q = params.get('q');
   const fuel = params.get('fuel');
   const r = params.get('r');
@@ -1192,3 +1359,15 @@ if ('serviceWorker' in navigator) {
     setTimeout(doAddressSearch, 50);
   }
 })();
+
+// Persiste le choix du mode + relance la recherche si on en a déjà une en cours
+$modeRadios.forEach(r => {
+  r.addEventListener('change', () => {
+    const mode = getDistanceMode();
+    try { localStorage.setItem(DISTANCE_MODE_KEY, mode); } catch {}
+    updateUrlParams();
+    if (currentResults) {
+      runSearch(currentResults.userLat, currentResults.userLon, currentResults.label);
+    }
+  });
+});

@@ -35,6 +35,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
   <link rel="preconnect" href="https://api-adresse.data.gouv.fr" />
+  <link rel="preconnect" href="https://router.project-osrm.org" />
   <link rel="preconnect" href="https://unpkg.com" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -89,6 +90,15 @@
           <input id="radius" type="number" min="1" max="50" value="5" />
         </div>
         <button id="searchBtn" class="btn-search" aria-label="Lancer la recherche">Chercher ↗</button>
+        <div class="field field-distance-mode">
+          <label>→ Mode de distance</label>
+          <div class="distance-mode" role="radiogroup" aria-label="Mode de calcul de distance">
+            <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />
+            <label for="modeCrow" class="mode-option" title="Distance en ligne droite entre deux points">à vol d'oiseau</label>
+            <input type="radio" id="modeDrive" name="distanceMode" value="drive" />
+            <label for="modeDrive" class="mode-option" title="Distance par la route (routage OSRM)">en voiture</label>
+          </div>
+        </div>
       </div>
       <button id="geolocBtn" class="geoloc-btn" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
     </section>

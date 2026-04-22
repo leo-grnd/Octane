@@ -293,10 +293,78 @@ async function osrmTable(originLat, originLon, stations, signal) {
   throw lastErr || new Error('OSRM indisponible');
 }
 
+// Fusion de 2 matrices de distances (rows [{stationId, meters}]).
+// meters null côté l'un = on prend l'autre. Les deux null = null. Les deux
+// dispos = moyenne arrondie (médiane de 2 valeurs = moyenne).
+function mergeDistanceRows(rowsA, rowsB) {
+  const mapA = new Map(rowsA.map(r => [r.stationId, r.meters]));
+  const mapB = new Map(rowsB.map(r => [r.stationId, r.meters]));
+  const ids = new Set([...mapA.keys(), ...mapB.keys()]);
+  const merged = [];
+  for (const id of ids) {
+    const a = mapA.get(id);
+    const b = mapB.get(id);
+    let meters;
+    if (a == null && b == null) meters = null;
+    else if (a == null) meters = b;
+    else if (b == null) meters = a;
+    else meters = Math.round((a + b) / 2);
+    merged.push({ stationId: id, meters });
+  }
+  return merged;
+}
+
+// Lance Valhalla ET OSRM en parallèle (batchés si besoin). Fire `onPartial`
+// dès que le 1er backend succès renvoie sa matrice → affichage rapide. Attend
+// ensuite le 2e pour renvoyer la fusion (ou le seul succès si l'autre échoue).
+async function raceDrivingBackends(originLat, originLon, stations, signal, onPartial) {
+  const runBackend = async (fn) => {
+    const rows = [];
+    for (let i = 0; i < stations.length; i += ROUTING_BATCH_MAX) {
+      const batch = stations.slice(i, i + ROUTING_BATCH_MAX);
+      const r = await fn(originLat, originLon, batch, signal);
+      rows.push(...r);
+    }
+    return rows;
+  };
+
+  const backends = [
+    { name: 'valhalla', p: runBackend(valhallaMatrix).catch(e => ({ _error: e })) },
+    { name: 'osrm',     p: runBackend(osrmTable).catch(e => ({ _error: e })) }
+  ];
+
+  let firstSuccess = null;
+  const settled = await Promise.all(backends.map(async b => {
+    const r = await b.p;
+    if (r && r._error) {
+      if (r._error.name === 'AbortError') throw r._error;
+      console.warn(`[routing] ${b.name} échec :`, r._error.message);
+      return { name: b.name, ok: false, err: r._error };
+    }
+    if (!firstSuccess) {
+      firstSuccess = { name: b.name, rows: r };
+      console.info(`[routing] 1er backend répondu : ${b.name} (${r.length} stations)`);
+      try { onPartial && onPartial(r, b.name); } catch (e) { console.warn('onPartial threw:', e); }
+    }
+    return { name: b.name, ok: true, rows: r };
+  }));
+
+  const ok = settled.filter(s => s.ok);
+  if (!ok.length) throw (settled[0] && settled[0].err) || new Error('Tous les backends de routage sont down');
+  if (ok.length === 1) {
+    console.info(`[routing] un seul backend a répondu : ${ok[0].name} — pas de fusion`);
+    return { final: ok[0].rows, source: ok[0].name, merged: false };
+  }
+  const merged = mergeDistanceRows(ok[0].rows, ok[1].rows);
+  console.info('[routing] fusion médiane des 2 backends appliquée');
+  return { final: merged, source: 'median', merged: true };
+}
+
 // Entrée publique : résout les distances routières pour un batch de stations,
-// en utilisant le cache localStorage. Essaie Valhalla d'abord, fallback OSRM.
-// Renvoie Map<stationId, metersOrNull>. `null` = station non routable.
-async function fetchDrivingDistances(originLat, originLon, stations, signal) {
+// en utilisant le cache localStorage et la race Valhalla/OSRM. `onPartial` est
+// appelé dès que le 1er backend répond (affichage rapide). La Promise résout
+// avec le résultat final (fusion si les deux ont répondu, sinon le survivant).
+async function fetchDrivingDistances(originLat, originLon, stations, signal, onPartial) {
   const result = new Map();
   const toQuery = [];
   for (const s of stations) {
@@ -309,36 +377,21 @@ async function fetchDrivingDistances(originLat, originLon, stations, signal) {
       toQuery.push(s);
     }
   }
-  // Ordre : Valhalla (primaire, + précis) → OSRM (fallback rapide)
-  const backends = [
-    { name: 'valhalla', fn: valhallaMatrix },
-    { name: 'osrm', fn: osrmTable }
-  ];
-  for (let i = 0; i < toQuery.length; i += ROUTING_BATCH_MAX) {
-    const batch = toQuery.slice(i, i + ROUTING_BATCH_MAX);
-    let rows = null;
-    let lastErr = null;
-    for (const b of backends) {
-      try {
-        rows = await b.fn(originLat, originLon, batch, signal);
-        if (!window._routingBackendLogged) {
-          window._routingBackendLogged = true;
-          console.info(`[routing] backend actif : ${b.name}`);
-        }
-        break;
-      } catch (err) {
-        if (err.name === 'AbortError') throw err;
-        console.warn(`[routing] ${b.name} échec :`, err.message);
-        lastErr = err;
-      }
-    }
-    if (!rows) throw lastErr || new Error('Tous les backends de routage sont down');
-    for (const row of rows) {
-      result.set(row.stationId, row.meters);
-      cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters });
-    }
+  if (!toQuery.length) return { map: result, merged: false };
+
+  const { final, merged } = await raceDrivingBackends(originLat, originLon, toQuery, signal, (partialRows) => {
+    const partialMap = new Map(result);
+    for (const row of partialRows) partialMap.set(row.stationId, row.meters);
+    try { onPartial && onPartial(partialMap); } catch {}
+  });
+
+  for (const row of final) {
+    result.set(row.stationId, row.meters);
+    // On cache toujours la valeur FINALE (fusion si dispo, sinon single-backend)
+    // pour que les visites suivantes n'aient pas à re-router.
+    cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters });
   }
-  return result;
+  return { map: result, merged };
 }
 
 // Base de marques OSM pré-calculée et shippée dans `data/osm/brands.json`.
@@ -744,41 +797,56 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
     .sort((a, b) => a.price - b.price);
 }
 
-// Pipeline drive-mode : enrichit les stations avec `driveKm`, filtre celles
-// au-dessus du rayon, marque les non-routables comme `driveUnavailable` et
-// refiltre par distance crow-flies pour leur appliquer le rayon demandé.
+// Applique une matrice de distances routières au set de stations et refresh
+// la liste. Utilisable autant pour le render "partial" (1er backend répondu)
+// que "final" (fusion médiane des deux).
+function applyDistMapAndRender(distMap, stations, radiusKm) {
+  const kept = [];
+  for (const s of stations) {
+    const meters = distMap.get(s.id);
+    if (meters == null) {
+      // Station non routable : on la garde SI elle est dans le rayon crow-flies
+      // (sinon elle vient du surfetch uniquement, pas pertinente).
+      if (s.distance != null && s.distance <= radiusKm + 0.05) {
+        s.driveKm = null;
+        s.driveUnavailable = true;
+        kept.push(s);
+      }
+      continue;
+    }
+    const km = meters / 1000;
+    if (km <= radiusKm + 0.05) {
+      s.driveKm = km;
+      s.driveUnavailable = false;
+      kept.push(s);
+    }
+  }
+  // Tri par prix inchangé (rang n°1 = moins cher).
+  currentResults.stations = kept.sort((a, b) => a.price - b.price);
+  renderStations();
+}
+
+// Pipeline drive-mode : lance la race Valhalla/OSRM, affiche dès le 1er
+// backend, puis réaffiche avec la fusion médiane quand le 2e finit aussi.
 async function applyDrivingDistances(stations, userLat, userLon, radiusKm, fuelField, token) {
   if (!stations.length) return;
   const ctrl = new AbortController();
   try {
     showStatus(`Calcul des distances routières pour ${stations.length} stations…`);
-    const distMap = await fetchDrivingDistances(userLat, userLon, stations, ctrl.signal);
+    const { map: finalMap, merged } = await fetchDrivingDistances(
+      userLat, userLon, stations, ctrl.signal,
+      // Partial : dès le 1er backend, on affiche. Masque le status pour donner
+      // l'impression que c'est fini — la fusion se fait silencieusement après.
+      (partialMap) => {
+        if (token !== currentSearchToken) return;
+        hideStatus();
+        applyDistMapAndRender(partialMap, stations, radiusKm);
+      }
+    );
     if (token !== currentSearchToken) return;
     hideStatus();
-
-    const kept = [];
-    for (const s of stations) {
-      const meters = distMap.get(s.id);
-      if (meters == null) {
-        // Station non routable : on la garde SI elle est dans le rayon crow-flies
-        // (sinon elle vient du surfetch uniquement, pas pertinente).
-        if (s.distance != null && s.distance <= radiusKm + 0.05) {
-          s.driveKm = null;
-          s.driveUnavailable = true;
-          kept.push(s);
-        }
-        continue;
-      }
-      const km = meters / 1000;
-      if (km <= radiusKm + 0.05) {
-        s.driveKm = km;
-        s.driveUnavailable = false;
-        kept.push(s);
-      }
-    }
-    // On garde le tri par prix (rang n°1 = moins cher) — inchangé.
-    currentResults.stations = kept.sort((a, b) => a.price - b.price);
-    renderStations();
+    // 2e render uniquement si fusion effective (sinon identique au partial).
+    if (merged) applyDistMapAndRender(finalMap, stations, radiusKm);
   } catch (err) {
     if (token !== currentSearchToken) return;
     console.warn('Routage indisponible, fallback vol d\'oiseau :', err);

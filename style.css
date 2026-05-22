@@ -386,14 +386,8 @@ header {
   cursor: not-allowed;
 }
 
-.quick-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1.4rem;
-  margin-top: 1rem;
-}
 .geoloc-btn {
+  margin-top: 1rem;
   font-size: 0.7rem;
   background: none;
   color: var(--ink-dim);
@@ -406,48 +400,6 @@ header {
 }
 
 .geoloc-btn:hover { color: var(--accent); }
-
-/* Toggle "Ouvert maintenant" — filtre doux à côté du bouton géoloc */
-.open-now-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.15s;
-}
-.open-now-toggle:hover { color: var(--accent); }
-.open-now-toggle input[type="checkbox"] {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  background: var(--bg);
-  cursor: pointer;
-  position: relative;
-  transition: background 0.15s, border-color 0.15s;
-}
-.open-now-toggle input[type="checkbox"]:checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.open-now-toggle input[type="checkbox"]:checked::after {
-  content: '✓';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  color: #fff;
-  font-weight: bold;
-}
-.open-now-toggle input[type="checkbox"]:checked + span { color: var(--accent); }
 
 .status {
   padding: 1.5rem 2rem;
@@ -606,15 +558,6 @@ header {
   margin: 0 0 0.6rem;
   font-weight: 500;
 }
-.sheet-auto {
-  font-size: 0.75rem;
-  color: var(--ink);
-  margin-bottom: 0.6rem;
-  padding: 0.4rem 0.7rem;
-  background: rgba(251, 191, 36, 0.1);
-  border-left: 3px solid #fbbf24;
-}
-
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
@@ -654,9 +597,6 @@ header {
 .sheet-fresh-veryStale { color: #ef4444; }
 .sheet-rupture { color: #ef4444; font-size: 0.75rem; font-style: italic; }
 .sheet-unavailable { color: var(--ink-dim); font-size: 0.75rem; font-style: italic; }
-
-.sheet-hours tr.today th { color: var(--accent); }
-.sheet-hours tr.today td { color: var(--accent); font-weight: 600; }
 
 .sheet-services {
   list-style: none;
@@ -960,43 +900,6 @@ body.sheet-open { overflow: hidden; }
   user-select: none;
 }
 .name-text { flex: 1; min-width: 0; word-break: break-word; }
-
-/* Chip "Ouvert / Fermé / 24/24 / Automate" — à droite du nom de station.
-   Couleur sémantique : vert = ouvert, rouge = fermé, gris-bleu = automate seul. */
-.opening {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.05em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  cursor: help;
-  text-transform: uppercase;
-  font-weight: 500;
-  line-height: 1.4;
-}
-.opening-open, .opening-open24 {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.3);
-}
-.opening-autoOnly {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.3);
-}
-.opening-closed {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-:root[data-theme="light"] .opening-open,
-:root[data-theme="light"] .opening-open24 { color: #15803d; }
-:root[data-theme="light"] .opening-autoOnly { color: #a16207; }
-:root[data-theme="light"] .opening-closed { color: #b91c1c; }
 
 /* Ligne d'icônes services (boutique, lavage, automate CB, etc.) */
 .amenities {

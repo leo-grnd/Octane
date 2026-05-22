@@ -58,12 +58,6 @@ function setDistanceMode(mode) {
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
-const $openNowToggle = document.getElementById('openNowToggle');
-if ($openNowToggle) {
-  $openNowToggle.addEventListener('change', () => {
-    if (currentResults) renderStations();
-  });
-}
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -650,88 +644,6 @@ function getAmenities(servicesArray) {
   return out;
 }
 
-// ===== Horaires d'ouverture =====
-// L'API expose deux champs utilisables :
-//   horaires_jour : "Automate-24-24, Lundi06.30-20.30, Mardi06.30-20.30, ..."
-//     (entrées séparées par virgule, format jourHH.MM-HH.MM, "." en séparateur)
-//   horaires_automate_24_24 : "Oui" | "Non" — paiement CB possible 24/24 même
-//     si la caisse est fermée. Utile à signaler la nuit.
-const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-
-function parseOpeningHours(horairesJour, auto24Field) {
-  const automate = auto24Field === 'Oui' || (horairesJour && /automate.?24/i.test(horairesJour));
-  if (!horairesJour && !automate) return null;
-  const slots = {}; // dayIdx (0..6) → [{from, to}] (minutes depuis minuit)
-  if (horairesJour) {
-    for (const raw of horairesJour.split(/[,\n]/)) {
-      const e = raw.trim();
-      if (!e) continue;
-      const m = e.match(/^(Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s*(\d{1,2})[.:h](\d{2})\s*-\s*(\d{1,2})[.:h](\d{2})/i);
-      if (!m) continue;
-      const dayName = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-      const dayIdx = DAYS_FR.indexOf(dayName);
-      if (dayIdx < 0) continue;
-      const from = parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
-      const to = parseInt(m[4], 10) * 60 + parseInt(m[5], 10);
-      (slots[dayIdx] ||= []).push({ from, to });
-    }
-  }
-  const hasAnySlots = Object.keys(slots).length > 0;
-  if (!hasAnySlots && !automate) return null;
-  return { automate, slots, hasAnySlots };
-}
-
-function fmtHM(minutes) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
-}
-
-// Évalue l'état d'ouverture d'une station à `now`. Retourne { state, label, isOpen }
-// où isOpen = true si on peut effectivement faire le plein (caisse ouverte OU
-// automate 24/24). state ∈ open24 | open | autoOnly | closed.
-function describeOpening(parsed, now = new Date()) {
-  if (!parsed) return null;
-  const day = now.getDay(); // 0=dim..6=sam (JS standard)
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const todaySlots = parsed.slots[day] || [];
-  // Heuristique 24/24 : la plage couvre quasi tout le jour (≥ 23h45)
-  const isAllDay = todaySlots.some(s => s.from <= 5 && s.to >= 23 * 60 + 45);
-  if (isAllDay) return { state: 'open24', label: '24h/24', isOpen: true };
-  const current = todaySlots.find(s => minutes >= s.from && minutes <= s.to);
-  if (current) {
-    return { state: 'open', label: `Ouvert · ferme à ${fmtHM(current.to)}`, isOpen: true };
-  }
-  // Fermé : chercher la prochaine ouverture (aujourd'hui ou jours suivants)
-  let nextLabel = null;
-  const laterToday = todaySlots.find(s => s.from > minutes);
-  if (laterToday) {
-    nextLabel = `ouvre à ${fmtHM(laterToday.from)}`;
-  } else {
-    for (let i = 1; i <= 7; i++) {
-      const nextDay = (day + i) % 7;
-      const ns = (parsed.slots[nextDay] || [])[0];
-      if (ns) {
-        const when = i === 1 ? 'demain' : DAYS_FR[nextDay].toLowerCase();
-        nextLabel = `ouvre ${when} à ${fmtHM(ns.from)}`;
-        break;
-      }
-    }
-  }
-  if (parsed.automate) {
-    return {
-      state: 'autoOnly',
-      label: nextLabel ? `Automate 24/24 · caisse ${nextLabel}` : 'Automate 24/24',
-      isOpen: true
-    };
-  }
-  return {
-    state: 'closed',
-    label: nextLabel ? `Fermé · ${nextLabel}` : 'Fermé',
-    isOpen: false
-  };
-}
-
 // Mapping enseigne → badge visuel (monogramme + couleur de marque).
 // Liste ordonnée : variantes spécifiques (TotalEnergies, Total Access) AVANT
 // la marque-mère (Total) pour que le bon match l'emporte. Si rien ne matche,
@@ -929,16 +841,12 @@ function buildStationCard(s, i, total, fuelField, refStation) {
         ? 'Prix possiblement obsolète : aucune mise à jour depuis plus d\'une semaine'
         : 'Prix relativement ancien : mise à jour il y a plus de 48 h')
     : '';
-  const opening = s._opening; // pré-calculé dans enrichStations
   const economyHint = i > 0 ? buildEconomyHint(s, refStation) : null;
   const economyHtml = economyHint
     ? `<div class="economy-hint">${economyHint}</div>` : '';
   const amenities = getAmenities(s.services_service);
   const amenitiesHtml = amenities.length
     ? `<div class="amenities" aria-label="Services disponibles">${amenities.map(a => `<span class="amenity" title="${a.label}" aria-label="${a.label}">${a.icon}</span>`).join('')}</div>`
-    : '';
-  const openingHtml = opening
-    ? `<span class="opening opening-${opening.state}" title="${opening.label}">${opening.state === 'open24' ? '24/24' : opening.state === 'open' ? 'Ouvert' : opening.state === 'autoOnly' ? 'Automate 24/24' : 'Fermé'}</span>`
     : '';
   const outlierHtml = s._outlier
     ? `<span class="outlier-chip" title="Prix qui s'écarte de ${Math.round(s._outlier.ratio * 100)}% de la médiane locale (${s._outlier.median.toFixed(3).replace('.', ',')} €). Peut indiquer une saisie erronée — à vérifier sur place.">⚠ À vérifier</span>`
@@ -964,7 +872,7 @@ function buildStationCard(s, i, total, fuelField, refStation) {
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
-      <div class="name">${badgeHtml}<span class="name-text">${title}</span>${openingHtml}</div>
+      <div class="name">${badgeHtml}<span class="name-text">${title}</span></div>
       <div class="addr">${subtitle}</div>
       ${amenitiesHtml}
       ${economyHtml}
@@ -1088,66 +996,43 @@ function renderSkeletons(count = 5) {
 function renderStations() {
   if (!currentResults) return;
   const { fuelField, stations } = currentResults;
+  const total = stations.length;
 
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
   $resultsTitle.textContent = FUEL_LABELS[fuelField];
 
-  // Filtre "Ouvert maintenant" : on garde les stations dont l'état d'ouverture
-  // est inconnu (mieux vaut afficher que cacher faute d'info) OU isOpen=true.
-  const openOnly = $openNowToggle && $openNowToggle.checked;
-  const visible = openOnly
-    ? stations.filter(s => !s._opening || s._opening.isOpen)
-    : stations;
-  const total = visible.length;
-  const hiddenByFilter = stations.length - total;
-
   if (total === 0) {
-    if (openOnly && stations.length > 0) {
-      $stationList.innerHTML = '';
-      const node = document.createElement('div');
-      node.className = 'status empty-state';
-      node.innerHTML = `<div>Aucune station ouverte actuellement dans ce rayon.</div>
-        <button type="button" class="status-cta">Afficher les ${stations.length} stations (ouvertes ou non)</button>`;
+    const node = document.createElement('div');
+    node.className = 'status empty-state';
+    const currentR = currentResults.radiusKm || parseInt($radius.value, 10) || 5;
+    const nextR = Math.min(50, currentR * 2);
+    if (nextR > currentR) {
+      node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km.</div>
+        <button type="button" class="status-cta">Élargir à ${nextR} km</button>`;
       node.querySelector('button').addEventListener('click', () => {
-        $openNowToggle.checked = false;
-        renderStations();
+        $radius.value = String(nextR);
+        doAddressSearch();
       }, { once: true });
-      $stationList.appendChild(node);
     } else {
-      $stationList.innerHTML = '';
-      const node = document.createElement('div');
-      node.className = 'status empty-state';
-      const currentR = currentResults.radiusKm || parseInt($radius.value, 10) || 5;
-      const nextR = Math.min(50, currentR * 2);
-      if (nextR > currentR) {
-        node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km.</div>
-          <button type="button" class="status-cta">Élargir à ${nextR} km</button>`;
-        node.querySelector('button').addEventListener('click', () => {
-          $radius.value = String(nextR);
-          doAddressSearch();
-        }, { once: true });
-      } else {
-        node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</div>`;
-      }
-      $stationList.appendChild(node);
+      node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</div>`;
     }
+    $stationList.appendChild(node);
     $resultsCount.textContent = '0 station';
     return;
   }
 
-  const savings = buildSavingsBanner(visible);
+  const savings = buildSavingsBanner(stations);
   if (savings) $stationList.appendChild(savings);
 
-  const refStation = visible[0];
-  visible.forEach((s, i) => {
+  const refStation = stations[0];
+  stations.forEach((s, i) => {
     $stationList.appendChild(buildStationCard(s, i, total, fuelField, refStation));
   });
-  const filterNote = hiddenByFilter > 0 ? ` (${hiddenByFilter} masquée${hiddenByFilter > 1 ? 's' : ''})` : '';
-  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}${filterNote}`;
+  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}`;
 
   if (currentView === 'map') {
-    renderMap(visible);
+    renderMap(stations);
   }
 }
 
@@ -1164,17 +1049,14 @@ function median(values) {
 }
 
 function enrichStations(rawStations, fuelField, userLat, userLon) {
-  const now = new Date();
   const enriched = rawStations.map(s => {
     const { lat, lon } = extractCoords(s);
-    const parsedHours = parseOpeningHours(s.horaires_jour, s.horaires_automate_24_24);
     return {
       ...s,
       lat,
       lon,
       distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
-      price: parseFloat(s[fuelField]),
-      _opening: describeOpening(parsedHours, now)
+      price: parseFloat(s[fuelField])
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
     .sort((a, b) => a.price - b.price);
@@ -1933,29 +1815,6 @@ function buildSheetContent(s, fuelField) {
     </tr>`;
   }).join('');
 
-  // --- Horaires détaillés par jour
-  const parsedHours = parseOpeningHours(s.horaires_jour, s.horaires_automate_24_24);
-  let hoursHtml = '';
-  if (parsedHours) {
-    const todayIdx = new Date().getDay();
-    const order = [1, 2, 3, 4, 5, 6, 0]; // affichage lun..dim
-    const rows = order.map(idx => {
-      const slots = parsedHours.slots[idx];
-      const txt = slots && slots.length
-        ? slots.map(s => `${fmtHM(s.from)}–${fmtHM(s.to)}`).join(', ')
-        : '—';
-      const today = idx === todayIdx ? ' class="today"' : '';
-      return `<tr${today}><th scope="row">${DAYS_FR[idx]}</th><td>${txt}</td></tr>`;
-    }).join('');
-    const automateLine = parsedHours.automate
-      ? `<div class="sheet-auto">💳 Automate CB 24/24 disponible</div>` : '';
-    hoursHtml = `<section class="sheet-section">
-      <h3>Horaires</h3>
-      ${automateLine}
-      <table class="sheet-table sheet-hours">${rows}</table>
-    </section>`;
-  }
-
   // --- Services
   const amenities = getAmenities(s.services_service);
   const servicesHtml = amenities.length
@@ -1979,7 +1838,6 @@ function buildSheetContent(s, fuelField) {
       <h3>Prix par carburant</h3>
       <table class="sheet-table sheet-prices">${pricesRows}</table>
     </section>
-    ${hoursHtml}
     ${servicesHtml}
   `;
 }
@@ -2040,11 +1898,7 @@ function openCardFromEvent(e) {
   if (!card || card.classList.contains('station-skeleton')) return;
   const idx = parseInt(card.dataset.stationIdx, 10);
   if (isNaN(idx) || !currentResults) return;
-  const openOnly = $openNowToggle && $openNowToggle.checked;
-  const visible = openOnly
-    ? currentResults.stations.filter(s => !s._opening || s._opening.isOpen)
-    : currentResults.stations;
-  const s = visible[idx];
+  const s = currentResults.stations[idx];
   if (s) openStationSheet(s, currentResults.fuelField, card);
 }
 $stationList.addEventListener('click', openCardFromEvent);

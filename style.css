@@ -464,6 +464,244 @@ header {
   color: #fca5a5;
 }
 
+/* CTA inline dans la barre status (réessayer, élargir le rayon, etc.) */
+.status-cta {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.35rem 0.9rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s, transform 0.1s;
+}
+.status-cta:hover { background: var(--accent-soft, #ff8c33); transform: translateY(-1px); }
+.status-cta:active { transform: translateY(0); }
+
+/* État vide affiché directement dans la liste des stations */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8rem;
+  color: var(--ink);
+  background: var(--bg-card);
+}
+.empty-state .status-cta { margin-left: 0; }
+
+/* ============ Bottom sheet "détails station" ============ */
+/* Desktop : panneau centré (modal). Mobile : feuille qui glisse depuis le bas.
+   Animation purement CSS via une classe .hidden + transitions. */
+.station-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+.station-sheet.hidden { display: none; }
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: sheetFade 0.18s ease-out;
+}
+:root[data-theme="light"] .sheet-backdrop { background: rgba(20, 18, 16, 0.4); }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.sheet-panel {
+  position: relative;
+  width: min(540px, calc(100% - 2rem));
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1.7rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+.sheet-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.8rem;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--ink-dim);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.4rem 0.6rem;
+  transition: color 0.15s;
+}
+.sheet-close:hover { color: var(--ink); }
+
+.sheet-header { margin-bottom: 1.2rem; }
+.sheet-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-right: 2rem;
+}
+.sheet-title-row h2 {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.15rem;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.sheet-addr {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  margin-top: 0.45rem;
+}
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.sheet-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sheet-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sheet-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.sheet-btn-primary:hover { background: var(--accent-soft, #ff8c33); color: #fff; }
+
+.sheet-section { margin-top: 1.3rem; }
+.sheet-section h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 0 0 0.6rem;
+  font-weight: 500;
+}
+.sheet-auto {
+  font-size: 0.75rem;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba(251, 191, 36, 0.1);
+  border-left: 3px solid #fbbf24;
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.sheet-table th,
+.sheet-table td {
+  text-align: left;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-table th {
+  color: var(--ink-dim);
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  width: 40%;
+}
+.sheet-table td { color: var(--ink); text-align: right; }
+.sheet-prices tr.current { background: rgba(255, 107, 0, 0.06); }
+.sheet-prices tr.current th { color: var(--accent); }
+.sheet-price {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+.sheet-fresh {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.03em;
+}
+.sheet-fresh-stale { color: #fb923c; }
+.sheet-fresh-veryStale { color: #ef4444; }
+.sheet-rupture { color: #ef4444; font-size: 0.75rem; font-style: italic; }
+.sheet-unavailable { color: var(--ink-dim); font-size: 0.75rem; font-style: italic; }
+
+.sheet-hours tr.today th { color: var(--accent); }
+.sheet-hours tr.today td { color: var(--accent); font-weight: 600; }
+
+.sheet-services {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+.sheet-services li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.amenity-big { font-size: 1rem; line-height: 1; opacity: 0.85; }
+
+body.sheet-open { overflow: hidden; }
+
+/* La carte station doit indiquer visuellement qu'elle est cliquable */
+.station { cursor: pointer; }
+.station:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Mobile : sheet en feuille bas qui prend toute la largeur */
+@media (max-width: 640px) {
+  .station-sheet { align-items: flex-end; }
+  .sheet-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px 12px 0 0;
+    padding: 1.2rem 1.1rem 1.5rem;
+  }
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .sheet-services { grid-template-columns: 1fr 1fr; gap: 0.4rem 0.7rem; font-size: 0.75rem; }
+  .sheet-title-row h2 { font-size: 1rem; }
+}
+
 .loader {
   display: inline-block;
   width: 12px;
@@ -759,6 +997,28 @@ header {
 :root[data-theme="light"] .opening-open24 { color: #15803d; }
 :root[data-theme="light"] .opening-autoOnly { color: #a16207; }
 :root[data-theme="light"] .opening-closed { color: #b91c1c; }
+
+/* Ligne d'icônes services (boutique, lavage, automate CB, etc.) */
+.amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.amenity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.65;
+  cursor: help;
+  user-select: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.amenity:hover { opacity: 1; transform: scale(1.15); }
 
 .distance {
   font-size: 0.75rem;

@@ -84,6 +84,18 @@ function hideStatus() {
   $status.classList.add('hidden');
 }
 
+// Affiche un état d'erreur dans la barre de status AVEC une action de
+// rattrapage cliquable. Pour les blocages côté utilisateur (géoloc refusée,
+// 0 résultat, fetch raté), un cul-de-sac sans suite tue l'usage.
+//   { label, action } — action = function appelée au clic
+function showStatusAction(msg, actionLabel, onClick) {
+  $status.classList.remove('hidden');
+  $status.classList.add('error');
+  $status.innerHTML = `${msg} <button type="button" class="status-cta">${actionLabel}</button>`;
+  const btn = $status.querySelector('.status-cta');
+  if (btn && onClick) btn.addEventListener('click', onClick, { once: true });
+}
+
 // Distance Haversine (km)
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -595,6 +607,49 @@ const KNOWN_BRANDS = [
   { re: /\bagip\b/i, name: 'Agip' }
 ];
 
+// ===== Services / amenities (champ services_service de l'API) =====
+// L'API retourne un array de noms en français. On mappe vers une icône Unicode
+// discrète + un label court pour l'a11y. Patterns d'ordre : variantes longues
+// AVANT versions courtes (ex: "Lavage automatique" avant "Lavage").
+const AMENITY_ICONS = [
+  { re: /boutique\s*alim/i,         icon: '🛒', label: 'Boutique alimentaire' },
+  { re: /boutique/i,                icon: '🏪', label: 'Boutique' },
+  { re: /lavage\s*auto/i,           icon: '🧼', label: 'Lavage automatique' },
+  { re: /lavage/i,                  icon: '🧽', label: 'Lavage manuel' },
+  { re: /gonflage/i,                icon: '⊙',  label: 'Station de gonflage' },
+  { re: /carburant\s*additiv/i,     icon: '⛽', label: 'Carburant additivé' },
+  { re: /piste\s*poids\s*lourds/i,  icon: '🚛', label: 'Piste poids lourds' },
+  { re: /gaz\s*domestique|butane|propane/i, icon: '🔥', label: 'Vente de gaz domestique' },
+  { re: /automate\s*cb/i,           icon: '💳', label: 'Automate CB 24/24' },
+  { re: /dab|distributeur\s*automatique\s*de\s*billets/i, icon: '💰', label: 'Distributeur de billets' },
+  { re: /restauration\s*sur\s*place/i, icon: '🍽', label: 'Restauration sur place' },
+  { re: /restauration\s*[aà]\s*emporter|snack/i, icon: '🥪', label: 'Restauration à emporter' },
+  { re: /toilettes/i,               icon: '🚻', label: 'Toilettes' },
+  { re: /\bbar\b/i,                 icon: '🍺', label: 'Bar' },
+  { re: /wifi/i,                    icon: '📶', label: 'Wi-Fi' },
+  { re: /borne|recharge|[eé]lectrique/i, icon: '⚡', label: 'Borne électrique' },
+  { re: /fioul/i,                   icon: '🛢', label: 'Vente de fioul' },
+  { re: /alcool/i,                  icon: '🍷', label: 'Vente d\'alcool' }
+];
+
+function getAmenities(servicesArray) {
+  if (!Array.isArray(servicesArray) || !servicesArray.length) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of servicesArray) {
+    if (typeof raw !== 'string') continue;
+    for (const { re, icon, label } of AMENITY_ICONS) {
+      if (re.test(raw)) {
+        if (seen.has(icon)) break;
+        seen.add(icon);
+        out.push({ icon, label });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 // ===== Horaires d'ouverture =====
 // L'API expose deux champs utilisables :
 //   horaires_jour : "Automate-24-24, Lundi06.30-20.30, Mardi06.30-20.30, ..."
@@ -854,6 +909,10 @@ function buildStationCard(s, i, total, fuelField) {
         : 'Prix relativement ancien : mise à jour il y a plus de 48 h')
     : '';
   const opening = s._opening; // pré-calculé dans enrichStations
+  const amenities = getAmenities(s.services_service);
+  const amenitiesHtml = amenities.length
+    ? `<div class="amenities" aria-label="Services disponibles">${amenities.map(a => `<span class="amenity" title="${a.label}" aria-label="${a.label}">${a.icon}</span>`).join('')}</div>`
+    : '';
   const openingHtml = opening
     ? `<span class="opening opening-${opening.state}" title="${opening.label}">${opening.state === 'open24' ? '24/24' : opening.state === 'open' ? 'Ouvert' : opening.state === 'autoOnly' ? 'Automate 24/24' : 'Fermé'}</span>`
     : '';
@@ -870,12 +929,17 @@ function buildStationCard(s, i, total, fuelField) {
   el.className = 'station';
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
+  el.dataset.stationIdx = String(i);
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', `Voir les détails de ${title}, prix ${s.price.toFixed(3)} euros par litre`);
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
       <div class="name">${badgeHtml}<span class="name-text">${title}</span>${openingHtml}</div>
       <div class="addr">${subtitle}</div>
+      ${amenitiesHtml}
     </div>
     <div class="distance">
       <strong>${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km</strong>
@@ -991,9 +1055,33 @@ function renderStations() {
 
   if (total === 0) {
     if (openOnly && stations.length > 0) {
-      $stationList.innerHTML = `<div class="status">Aucune station ouverte actuellement dans ce rayon. Décoche "Ouvert maintenant" pour voir les ${stations.length} résultats.</div>`;
+      $stationList.innerHTML = '';
+      const node = document.createElement('div');
+      node.className = 'status empty-state';
+      node.innerHTML = `<div>Aucune station ouverte actuellement dans ce rayon.</div>
+        <button type="button" class="status-cta">Afficher les ${stations.length} stations (ouvertes ou non)</button>`;
+      node.querySelector('button').addEventListener('click', () => {
+        $openNowToggle.checked = false;
+        renderStations();
+      }, { once: true });
+      $stationList.appendChild(node);
     } else {
-      $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
+      $stationList.innerHTML = '';
+      const node = document.createElement('div');
+      node.className = 'status empty-state';
+      const currentR = currentResults.radiusKm || parseInt($radius.value, 10) || 5;
+      const nextR = Math.min(50, currentR * 2);
+      if (nextR > currentR) {
+        node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km.</div>
+          <button type="button" class="status-cta">Élargir à ${nextR} km</button>`;
+        node.querySelector('button').addEventListener('click', () => {
+          $radius.value = String(nextR);
+          doAddressSearch();
+        }, { once: true });
+      } else {
+        node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</div>`;
+      }
+      $stationList.appendChild(node);
     }
     $resultsCount.textContent = '0 station';
     return;
@@ -1205,8 +1293,13 @@ async function runSearch(lat, lon, label) {
   } catch (err) {
     if (token !== currentSearchToken) return;
     $stationList.setAttribute('aria-busy', 'false');
+    $stationList.innerHTML = '';
     console.error(err);
-    showStatus(`Erreur: ${err.message}`, true);
+    showStatusAction(
+      `Erreur lors du chargement des prix : ${err.message}`,
+      'Réessayer',
+      () => { hideStatus(); runSearch(lat, lon, label); }
+    );
   }
 }
 
@@ -1248,7 +1341,11 @@ async function doAddressSearch() {
     pushHistory(address, label);
     await runSearch(lat, lon, label);
   } catch (err) {
-    showStatus(`Erreur: ${err.message}`, true);
+    showStatusAction(
+      `Erreur : ${err.message}`,
+      'Réessayer',
+      () => { hideStatus(); doAddressSearch(); }
+    );
   } finally {
     setSearchBusy(false);
   }
@@ -1400,7 +1497,11 @@ document.addEventListener('click', e => {
 $geolocBtn.addEventListener('click', () => {
   if (searchBusy) return;
   if (!navigator.geolocation) {
-    showStatus('Géolocalisation non supportée par ton navigateur', true);
+    showStatusAction(
+      'Géolocalisation non supportée par ton navigateur.',
+      'Saisir une adresse',
+      () => { hideStatus(); $address.focus(); }
+    );
     return;
   }
   setSearchBusy(true);
@@ -1414,7 +1515,16 @@ $geolocBtn.addEventListener('click', () => {
       finally { setSearchBusy(false); }
     },
     (err) => {
-      showStatus(`Géoloc refusée: ${err.message}`, true);
+      // err.code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+      const isDenied = err.code === 1;
+      const msg = isDenied
+        ? 'Géolocalisation refusée. Tu peux saisir une adresse à la place.'
+        : `Position indisponible (${err.message}).`;
+      showStatusAction(msg, 'Saisir une adresse', () => {
+        hideStatus();
+        $address.focus();
+        $address.select();
+      });
       setSearchBusy(false);
     },
     { enableHighAccuracy: true, timeout: 10000 }
@@ -1684,6 +1794,187 @@ function setView(view) {
 $viewList.addEventListener('click', () => setView('list'));
 $viewMap.addEventListener('click', () => setView('map'));
 $viewHistory.addEventListener('click', () => setView('history'));
+
+// ===== Bottom sheet "détails station" =====
+// Ouvert au clic sur une carte. Recyclable : un seul DOM, rempli dynamiquement.
+const $stationSheet = document.getElementById('stationSheet');
+const $sheetContent = $stationSheet ? $stationSheet.querySelector('.sheet-content') : null;
+const $sheetPanel = $stationSheet ? $stationSheet.querySelector('.sheet-panel') : null;
+let lastSheetTrigger = null; // pour rendre le focus à la card cliquée à la fermeture
+
+const ALL_FUELS = [
+  { field: 'gazole_prix', label: 'Gazole' },
+  { field: 'sp95_prix', label: 'SP95' },
+  { field: 'sp95_e10_prix', label: 'SP95-E10' },
+  { field: 'sp98_prix', label: 'SP98' },
+  { field: 'e85_prix', label: 'E85' },
+  { field: 'gplc_prix', label: 'GPLc' }
+];
+
+// Liens deep-link natifs : Google Maps + Waze ouvrent l'app si installée, sinon le web.
+function googleMapsUrl(lat, lon) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat.toFixed(6)},${lon.toFixed(6)}&travelmode=driving`;
+}
+function wazeUrl(lat, lon) {
+  return `https://waze.com/ul?ll=${lat.toFixed(6)}%2C${lon.toFixed(6)}&navigate=yes`;
+}
+
+function buildSheetContent(s, fuelField) {
+  const brandName = extractStationName(s) || s.adresse || 'Station sans nom';
+  const badge = getBrandBadge(brandName);
+  const badgeHtml = badge
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    : '';
+  const fullAddr = [s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
+  // --- Tous les prix : montre dispo + rupture (temporaire / définitive)
+  const pricesRows = ALL_FUELS.map(f => {
+    const v = s[f.field];
+    const ruptureType = s[f.field.replace('_prix', '_rupture_type')];
+    const ruptureLabel = ruptureType === 'definitive' ? 'Rupture définitive'
+                       : ruptureType === 'temporaire' ? 'Rupture temporaire'
+                       : null;
+    const majIso = s[f.field.replace('_prix', '_maj')];
+    const fresh = formatRelativeTime(majIso);
+    const isCurrent = f.field === fuelField;
+    let priceCell;
+    if (typeof v === 'number' && v > 0) {
+      priceCell = `<span class="sheet-price">${v.toFixed(3).replace('.', ',')} €</span>`;
+      if (fresh) priceCell += ` <span class="sheet-fresh sheet-fresh-${fresh.tier}">${fresh.text}</span>`;
+    } else if (ruptureLabel) {
+      priceCell = `<span class="sheet-rupture">${ruptureLabel}</span>`;
+    } else {
+      priceCell = `<span class="sheet-unavailable">Non distribué</span>`;
+    }
+    return `<tr${isCurrent ? ' class="current"' : ''}>
+      <th scope="row">${f.label}</th><td>${priceCell}</td>
+    </tr>`;
+  }).join('');
+
+  // --- Horaires détaillés par jour
+  const parsedHours = parseOpeningHours(s.horaires_jour, s.horaires_automate_24_24);
+  let hoursHtml = '';
+  if (parsedHours) {
+    const todayIdx = new Date().getDay();
+    const order = [1, 2, 3, 4, 5, 6, 0]; // affichage lun..dim
+    const rows = order.map(idx => {
+      const slots = parsedHours.slots[idx];
+      const txt = slots && slots.length
+        ? slots.map(s => `${fmtHM(s.from)}–${fmtHM(s.to)}`).join(', ')
+        : '—';
+      const today = idx === todayIdx ? ' class="today"' : '';
+      return `<tr${today}><th scope="row">${DAYS_FR[idx]}</th><td>${txt}</td></tr>`;
+    }).join('');
+    const automateLine = parsedHours.automate
+      ? `<div class="sheet-auto">💳 Automate CB 24/24 disponible</div>` : '';
+    hoursHtml = `<section class="sheet-section">
+      <h3>Horaires</h3>
+      ${automateLine}
+      <table class="sheet-table sheet-hours">${rows}</table>
+    </section>`;
+  }
+
+  // --- Services
+  const amenities = getAmenities(s.services_service);
+  const servicesHtml = amenities.length
+    ? `<section class="sheet-section">
+        <h3>Services</h3>
+        <ul class="sheet-services">${amenities.map(a => `<li><span class="amenity-big">${a.icon}</span>${a.label}</li>`).join('')}</ul>
+       </section>`
+    : '';
+
+  return `
+    <header class="sheet-header">
+      <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${brandName}</h2></div>
+      ${fullAddr ? `<div class="sheet-addr">${fullAddr}</div>` : ''}
+      <div class="sheet-actions">
+        <a class="sheet-btn sheet-btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps ↗</a>
+        <a class="sheet-btn" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze ↗</a>
+        ${fullAddr ? `<button type="button" class="sheet-btn sheet-copy" data-copy="${fullAddr.replace(/"/g, '&quot;')}">Copier l'adresse</button>` : ''}
+      </div>
+    </header>
+    <section class="sheet-section">
+      <h3>Prix par carburant</h3>
+      <table class="sheet-table sheet-prices">${pricesRows}</table>
+    </section>
+    ${hoursHtml}
+    ${servicesHtml}
+  `;
+}
+
+function openStationSheet(s, fuelField, triggerEl) {
+  if (!$stationSheet || !$sheetContent) return;
+  $sheetContent.innerHTML = buildSheetContent(s, fuelField);
+  $stationSheet.classList.remove('hidden');
+  $stationSheet.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('sheet-open');
+  lastSheetTrigger = triggerEl || null;
+  // Focus dans le panneau pour piéger les flèches/tab
+  setTimeout(() => $sheetPanel && $sheetPanel.focus(), 30);
+  // Bouton "Copier l'adresse"
+  const copyBtn = $sheetContent.querySelector('.sheet-copy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const text = copyBtn.dataset.copy || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = copyBtn.textContent;
+        copyBtn.textContent = '✓ Copié';
+        setTimeout(() => { copyBtn.textContent = prev; }, 1500);
+      } catch {
+        copyBtn.textContent = 'Copie impossible';
+      }
+    });
+  }
+}
+
+function closeStationSheet() {
+  if (!$stationSheet) return;
+  $stationSheet.classList.add('hidden');
+  $stationSheet.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('sheet-open');
+  if (lastSheetTrigger && typeof lastSheetTrigger.focus === 'function') {
+    lastSheetTrigger.focus();
+  }
+  lastSheetTrigger = null;
+}
+
+if ($stationSheet) {
+  // Fermeture : backdrop, bouton ×, Escape
+  $stationSheet.addEventListener('click', (e) => {
+    if (e.target.dataset && e.target.dataset.close === '1') closeStationSheet();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$stationSheet.classList.contains('hidden')) closeStationSheet();
+  });
+}
+
+// Click handler global sur la liste : on remonte au .station, on retrouve
+// l'objet station depuis currentResults.stations par index (data-station-idx
+// posé au render). Ignore les clics sur les liens internes (Itinéraire).
+function openCardFromEvent(e) {
+  if (e.target.closest('a, button')) return; // laisse passer Itinéraire, etc.
+  const card = e.target.closest('.station');
+  if (!card || card.classList.contains('station-skeleton')) return;
+  const idx = parseInt(card.dataset.stationIdx, 10);
+  if (isNaN(idx) || !currentResults) return;
+  const openOnly = $openNowToggle && $openNowToggle.checked;
+  const visible = openOnly
+    ? currentResults.stations.filter(s => !s._opening || s._opening.isOpen)
+    : currentResults.stations;
+  const s = visible[idx];
+  if (s) openStationSheet(s, currentResults.fuelField, card);
+}
+$stationList.addEventListener('click', openCardFromEvent);
+$stationList.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const card = e.target.closest('.station');
+    if (card && !card.classList.contains('station-skeleton')) {
+      e.preventDefault();
+      openCardFromEvent(e);
+    }
+  }
+});
 
 // ===== Détection offline =====
 // On s'appuie sur navigator.onLine + les events online/offline. Ça couvre le

@@ -132,6 +132,14 @@
       <div id="historyList" class="history-list hidden" role="tabpanel" aria-label="Historique des prix"></div>
     </section>
 
+    <aside id="stationSheet" class="station-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+      <div class="sheet-backdrop" data-close="1"></div>
+      <div class="sheet-panel" tabindex="-1">
+        <button type="button" class="sheet-close" data-close="1" aria-label="Fermer">×</button>
+        <div class="sheet-content"><!-- rempli dynamiquement par openStationSheet --></div>
+      </div>
+    </aside>
+
     <footer>
       Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a>
     </footer>

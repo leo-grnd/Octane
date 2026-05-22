@@ -58,6 +58,12 @@ function setDistanceMode(mode) {
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
+const $openNowToggle = document.getElementById('openNowToggle');
+if ($openNowToggle) {
+  $openNowToggle.addEventListener('change', () => {
+    if (currentResults) renderStations();
+  });
+}
 
 const FUEL_LABELS = {
   sp95_e10_prix: 'SP95-E10',
@@ -231,14 +237,15 @@ const DRIVE_INFLATE = 1.8;               // ratio max crow → route en France
 const DRIVE_SAFETY_KM = 0.5;             // marge absolue pour zones tortueuses
 
 function driveCacheKey(lat, lon, stationId) {
-  // `drive2:` = v2 du schéma : les entrées v1 (OSRM pur) sont ignorées pour
-  // forcer un recalcul via Valhalla au premier accès. Elles expireront seules.
-  return `drive2:${lat.toFixed(3)}:${lon.toFixed(3)}:${stationId}`;
+  // `drive3:` = v3 du schéma : ajoute le champ `seconds` (ETA) en plus de
+  // `meters`. Les entrées v2 (sans ETA) sont ignorées pour forcer un recalcul.
+  // Elles expireront seules grâce au TTL.
+  return `drive3:${lat.toFixed(3)}:${lon.toFixed(3)}:${stationId}`;
 }
 
 // Valhalla `/sources_to_targets` : 1 origine × N destinations, JSON via GET
 // pour éviter le preflight CORS (POST JSON déclenche un OPTIONS qui échoue
-// parfois sur les démos publics). Distances en kilomètres.
+// parfois sur les démos publics). Distances en kilomètres, durée en secondes.
 async function valhallaMatrix(originLat, originLon, stations, signal) {
   if (!stations.length) return [];
   const body = {
@@ -254,22 +261,24 @@ async function valhallaMatrix(originLat, originLon, stations, signal) {
   const row = (data.sources_to_targets && data.sources_to_targets[0]) || [];
   return stations.map((s, i) => {
     const cell = row[i];
-    // `distance` null/undefined = destination inatteignable
+    // `distance` / `time` null = destination inatteignable
     return {
       stationId: s.id,
-      meters: cell && cell.distance != null ? Math.round(cell.distance * 1000) : null
+      meters: cell && cell.distance != null ? Math.round(cell.distance * 1000) : null,
+      seconds: cell && cell.time != null ? Math.round(cell.time) : null
     };
   });
 }
 
-// OSRM `/table` : 1 seul appel → matrice. Distances en mètres directement.
+// OSRM `/table` : 1 seul appel → matrice. Distances en mètres, durées en
+// secondes (annotations=distance,duration → renvoie les deux matrices).
 async function osrmTable(originLat, originLon, stations, signal) {
   if (!stations.length) return [];
   // Format OSRM : "lon,lat;lon,lat;..." — origine en index 0
   const coordParts = [`${originLon},${originLat}`]
     .concat(stations.map(s => `${s.lon},${s.lat}`));
   const destIdxs = stations.map((_, i) => i + 1).join(';');
-  const path = `/table/v1/driving/${coordParts.join(';')}?sources=0&destinations=${destIdxs}&annotations=distance`;
+  const path = `/table/v1/driving/${coordParts.join(';')}?sources=0&destinations=${destIdxs}&annotations=distance,duration`;
   let lastErr;
   for (const base of OSRM_ENDPOINTS) {
     try {
@@ -280,10 +289,12 @@ async function osrmTable(originLat, originLon, stations, signal) {
         lastErr = new Error(`OSRM code=${data.code}`);
         continue;
       }
-      const row = data.distances[0]; // distances[source][destination]
+      const distRow = data.distances[0]; // distances[source][destination], en mètres
+      const durRow = (data.durations && data.durations[0]) || []; // secondes
       return stations.map((s, i) => ({
         stationId: s.id,
-        meters: row[i] // null si OSRM n'a pas trouvé de route
+        meters: distRow[i], // null si OSRM n'a pas trouvé de route
+        seconds: durRow[i] != null ? Math.round(durRow[i]) : null
       }));
     } catch (err) {
       if (err.name === 'AbortError') throw err;
@@ -293,23 +304,28 @@ async function osrmTable(originLat, originLon, stations, signal) {
   throw lastErr || new Error('OSRM indisponible');
 }
 
-// Fusion de 2 matrices de distances (rows [{stationId, meters}]).
-// meters null côté l'un = on prend l'autre. Les deux null = null. Les deux
-// dispos = moyenne arrondie (médiane de 2 valeurs = moyenne).
+// Fusion de 2 matrices (rows [{stationId, meters, seconds}]).
+// Pour chaque champ : null côté l'un = on prend l'autre. Les deux null = null.
+// Les deux dispos = moyenne arrondie (médiane de 2 valeurs = moyenne).
 function mergeDistanceRows(rowsA, rowsB) {
-  const mapA = new Map(rowsA.map(r => [r.stationId, r.meters]));
-  const mapB = new Map(rowsB.map(r => [r.stationId, r.meters]));
+  const mapA = new Map(rowsA.map(r => [r.stationId, r]));
+  const mapB = new Map(rowsB.map(r => [r.stationId, r]));
   const ids = new Set([...mapA.keys(), ...mapB.keys()]);
+  const median = (a, b) => {
+    if (a == null && b == null) return null;
+    if (a == null) return b;
+    if (b == null) return a;
+    return Math.round((a + b) / 2);
+  };
   const merged = [];
   for (const id of ids) {
-    const a = mapA.get(id);
-    const b = mapB.get(id);
-    let meters;
-    if (a == null && b == null) meters = null;
-    else if (a == null) meters = b;
-    else if (b == null) meters = a;
-    else meters = Math.round((a + b) / 2);
-    merged.push({ stationId: id, meters });
+    const a = mapA.get(id) || {};
+    const b = mapB.get(id) || {};
+    merged.push({
+      stationId: id,
+      meters: median(a.meters, b.meters),
+      seconds: median(a.seconds, b.seconds)
+    });
   }
   return merged;
 }
@@ -365,6 +381,7 @@ async function raceDrivingBackends(originLat, originLon, stations, signal, onPar
 // appelé dès que le 1er backend répond (affichage rapide). La Promise résout
 // avec le résultat final (fusion si les deux ont répondu, sinon le survivant).
 async function fetchDrivingDistances(originLat, originLon, stations, signal, onPartial) {
+  // result: stationId → { meters, seconds }
   const result = new Map();
   const toQuery = [];
   for (const s of stations) {
@@ -372,7 +389,7 @@ async function fetchDrivingDistances(originLat, originLon, stations, signal, onP
     const k = driveCacheKey(originLat, originLon, s.id);
     const cached = cacheGet(localStorage, k, TTL_DRIVE);
     if (cached && typeof cached.meters !== 'undefined') {
-      result.set(s.id, cached.meters);
+      result.set(s.id, { meters: cached.meters, seconds: cached.seconds ?? null });
     } else {
       toQuery.push(s);
     }
@@ -381,15 +398,15 @@ async function fetchDrivingDistances(originLat, originLon, stations, signal, onP
 
   const { final, merged } = await raceDrivingBackends(originLat, originLon, toQuery, signal, (partialRows) => {
     const partialMap = new Map(result);
-    for (const row of partialRows) partialMap.set(row.stationId, row.meters);
+    for (const row of partialRows) partialMap.set(row.stationId, { meters: row.meters, seconds: row.seconds });
     try { onPartial && onPartial(partialMap); } catch {}
   });
 
   for (const row of final) {
-    result.set(row.stationId, row.meters);
+    result.set(row.stationId, { meters: row.meters, seconds: row.seconds });
     // On cache toujours la valeur FINALE (fusion si dispo, sinon single-backend)
     // pour que les visites suivantes n'aient pas à re-router.
-    cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters });
+    cacheSet(localStorage, driveCacheKey(originLat, originLon, row.stationId), { meters: row.meters, seconds: row.seconds });
   }
   return { map: result, merged };
 }
@@ -578,6 +595,125 @@ const KNOWN_BRANDS = [
   { re: /\bagip\b/i, name: 'Agip' }
 ];
 
+// ===== Horaires d'ouverture =====
+// L'API expose deux champs utilisables :
+//   horaires_jour : "Automate-24-24, Lundi06.30-20.30, Mardi06.30-20.30, ..."
+//     (entrées séparées par virgule, format jourHH.MM-HH.MM, "." en séparateur)
+//   horaires_automate_24_24 : "Oui" | "Non" — paiement CB possible 24/24 même
+//     si la caisse est fermée. Utile à signaler la nuit.
+const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+function parseOpeningHours(horairesJour, auto24Field) {
+  const automate = auto24Field === 'Oui' || (horairesJour && /automate.?24/i.test(horairesJour));
+  if (!horairesJour && !automate) return null;
+  const slots = {}; // dayIdx (0..6) → [{from, to}] (minutes depuis minuit)
+  if (horairesJour) {
+    for (const raw of horairesJour.split(/[,\n]/)) {
+      const e = raw.trim();
+      if (!e) continue;
+      const m = e.match(/^(Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s*(\d{1,2})[.:h](\d{2})\s*-\s*(\d{1,2})[.:h](\d{2})/i);
+      if (!m) continue;
+      const dayName = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+      const dayIdx = DAYS_FR.indexOf(dayName);
+      if (dayIdx < 0) continue;
+      const from = parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
+      const to = parseInt(m[4], 10) * 60 + parseInt(m[5], 10);
+      (slots[dayIdx] ||= []).push({ from, to });
+    }
+  }
+  const hasAnySlots = Object.keys(slots).length > 0;
+  if (!hasAnySlots && !automate) return null;
+  return { automate, slots, hasAnySlots };
+}
+
+function fmtHM(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+}
+
+// Évalue l'état d'ouverture d'une station à `now`. Retourne { state, label, isOpen }
+// où isOpen = true si on peut effectivement faire le plein (caisse ouverte OU
+// automate 24/24). state ∈ open24 | open | autoOnly | closed.
+function describeOpening(parsed, now = new Date()) {
+  if (!parsed) return null;
+  const day = now.getDay(); // 0=dim..6=sam (JS standard)
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const todaySlots = parsed.slots[day] || [];
+  // Heuristique 24/24 : la plage couvre quasi tout le jour (≥ 23h45)
+  const isAllDay = todaySlots.some(s => s.from <= 5 && s.to >= 23 * 60 + 45);
+  if (isAllDay) return { state: 'open24', label: '24h/24', isOpen: true };
+  const current = todaySlots.find(s => minutes >= s.from && minutes <= s.to);
+  if (current) {
+    return { state: 'open', label: `Ouvert · ferme à ${fmtHM(current.to)}`, isOpen: true };
+  }
+  // Fermé : chercher la prochaine ouverture (aujourd'hui ou jours suivants)
+  let nextLabel = null;
+  const laterToday = todaySlots.find(s => s.from > minutes);
+  if (laterToday) {
+    nextLabel = `ouvre à ${fmtHM(laterToday.from)}`;
+  } else {
+    for (let i = 1; i <= 7; i++) {
+      const nextDay = (day + i) % 7;
+      const ns = (parsed.slots[nextDay] || [])[0];
+      if (ns) {
+        const when = i === 1 ? 'demain' : DAYS_FR[nextDay].toLowerCase();
+        nextLabel = `ouvre ${when} à ${fmtHM(ns.from)}`;
+        break;
+      }
+    }
+  }
+  if (parsed.automate) {
+    return {
+      state: 'autoOnly',
+      label: nextLabel ? `Automate 24/24 · caisse ${nextLabel}` : 'Automate 24/24',
+      isOpen: true
+    };
+  }
+  return {
+    state: 'closed',
+    label: nextLabel ? `Fermé · ${nextLabel}` : 'Fermé',
+    isOpen: false
+  };
+}
+
+// Mapping enseigne → badge visuel (monogramme + couleur de marque).
+// Liste ordonnée : variantes spécifiques (TotalEnergies, Total Access) AVANT
+// la marque-mère (Total) pour que le bon match l'emporte. Si rien ne matche,
+// on tombe sur un badge neutre gris avec l'initiale.
+const BRAND_BADGES = [
+  { re: /total\s*acc/i, mono: 'TA', bg: '#E5004B' },
+  { re: /totalenergies/i, mono: 'TE', bg: '#E5004B' },
+  { re: /total/i, mono: 'T', bg: '#E5004B' },
+  { re: /e\.?\s*leclerc|leclerc/i, mono: 'L', bg: '#0066B3' },
+  { re: /carrefour/i, mono: 'C', bg: '#004E9F' },
+  { re: /interm[aà]rch[eé]/i, mono: 'IM', bg: '#E2001A' },
+  { re: /auchan/i, mono: 'A', bg: '#E50019' },
+  { re: /super\s*u|hyper\s*u|syst[eè]me\s*u|u\s*express/i, mono: 'U', bg: '#E51F3D' },
+  { re: /esso\s*express/i, mono: 'EE', bg: '#003B7A' },
+  { re: /esso/i, mono: 'E', bg: '#003B7A' },
+  { re: /shell/i, mono: 'S', bg: '#FFC72C', fg: '#D8232A' },
+  { re: /avia/i, mono: 'AV', bg: '#C8102E' },
+  { re: /g[eé]ant\s*casino|casino/i, mono: 'CA', bg: '#DC0E37' },
+  { re: /cora/i, mono: 'CO', bg: '#E2001A' },
+  { re: /netto/i, mono: 'N', bg: '#FF6900' },
+  { re: /\bbp\b/i, mono: 'BP', bg: '#006837' },
+  { re: /leader\s*price/i, mono: 'LP', bg: '#E2001A' },
+  { re: /colruyt/i, mono: 'CL', bg: '#003D7A' },
+  { re: /elan/i, mono: 'EL', bg: '#0066B3' },
+  { re: /agip/i, mono: 'AG', bg: '#FFCD00', fg: '#000' }
+];
+function getBrandBadge(name) {
+  if (!name) return null;
+  for (const b of BRAND_BADGES) {
+    if (b.re.test(name)) return { mono: b.mono, bg: b.bg, fg: b.fg || '#fff' };
+  }
+  // Fallback : initiale du 1er mot signifiant, fond gris neutre
+  const word = name.trim().split(/\s+/).find(w => /[a-z]/i.test(w));
+  if (!word) return null;
+  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--ink)' };
+}
+
 // Nom commercial de la station (avec la ville si on peut)
 function extractStationName(s) {
   // 1) Marque déjà matchée via OSM (priorité absolue, géospatial)
@@ -631,19 +767,47 @@ function formatPrice(price) {
   return `${euros}<span class="cents">,${cents}</span> €`;
 }
 
-// "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour
+// "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour.
+// Retourne { text, tier } pour permettre une coloration selon la fraîcheur :
+//   fresh = < 48 h (chip neutre, opacité faible)
+//   stale = 48 h–7 j (chip orange, attention douce)
+//   veryStale = > 7 j (chip rouge, donnée potentiellement obsolète)
 function formatRelativeTime(iso) {
   if (!iso) return null;
   const then = new Date(iso).getTime();
   if (isNaN(then)) return null;
   const diffMin = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (diffMin < 2) return 'à l\'instant';
-  if (diffMin < 60) return `il y a ${diffMin} min`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `il y a ${diffH} h`;
-  const diffD = Math.round(diffH / 24);
-  if (diffD < 30) return `il y a ${diffD} j`;
-  return `il y a ${Math.round(diffD / 30)} mois`;
+  const diffH = diffMin / 60;
+  const diffD = diffH / 24;
+  let text;
+  if (diffMin < 2) text = 'à l\'instant';
+  else if (diffMin < 60) text = `il y a ${diffMin} min`;
+  else if (diffH < 24) text = `il y a ${Math.round(diffH)} h`;
+  else if (diffD < 30) text = `il y a ${Math.round(diffD)} j`;
+  else text = `il y a ${Math.round(diffD / 30)} mois`;
+  const tier = diffD > 7 ? 'veryStale' : diffD > 2 ? 'stale' : 'fresh';
+  return { text, tier };
+}
+
+// Compare le prix actuel à la moyenne des 7 derniers jours d'historique
+// (déjà chargé en mémoire par prefetchHistory). Retourne { sign, arrow, deltaCt }
+// ou null si l'historique n'est pas encore là ou trop court.
+function getStationTrend(stationId, fuelField, currentPrice) {
+  if (stationId == null || !HIST_FUELS.has(fuelField) || !Number.isFinite(currentPrice)) return null;
+  const points = historyMemCache[`${stationId}:${fuelField}`];
+  if (!points || points.length < 3) return null;
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  // points = [[tsMs, milliEuros], ...] triés du plus ancien au plus récent
+  const recent = points.filter(p => p[0] >= cutoff).map(p => p[1] / 1000);
+  // Fallback : si on a moins de 2 points sur 7j, on prend les 5 derniers globaux
+  const series = recent.length >= 2 ? recent : points.slice(-5).map(p => p[1] / 1000);
+  if (series.length < 2) return null;
+  const avg = series.reduce((s, v) => s + v, 0) / series.length;
+  const deltaEur = currentPrice - avg;
+  const deltaCt = Math.round(deltaEur * 100); // centimes
+  const sign = deltaCt <= -1 ? 'down' : deltaCt >= 1 ? 'up' : 'flat';
+  const arrow = sign === 'down' ? '↘' : sign === 'up' ? '↗' : '→';
+  return { sign, arrow, deltaCt };
 }
 
 // URL Google Maps pour itinéraire depuis la position de l'utilisateur
@@ -673,6 +837,10 @@ function buildStationCard(s, i, total, fuelField) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
+  const badge = getBrandBadge(brandName);
+  const badgeHtml = badge
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    : '';
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
@@ -680,6 +848,21 @@ function buildStationCard(s, i, total, fuelField) {
   const subtitle = subParts.join(' · ');
   const majField = fuelField.replace('_prix', '_maj');
   const freshness = formatRelativeTime(s[majField]);
+  const freshnessTitle = freshness && freshness.tier !== 'fresh'
+    ? (freshness.tier === 'veryStale'
+        ? 'Prix possiblement obsolète : aucune mise à jour depuis plus d\'une semaine'
+        : 'Prix relativement ancien : mise à jour il y a plus de 48 h')
+    : '';
+  const opening = s._opening; // pré-calculé dans enrichStations
+  const openingHtml = opening
+    ? `<span class="opening opening-${opening.state}" title="${opening.label}">${opening.state === 'open24' ? '24/24' : opening.state === 'open' ? 'Ouvert' : opening.state === 'autoOnly' ? 'Automate 24/24' : 'Fermé'}</span>`
+    : '';
+  const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
+  const trendTitle = trend
+    ? (trend.sign === 'flat'
+        ? 'Prix stable par rapport à la moyenne 7 jours'
+        : `${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours`)
+    : '';
   const dirUrl = directionsUrl(s.lat, s.lon, title);
   const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
 
@@ -691,19 +874,20 @@ function buildStationCard(s, i, total, fuelField) {
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
-      <div class="name">${title}</div>
+      <div class="name">${badgeHtml}<span class="name-text">${title}</span>${openingHtml}</div>
       <div class="addr">${subtitle}</div>
     </div>
     <div class="distance">
       <strong>${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km</strong>
       <span class="dist-label">${s.driveKm != null ? 'par la route' : 'à vol d\'oiseau'}</span>
+      ${s.driveMin != null ? `<span class="dist-eta" title="Temps de trajet estimé en voiture">≈ ${s.driveMin} min</span>` : ''}
       ${s.driveUnavailable ? `<span class="dist-warn" title="Trajet routier non disponible pour cette station — distance affichée à vol d'oiseau">⚠ routage indispo</span>` : ''}
       <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title} (ouvre Google Maps)">Itinéraire ↗</a>
     </div>
     <div class="price">
-      ${formatPrice(s.price)}
+      ${formatPrice(s.price)}${trend ? `<span class="trend trend-${trend.sign}" title="${trendTitle}" aria-label="${trendTitle}">${trend.arrow}</span>` : ''}
       <span class="unit">€ / L</span>
-      ${freshness ? `<span class="freshness">Mis à jour ${freshness}</span>` : ''}
+      ${freshness ? `<span class="freshness freshness-${freshness.tier}"${freshnessTitle ? ` title="${freshnessTitle}"` : ''}>Mis à jour ${freshness.text}</span>` : ''}
     </div>
   `;
   return el;
@@ -713,6 +897,10 @@ function buildHistoryCard(s, i, total) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
+  const badge = getBrandBadge(brandName);
+  const badgeHtml = badge
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    : '';
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
@@ -726,7 +914,7 @@ function buildHistoryCard(s, i, total) {
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <div class="info">
-      <div class="name">${title}</div>
+      <div class="name">${badgeHtml}<span class="name-text">${title}</span></div>
       <div class="addr">${subtitle}</div>
     </div>
     <div class="hist-body"><div class="hist-empty"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div></div>
@@ -752,31 +940,76 @@ function buildSavingsBanner(stations) {
   return el;
 }
 
+// Affiche un placeholder de chargement (5 cartes squelette + shimmer CSS) pour
+// que l'utilisateur ait un feedback visuel pendant l'appel API au lieu d'une
+// zone vide. Affiché dès le clic, retiré au premier render réel.
+function renderSkeletons(count = 5) {
+  $stationList.innerHTML = '';
+  $stationList.setAttribute('aria-busy', 'true');
+  $resultsTitle.textContent = '';
+  $resultsCount.textContent = '';
+  $results.classList.remove('hidden');
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'station station-skeleton';
+    el.style.animationDelay = `${i * 0.06}s`;
+    el.innerHTML = `
+      <div class="sk-rank"></div>
+      <div class="sk-info">
+        <div class="sk-line sk-line-name"></div>
+        <div class="sk-line sk-line-addr"></div>
+      </div>
+      <div class="sk-distance">
+        <div class="sk-line sk-line-km"></div>
+        <div class="sk-line sk-line-label"></div>
+      </div>
+      <div class="sk-price">
+        <div class="sk-line sk-line-price"></div>
+        <div class="sk-line sk-line-unit"></div>
+      </div>
+    `;
+    $stationList.appendChild(el);
+  }
+}
+
 function renderStations() {
   if (!currentResults) return;
   const { fuelField, stations } = currentResults;
-  const total = stations.length;
 
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
   $resultsTitle.textContent = FUEL_LABELS[fuelField];
 
+  // Filtre "Ouvert maintenant" : on garde les stations dont l'état d'ouverture
+  // est inconnu (mieux vaut afficher que cacher faute d'info) OU isOpen=true.
+  const openOnly = $openNowToggle && $openNowToggle.checked;
+  const visible = openOnly
+    ? stations.filter(s => !s._opening || s._opening.isOpen)
+    : stations;
+  const total = visible.length;
+  const hiddenByFilter = stations.length - total;
+
   if (total === 0) {
-    $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
+    if (openOnly && stations.length > 0) {
+      $stationList.innerHTML = `<div class="status">Aucune station ouverte actuellement dans ce rayon. Décoche "Ouvert maintenant" pour voir les ${stations.length} résultats.</div>`;
+    } else {
+      $stationList.innerHTML = `<div class="status">Aucune station trouvée avec ce carburant dans ce rayon. Essaie d'élargir.</div>`;
+    }
     $resultsCount.textContent = '0 station';
     return;
   }
 
-  const savings = buildSavingsBanner(stations);
+  const savings = buildSavingsBanner(visible);
   if (savings) $stationList.appendChild(savings);
 
-  stations.forEach((s, i) => {
+  visible.forEach((s, i) => {
     $stationList.appendChild(buildStationCard(s, i, total, fuelField));
   });
-  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''} trouvée${total > 1 ? 's' : ''}`;
+  const filterNote = hiddenByFilter > 0 ? ` (${hiddenByFilter} masquée${hiddenByFilter > 1 ? 's' : ''})` : '';
+  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}${filterNote}`;
 
   if (currentView === 'map') {
-    renderMap(stations);
+    renderMap(visible);
   }
 }
 
@@ -784,14 +1017,17 @@ function renderStations() {
 let currentSearchToken = 0;
 
 function enrichStations(rawStations, fuelField, userLat, userLon) {
+  const now = new Date();
   return rawStations.map(s => {
     const { lat, lon } = extractCoords(s);
+    const parsedHours = parseOpeningHours(s.horaires_jour, s.horaires_automate_24_24);
     return {
       ...s,
       lat,
       lon,
       distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
-      price: parseFloat(s[fuelField])
+      price: parseFloat(s[fuelField]),
+      _opening: describeOpening(parsedHours, now)
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
     .sort((a, b) => a.price - b.price);
@@ -803,12 +1039,15 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
 function applyDistMapAndRender(distMap, stations, radiusKm) {
   const kept = [];
   for (const s of stations) {
-    const meters = distMap.get(s.id);
+    const entry = distMap.get(s.id);
+    const meters = entry && typeof entry === 'object' ? entry.meters : entry;
+    const seconds = entry && typeof entry === 'object' ? entry.seconds : null;
     if (meters == null) {
       // Station non routable : on la garde SI elle est dans le rayon crow-flies
       // (sinon elle vient du surfetch uniquement, pas pertinente).
       if (s.distance != null && s.distance <= radiusKm + 0.05) {
         s.driveKm = null;
+        s.driveMin = null;
         s.driveUnavailable = true;
         kept.push(s);
       }
@@ -817,6 +1056,7 @@ function applyDistMapAndRender(distMap, stations, radiusKm) {
     const km = meters / 1000;
     if (km <= radiusKm + 0.05) {
       s.driveKm = km;
+      s.driveMin = seconds != null ? Math.max(1, Math.round(seconds / 60)) : null;
       s.driveUnavailable = false;
       kept.push(s);
     }
@@ -878,7 +1118,7 @@ async function runSearch(lat, lon, label) {
 
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
-    $stationList.setAttribute('aria-busy', 'true');
+    renderSkeletons(5);
     // Base de marques shippée statiquement : chargée une fois par session, < 1 s
     // même sur la toute première visite grâce à la taille (~200 Ko gzip).
     const brandsPromise = loadOSMBrands();
@@ -1310,10 +1550,13 @@ function renderSparklineFromPoints(points) {
 // Pré-charge en arrière-plan (pool de N) l'historique de chaque station juste
 // après un render de liste : quand l'utilisateur ouvre l'onglet Historique, les
 // données sont déjà en cache. Stoppe si la recherche courante a changé.
+// Quand tout est chargé, déclenche un re-render unique pour faire apparaître
+// les flèches de tendance qui dépendent de historyMemCache.
 function prefetchHistory(stations, fuelField, tokenCheck) {
   if (!HIST_FUELS.has(fuelField)) return;
   const ids = stations.map(s => s.id != null ? String(s.id) : null).filter(Boolean);
   let cursor = 0;
+  const workers = [];
   const worker = async () => {
     while (cursor < ids.length) {
       if (tokenCheck && !tokenCheck()) return;
@@ -1321,7 +1564,11 @@ function prefetchHistory(stations, fuelField, tokenCheck) {
       await loadStationHistory(id, fuelField);
     }
   };
-  for (let w = 0; w < HIST_PREFETCH_CONCURRENCY; w++) worker();
+  for (let w = 0; w < HIST_PREFETCH_CONCURRENCY; w++) workers.push(worker());
+  Promise.all(workers).then(() => {
+    if (tokenCheck && !tokenCheck()) return;
+    if (currentView === 'list') renderStations();
+  });
 }
 
 function renderPriceHistory() {
@@ -1404,10 +1651,12 @@ function renderMap(stations) {
       const marker = L.marker([s.lat, s.lon], { icon });
       const name = extractStationName(s) || s.adresse || 'Station';
       const addrLine = [s.adresse, s.cp, s.ville].filter(Boolean).join(' · ');
+      const distStr = `${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km${s.driveKm != null ? ' (route)' : ''}`;
+      const etaStr = s.driveMin != null ? ` · ≈ ${s.driveMin} min` : '';
       marker.bindPopup(
         `<strong>${name}</strong><br>` +
         (addrLine ? `<span style="color:#666;font-size:0.75rem">${addrLine}</span><br>` : '') +
-        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km${s.driveKm != null ? ' (route)' : ''}`
+        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}`
       );
       markersLayer.addLayer(marker);
       bounds.extend([s.lat, s.lon]);

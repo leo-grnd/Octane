@@ -386,8 +386,14 @@ header {
   cursor: not-allowed;
 }
 
-.geoloc-btn {
+.quick-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.4rem;
   margin-top: 1rem;
+}
+.geoloc-btn {
   font-size: 0.7rem;
   background: none;
   color: var(--ink-dim);
@@ -400,6 +406,48 @@ header {
 }
 
 .geoloc-btn:hover { color: var(--accent); }
+
+/* Toggle "Ouvert maintenant" — filtre doux à côté du bouton géoloc */
+.open-now-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.open-now-toggle:hover { color: var(--accent); }
+.open-now-toggle input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+}
+.open-now-toggle input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.open-now-toggle input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: #fff;
+  font-weight: bold;
+}
+.open-now-toggle input[type="checkbox"]:checked + span { color: var(--accent); }
 
 .status {
   padding: 1.5rem 2rem;
@@ -585,6 +633,54 @@ header {
   to { opacity: 1; transform: translateX(0); }
 }
 
+/* ============ Skeleton loaders ============ */
+/* Animation shimmer : bande lumineuse qui glisse de gauche à droite,
+   sans JS, pour signaler clairement qu'on charge sans figer la zone. */
+@keyframes skShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.station-skeleton {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 1.2rem;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  padding: 1.2rem 1.5rem;
+  animation: slideIn 0.4s ease-out backwards;
+  pointer-events: none;
+}
+.station-skeleton .sk-rank { width: 40px; height: 28px; }
+.station-skeleton .sk-info { display: flex; flex-direction: column; gap: 0.45rem; }
+.station-skeleton .sk-distance { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end; min-width: 80px; }
+.station-skeleton .sk-price { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end; min-width: 100px; }
+.station-skeleton .sk-line,
+.station-skeleton .sk-rank {
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--border) 0%,
+    var(--bg-soft) 30%,
+    var(--bg-soft) 50%,
+    var(--border) 80%
+  );
+  background-size: 200% 100%;
+  animation: skShimmer 1.6s ease-in-out infinite;
+  opacity: 0.55;
+}
+.station-skeleton .sk-line-name { width: 60%; height: 16px; }
+.station-skeleton .sk-line-addr { width: 90%; height: 11px; }
+.station-skeleton .sk-line-km   { width: 56px; height: 16px; }
+.station-skeleton .sk-line-label { width: 70px; height: 10px; }
+.station-skeleton .sk-line-price { width: 84px; height: 22px; }
+.station-skeleton .sk-line-unit { width: 36px; height: 10px; }
+
+@media (max-width: 640px) {
+  .station-skeleton { padding: 0.85rem 0.9rem; gap: 0.3rem 0.7rem; }
+}
+
 .rank {
   font-family: 'Archivo Black', sans-serif;
   font-size: 1.5rem;
@@ -604,6 +700,65 @@ header {
   color: var(--ink-dim);
   line-height: 1.4;
 }
+
+/* Badge marque (monogramme coloré à gauche du nom de station) */
+.info .name { display: flex; align-items: center; gap: 0.55rem; }
+.history-card .info .name { display: flex; align-items: center; gap: 0.55rem; }
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  user-select: none;
+}
+.name-text { flex: 1; min-width: 0; word-break: break-word; }
+
+/* Chip "Ouvert / Fermé / 24/24 / Automate" — à droite du nom de station.
+   Couleur sémantique : vert = ouvert, rouge = fermé, gris-bleu = automate seul. */
+.opening {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: help;
+  text-transform: uppercase;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.opening-open, .opening-open24 {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+.opening-autoOnly {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+.opening-closed {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+:root[data-theme="light"] .opening-open,
+:root[data-theme="light"] .opening-open24 { color: #15803d; }
+:root[data-theme="light"] .opening-autoOnly { color: #a16207; }
+:root[data-theme="light"] .opening-closed { color: #b91c1c; }
 
 .distance {
   font-size: 0.75rem;
@@ -626,6 +781,24 @@ header {
   letter-spacing: 0.05em;
   margin-top: 0.15rem;
   cursor: help;
+}
+/* ETA en mode trajet : durée estimée en voiture, sous le km */
+.dist-eta {
+  display: inline-block;
+  font-size: 0.65rem;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 107, 0, 0.1);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  font-family: 'JetBrains Mono', monospace;
+  cursor: help;
+}
+:root[data-theme="light"] .dist-eta {
+  background: rgba(232, 95, 0, 0.1);
+  border-color: rgba(232, 95, 0, 0.3);
 }
 
 .price {
@@ -652,16 +825,59 @@ header {
   font-weight: 400;
 }
 
+/* Flèche de tendance vs moyenne 7 jours (à droite du prix) */
+.price .trend {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  vertical-align: 0.05em;
+  cursor: help;
+  user-select: none;
+  font-weight: 700;
+}
+.price .trend-down { color: #4ade80; }
+.price .trend-up { color: #ef4444; }
+.price .trend-flat { color: var(--ink-dim); opacity: 0.55; font-weight: 500; }
+:root[data-theme="light"] .price .trend-down { color: #15803d; }
+:root[data-theme="light"] .price .trend-up { color: #b91c1c; }
+
 .price .freshness {
-  display: block;
+  display: inline-block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
   color: var(--ink-dim);
   letter-spacing: 0.05em;
-  margin-top: 0.15rem;
+  margin-top: 0.25rem;
   font-weight: 400;
   opacity: 0.7;
   text-transform: none;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: default;
+}
+/* Donnée potentiellement vieille (> 48 h) : chip orange discret */
+.price .freshness-stale {
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.35);
+  background: rgba(251, 146, 60, 0.08);
+  opacity: 1;
+}
+/* Donnée probablement obsolète (> 7 j) : chip rouge */
+.price .freshness-veryStale {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  opacity: 1;
+}
+:root[data-theme="light"] .price .freshness-stale {
+  color: #c2410c;
+  background: rgba(251, 146, 60, 0.14);
+}
+:root[data-theme="light"] .price .freshness-veryStale {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .dir-link {

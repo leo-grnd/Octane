@@ -872,6 +872,27 @@ function directionsUrl(lat, lon, label) {
   return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=&travelmode=driving&query=${q}`;
 }
 
+// ===== Mémoire "dernière recherche" =====
+// Au chargement de l'app sans URL params, si une recherche a abouti il y a moins
+// de 24h, on propose un bandeau "Reprendre : Gazole · Lyon · 5 km" en 1 clic.
+// Évite à un utilisateur récurrent de retaper sa recherche habituelle.
+const LAST_SEARCH_KEY = 'octane-last-search';
+const LAST_SEARCH_TTL = 24 * 60 * 60 * 1000;
+function saveLastSearch(q, fuel, radius, mode) {
+  try {
+    localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify({ q, fuel, radius, mode, ts: Date.now() }));
+  } catch {}
+}
+function loadLastSearch() {
+  try {
+    const raw = localStorage.getItem(LAST_SEARCH_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || Date.now() - data.ts > LAST_SEARCH_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
 // ===== Historique de recherches =====
 const HISTORY_KEY = 'octane-history';
 const HISTORY_MAX = 5;
@@ -888,7 +909,7 @@ function pushHistory(query, label) {
 let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
 let currentView = 'list';
 
-function buildStationCard(s, i, total, fuelField) {
+function buildStationCard(s, i, total, fuelField, refStation) {
   const color = getColorForRank(i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
@@ -909,12 +930,18 @@ function buildStationCard(s, i, total, fuelField) {
         : 'Prix relativement ancien : mise à jour il y a plus de 48 h')
     : '';
   const opening = s._opening; // pré-calculé dans enrichStations
+  const economyHint = i > 0 ? buildEconomyHint(s, refStation) : null;
+  const economyHtml = economyHint
+    ? `<div class="economy-hint">${economyHint}</div>` : '';
   const amenities = getAmenities(s.services_service);
   const amenitiesHtml = amenities.length
     ? `<div class="amenities" aria-label="Services disponibles">${amenities.map(a => `<span class="amenity" title="${a.label}" aria-label="${a.label}">${a.icon}</span>`).join('')}</div>`
     : '';
   const openingHtml = opening
     ? `<span class="opening opening-${opening.state}" title="${opening.label}">${opening.state === 'open24' ? '24/24' : opening.state === 'open' ? 'Ouvert' : opening.state === 'autoOnly' ? 'Automate 24/24' : 'Fermé'}</span>`
+    : '';
+  const outlierHtml = s._outlier
+    ? `<span class="outlier-chip" title="Prix qui s'écarte de ${Math.round(s._outlier.ratio * 100)}% de la médiane locale (${s._outlier.median.toFixed(3).replace('.', ',')} €). Peut indiquer une saisie erronée — à vérifier sur place.">⚠ À vérifier</span>`
     : '';
   const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
   const trendTitle = trend
@@ -940,6 +967,7 @@ function buildStationCard(s, i, total, fuelField) {
       <div class="name">${badgeHtml}<span class="name-text">${title}</span>${openingHtml}</div>
       <div class="addr">${subtitle}</div>
       ${amenitiesHtml}
+      ${economyHtml}
     </div>
     <div class="distance">
       <strong>${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km</strong>
@@ -951,6 +979,7 @@ function buildStationCard(s, i, total, fuelField) {
     <div class="price">
       ${formatPrice(s.price)}${trend ? `<span class="trend trend-${trend.sign}" title="${trendTitle}" aria-label="${trendTitle}">${trend.arrow}</span>` : ''}
       <span class="unit">€ / L</span>
+      ${outlierHtml}
       ${freshness ? `<span class="freshness freshness-${freshness.tier}"${freshnessTitle ? ` title="${freshnessTitle}"` : ''}>Mis à jour ${freshness.text}</span>` : ''}
     </div>
   `;
@@ -984,6 +1013,26 @@ function buildHistoryCard(s, i, total) {
     <div class="hist-body"><div class="hist-empty"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div></div>
   `;
   return el;
+}
+
+// Petit hint par carte (rang ≥ 2) : combien tu paies en plus vs station n°1
+// sur un plein de 60 L, et est-ce que c'est plus près ou plus loin que n°1.
+// Aide le grand public à arbitrer "vaut le coup de bouger ?" sans calculs.
+function buildEconomyHint(s, ref) {
+  if (!ref || s === ref) return null;
+  const priceDelta = s.price - ref.price;
+  if (priceDelta < 0.005) return null; // < 0,5 ct/L : bruit, on n'affiche pas
+  const tankExtra = priceDelta * 60;
+  const distS = s.driveKm != null ? s.driveKm : s.distance;
+  const distR = ref.driveKm != null ? ref.driveKm : ref.distance;
+  const tankStr = `+${tankExtra.toFixed(2).replace('.', ',')} € (60 L) vs n°1`;
+  if (distS == null || distR == null) return tankStr;
+  const distDelta = distR - distS; // > 0 si cette station est plus PROCHE que n°1
+  if (Math.abs(distDelta) < 0.3) return `${tankStr} · même distance`;
+  const distAbs = Math.abs(distDelta).toFixed(1).replace('.', ',');
+  return distDelta > 0
+    ? `${tankStr} mais ${distAbs} km plus près`
+    : `${tankStr} et ${distAbs} km plus loin`;
 }
 
 // Calcule et insère le bandeau "gain potentiel" : écart max de prix × 60L.
@@ -1090,8 +1139,9 @@ function renderStations() {
   const savings = buildSavingsBanner(visible);
   if (savings) $stationList.appendChild(savings);
 
+  const refStation = visible[0];
   visible.forEach((s, i) => {
-    $stationList.appendChild(buildStationCard(s, i, total, fuelField));
+    $stationList.appendChild(buildStationCard(s, i, total, fuelField, refStation));
   });
   const filterNote = hiddenByFilter > 0 ? ` (${hiddenByFilter} masquée${hiddenByFilter > 1 ? 's' : ''})` : '';
   $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}${filterNote}`;
@@ -1104,9 +1154,18 @@ function renderStations() {
 // Token de la recherche en cours (évite les races si on relance avant la fin)
 let currentSearchToken = 0;
 
+// Médiane simple sur un tableau de nombres (ignore NaN). Utilisée pour la
+// détection de prix aberrants (saisie erronée côté station/gérant).
+function median(values) {
+  const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 function enrichStations(rawStations, fuelField, userLat, userLon) {
   const now = new Date();
-  return rawStations.map(s => {
+  const enriched = rawStations.map(s => {
     const { lat, lon } = extractCoords(s);
     const parsedHours = parseOpeningHours(s.horaires_jour, s.horaires_automate_24_24);
     return {
@@ -1119,6 +1178,27 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
     .sort((a, b) => a.price - b.price);
+
+  // Détection des prix aberrants : écart > 25 % avec la médiane locale du set.
+  // Au moins 5 stations pour que la médiane soit représentative, sinon on ne
+  // marque rien (trop volatile sur les très petites zones rurales).
+  if (enriched.length >= 5) {
+    const med = median(enriched.map(s => s.price));
+    if (med && med > 0) {
+      const threshold = 0.25;
+      for (const s of enriched) {
+        const ratio = Math.abs(s.price - med) / med;
+        if (ratio > threshold) {
+          s._outlier = {
+            ratio,
+            direction: s.price > med ? 'high' : 'low',
+            median: med
+          };
+        }
+      }
+    }
+  }
+  return enriched;
 }
 
 // Applique une matrice de distances routières au set de stations et refresh
@@ -1249,6 +1329,8 @@ async function runSearch(lat, lon, label) {
 
     renderStations();
     $results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Persiste la recherche réussie pour la "reprise" au prochain chargement.
+    saveLastSearch($address.value.trim() || label, fuelField, radiusKm, distanceMode);
 
     // Mode voiture : en tâche de fond, on calcule les distances routières
     // via OSRM sur le SUPERSET (inclut les stations hors cercle crow-flies
@@ -2015,8 +2097,44 @@ if ('serviceWorker' in navigator) {
     $address.value = q;
     // Laisse le temps au DOM / cache de s'initialiser avant de lancer
     setTimeout(doAddressSearch, 50);
+    return;
   }
+  // Pas de query string : si une recherche récente existe, proposer un bandeau
+  // de reprise au-dessus du hero. Un clic suffit à relancer.
+  const last = loadLastSearch();
+  if (last && last.q) showResumeBanner(last);
 })();
+
+function showResumeBanner(last) {
+  if (document.getElementById('resumeBanner')) return;
+  const fuelLabel = FUEL_LABELS[last.fuel] || 'carburant';
+  const banner = document.createElement('div');
+  banner.id = 'resumeBanner';
+  banner.className = 'resume-banner';
+  banner.innerHTML = `
+    <div class="resume-text">
+      <span class="resume-dot" aria-hidden="true">↻</span>
+      Reprendre votre dernière recherche : <strong>${fuelLabel}</strong> autour de <strong>${last.q}</strong> (${last.radius} km)
+    </div>
+    <div class="resume-actions">
+      <button type="button" class="resume-btn resume-go" aria-label="Reprendre la recherche">Reprendre</button>
+      <button type="button" class="resume-btn resume-dismiss" aria-label="Ignorer">✕</button>
+    </div>
+  `;
+  const hero = document.querySelector('.hero');
+  if (hero && hero.parentNode) {
+    hero.parentNode.insertBefore(banner, hero);
+  }
+  banner.querySelector('.resume-go').addEventListener('click', () => {
+    $address.value = last.q;
+    if (last.fuel && [...$fuel.options].some(o => o.value === last.fuel)) $fuel.value = last.fuel;
+    if (last.radius) $radius.value = String(last.radius);
+    if (last.mode) setDistanceMode(last.mode);
+    banner.remove();
+    doAddressSearch();
+  });
+  banner.querySelector('.resume-dismiss').addEventListener('click', () => banner.remove());
+}
 
 // Persiste le choix du mode + relance la recherche si on en a déjà une en cours
 $modeRadios.forEach(r => {

@@ -55,6 +55,21 @@ function setDistanceMode(mode) {
   const r = document.querySelector(`input[name="distanceMode"][value="${mode}"]`);
   if (r) r.checked = true;
 }
+
+const $tank = document.getElementById('tank');
+const TANK_KEY = 'octane-tank-size';
+const TANK_DEFAULT = 60;
+// Clampé 1–200 L pour rester réaliste (un poids-lourd a typiquement 200 L max).
+function getTankSize() {
+  const v = parseInt($tank && $tank.value, 10);
+  if (!Number.isFinite(v) || v <= 0) return TANK_DEFAULT;
+  return Math.min(200, Math.max(1, v));
+}
+function setTankSize(liters) {
+  const v = parseInt(liters, 10);
+  if (!$tank || !Number.isFinite(v) || v <= 0) return;
+  $tank.value = Math.min(200, Math.max(1, v));
+}
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
@@ -734,20 +749,22 @@ function buildHistoryCard(s, i, total) {
   return el;
 }
 
-// Calcule et insère le bandeau "gain potentiel" : écart max de prix × 60L.
-// Seulement si on a au moins 2 stations avec un vrai écart (> 1 ct/L).
+// Calcule et insère le bandeau "gain potentiel" : écart max de prix × volume
+// réservoir choisi par l'user (60L par défaut). Seulement si ≥ 2 stations
+// avec un vrai écart (> 1 ct/L).
 function buildSavingsBanner(stations) {
   if (!stations || stations.length < 2) return null;
   const min = stations[0].price;
   const max = stations[stations.length - 1].price;
   const delta = max - min;
   if (delta < 0.01) return null;
-  const tankEur = delta * 60;
+  const tankSize = getTankSize();
+  const tankEur = delta * tankSize;
   const el = document.createElement('div');
   el.className = 'savings-banner';
   el.innerHTML = `
     <div class="savings-delta">${delta.toFixed(2).replace('.', ',')} € / L d'écart</div>
-    <div class="savings-tank">soit <strong>${tankEur.toFixed(2).replace('.', ',')} €</strong> économisés sur un plein de 60 L</div>
+    <div class="savings-tank">soit <strong>${tankEur.toFixed(2).replace('.', ',')} €</strong> économisés sur un plein de ${tankSize} L</div>
   `;
   return el;
 }
@@ -979,6 +996,8 @@ function updateUrlParams() {
   params.set('r', $radius.value);
   const mode = getDistanceMode();
   if (mode !== 'crow') params.set('mode', mode);
+  const tank = getTankSize();
+  if (tank !== TANK_DEFAULT) params.set('tank', String(tank));
   const url = `${location.pathname}?${params.toString()}${location.hash}`;
   history.replaceState(null, '', url);
 }
@@ -1466,6 +1485,11 @@ if ('serviceWorker' in navigator) {
              : 'crow';
   setDistanceMode(mode);
 
+  // Taille réservoir : URL > localStorage > défaut (60)
+  const urlTank = params.get('tank');
+  const storedTank = (() => { try { return localStorage.getItem(TANK_KEY); } catch { return null; } })();
+  setTankSize(urlTank || storedTank || TANK_DEFAULT);
+
   const q = params.get('q');
   const fuel = params.get('fuel');
   const r = params.get('r');
@@ -1489,3 +1513,15 @@ $modeRadios.forEach(r => {
     }
   });
 });
+
+// Taille réservoir : persiste + re-render des stations (le bandeau d'économie
+// recalcule avec le nouveau volume). Pas besoin de re-fetcher l'API.
+if ($tank) {
+  $tank.addEventListener('change', () => {
+    const v = getTankSize();
+    setTankSize(v); // clamp visible immédiat si l'user a tapé 300
+    try { localStorage.setItem(TANK_KEY, String(v)); } catch {}
+    updateUrlParams();
+    if (currentResults) renderStations();
+  });
+}

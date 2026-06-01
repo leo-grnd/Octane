@@ -192,8 +192,9 @@ header {
   align-items: end;
 }
 
-/* Toggle mode de distance : ligne dédiée en dessous du grid principal */
-.field-distance-mode { grid-column: 1 / -1; }
+/* Ligne 2 du grid : taille réservoir (1 col) + mode de distance (le reste) */
+.field-tank { grid-column: 1 / span 1; }
+.field-distance-mode { grid-column: 2 / -1; align-self: end; }
 .distance-mode {
   display: inline-flex;
   border: 1px solid var(--border);
@@ -240,11 +241,15 @@ header {
   .form-grid { grid-template-columns: 1fr 1fr; }
   .field:first-child { grid-column: 1 / -1; }
   .btn-search { grid-column: 1 / -1; }
+  .field-tank { grid-column: 1; }
+  .field-distance-mode { grid-column: 2 / -1; }
 }
 @media (max-width: 560px) {
   .form-grid { grid-template-columns: 1fr; gap: 1.1rem; }
   .field:first-child,
-  .btn-search { grid-column: auto; }
+  .btn-search,
+  .field-tank,
+  .field-distance-mode { grid-column: auto; }
   .btn-search { width: 100%; padding: 1rem; }
 }
 

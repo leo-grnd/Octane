@@ -35,4 +35,16 @@ jobs:
             exit 0
           fi
           git commit -m "chore(data): refresh OSM brands"
-          git push
+          # Push résilient : si main a avancé entre le checkout et maintenant
+          # (commit humain pendant que le scraper tournait), on rebase et on
+          # ré-essaie. 5 tentatives pour absorber les rebases en cascade.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "Push réussi (essai $attempt)"
+              exit 0
+            fi
+            echo "Push refusé (essai $attempt) — rebase puis retry"
+            git pull --rebase origin main
+          done
+          echo "Push échoué après 5 essais"
+          exit 1

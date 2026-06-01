@@ -40,36 +40,73 @@ out center tags;
 
 const endpoints = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.openstreetmap.fr/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter'
+  'https://overpass.openstreetmap.fr/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
+
+// Overpass impose un User-Agent identifiable + Accept JSON depuis 2024.
+// Sans ça → 403 (openstreetmap.fr) ou 406 (overpass-api.de). Le `+url` est
+// la convention pour pouvoir nous joindre en cas d'abus.
+const HEADERS = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Accept': 'application/json',
+  'User-Agent': 'octane-build/1.0 (+https://github.com/leo-grnd/Octane)'
+};
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Tente un endpoint avec retry sur 429/503/504 (sleep 60s entre essais).
+// Bouge au endpoint suivant sur erreurs définitives (403/406) ou réseau.
+async function fetchFromEndpoint(ep, query) {
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10 * 60 * 1000);
+    try {
+      const res = await fetch(ep, {
+        method: 'POST',
+        body: `data=${encodeURIComponent(query)}`,
+        headers: HEADERS,
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) return await res.json();
+      // 429 / 503 / 504 = transient → sleep + retry sur le même endpoint
+      if ([429, 503, 504].includes(res.status) && attempt < MAX_RETRIES) {
+        const wait = 60 * attempt; // 60s, 120s
+        process.stderr.write(`  · HTTP ${res.status} (essai ${attempt}/${MAX_RETRIES}) — sleep ${wait}s\n`);
+        await sleep(wait * 1000);
+        continue;
+      }
+      // 4xx définitif → on bouge à l'endpoint suivant
+      process.stderr.write(`  ✗ HTTP ${res.status}\n`);
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      clearTimeout(timer);
+      if (attempt >= MAX_RETRIES || !err.message.startsWith('HTTP 5') && !err.message.startsWith('HTTP 429')) {
+        throw err;
+      }
+    }
+  }
+  throw new Error('Retries exhausted');
+}
 
 async function fetchAll() {
   let lastErr;
   for (const ep of endpoints) {
     process.stderr.write(`→ ${ep}\n`);
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10 * 60 * 1000); // 10 min
     try {
-      const res = await fetch(ep, {
-        method: 'POST',
-        body: `data=${encodeURIComponent(query)}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        signal: ctrl.signal
-      });
-      clearTimeout(timer);
-      if (!res.ok) {
-        process.stderr.write(`  ✗ HTTP ${res.status}\n`);
-        lastErr = new Error(`HTTP ${res.status}`);
-        continue;
-      }
-      const data = await res.json();
+      const data = await fetchFromEndpoint(ep, query);
+      process.stderr.write(`  ✓ OK\n`);
       return data;
     } catch (err) {
-      clearTimeout(timer);
       process.stderr.write(`  ✗ ${err.message}\n`);
       lastErr = err;
+      // Petite pause entre endpoints pour ne pas tout enchaîner si on a été
+      // rate-limited (l'IP de GHA est partagée → souvent throttled en cascade)
+      await sleep(5000);
     }
   }
   throw lastErr ?? new Error('Tous les endpoints Overpass ont échoué');

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment ça marche — OCTANE</title>
+    <meta name="description" content="Comprendre OCTANE : comment trouver la station-service la moins chère autour de soi — carburants suivis, rayon, distance à vol d'oiseau ou par la route, et d'où viennent les données.">
+    <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
+    <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="comment-ca-marche.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <a class="logo" href="index.html">O<span>CTANE</span></a>
+                <div class="tagline">— Comment ça marche</div>
+            </div>
+            <div class="meta">
+                <div class="meta-right">
+                    <a class="nav-link" href="index.html">← Retour à l'outil</a>
+                    <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+                        <span id="themeIcon" aria-hidden="true">☾</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <section class="hero hiw-hero">
+            <h1>Le bon plein, <em>au bon prix.</em></h1>
+            <p>OCTANE compare en direct les prix officiels des stations-service françaises et te montre, autour de
+               toi, où faire le plein le moins cher — par prix <strong>et</strong> par distance. Gratuit, sans pub,
+               sans compte.</p>
+        </section>
+
+        <section class="stats" aria-label="Chiffres clés">
+            <div class="stat"><div class="stat-num" data-count="6">0</div><div class="stat-lbl">carburants suivis</div></div>
+            <div class="stat"><div class="stat-num" data-count="50">0</div><div class="stat-lbl">km de rayon max</div></div>
+            <div class="stat"><div class="stat-num" data-count="2">0</div><div class="stat-lbl">modes de distance</div></div>
+            <div class="stat"><div class="stat-num">0</div><div class="stat-lbl">clé API / compte</div></div>
+        </section>
+
+        <p class="flow-intro">Tout ce qu'il faut savoir <span class="arrow">↓</span></p>
+
+        <ol class="pipeline">
+
+            <li class="step card reveal">
+                <div class="step-head"><span class="step-num">01</span><h2>Dis où tu es</h2></div>
+                <div class="step-body">
+                    <div class="step-text">
+                        <p>Tape une <strong>adresse ou une ville</strong> (avec autocomplétion officielle), ou laisse
+                           OCTANE utiliser ta <strong>position actuelle</strong> d'un clic.</p>
+                        <p>Choisis ensuite ton <strong>rayon de recherche</strong>, de <code>1</code> à <code>50 km</code>
+                           autour du point de départ.</p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="vchips">
+                            <span class="vchip">⊙ Ma position</span>
+                            <span class="vchip">🏠 Adresse ou ville</span>
+                            <span class="vchip">📏 Rayon 1–50 km</span>
+                        </div>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step card reveal">
+                <div class="step-head"><span class="step-num">02</span><h2>Choisis ton carburant</h2></div>
+                <div class="step-body">
+                    <div class="step-text">
+                        <p>Six carburants sont suivis. OCTANE classe les stations sur <strong>celui que tu as choisi</strong>,
+                           du moins cher au plus cher.</p>
+                        <p>Indique aussi la taille de ton <strong>réservoir</strong> : le coût d'un plein complet est
+                           calculé pour chaque station.</p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="vchips">
+                            <span class="vchip">SP95-E10</span>
+                            <span class="vchip">SP95</span>
+                            <span class="vchip">SP98</span>
+                            <span class="vchip">Gazole</span>
+                            <span class="vchip">E85</span>
+                            <span class="vchip">GPLc</span>
+                        </div>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step card reveal">
+                <div class="step-head"><span class="step-num">03</span><h2>À vol d'oiseau ou en voiture</h2></div>
+                <div class="step-body">
+                    <div class="step-text">
+                        <p>Deux façons de mesurer la distance : la ligne droite, ou la <strong>vraie distance par la
+                           route</strong>. Le mode « en voiture » route réellement le trajet — plus juste pour savoir
+                           si le détour vaut le coup.</p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="dmodes" aria-hidden="true">
+                            <div class="dmode"><b>À vol d'oiseau</b> rapide, ligne droite</div>
+                            <div class="dmode"><b>En voiture</b> distance réelle par la route</div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step card reveal">
+                <div class="step-head"><span class="step-num">04</span><h2>Le classement, le plein, la carte</h2></div>
+                <div class="step-body">
+                    <div class="step-text">
+                        <p>Les stations s'affichent <strong>triées par prix</strong>, avec le coût d'un plein et la
+                           distance. Bascule entre <strong>liste</strong>, <strong>carte</strong> et
+                           <strong>historique</strong> des prix pour voir la tendance.</p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="rank" aria-hidden="true">
+                            <div class="rank-row best"><span class="rank-medal">🥇</span><span class="rank-name">Station la moins chère</span><span class="rank-price">1,72 €</span></div>
+                            <div class="rank-row"><span class="rank-medal">🥈</span><span class="rank-name">2ᵉ</span><span class="rank-price">1,74 €</span></div>
+                            <div class="rank-row"><span class="rank-medal">🥉</span><span class="rank-name">3ᵉ</span><span class="rank-price">1,79 €</span></div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step card reveal">
+                <div class="step-head"><span class="step-num">05</span><h2>D'où viennent les données</h2></div>
+                <div class="step-body">
+                    <div class="step-text">
+                        <p>Les prix proviennent du <strong>flux officiel du Ministère de l'Économie</strong>
+                           (<code>data.economie.gouv.fr</code>), mis à jour en continu. Le géocodage des adresses passe
+                           par <code>adresse.data.gouv.fr</code>, le routage par OSRM/Valhalla, les enseignes par
+                           OpenStreetMap.</p>
+                        <p>Tout tourne <strong>dans ton navigateur</strong> : aucune clé, aucun compte, aucun traceur.
+                           Le site fonctionne même hors-ligne grâce au cache.</p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="badges">
+                            <span class="badge">data.economie.gouv.fr</span>
+                            <span class="badge">Sans clé API</span>
+                            <span class="badge">100% navigateur</span>
+                            <span class="badge">Hors-ligne (cache)</span>
+                            <span class="badge">Aucun traceur</span>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </ol>
+
+        <section class="outro card reveal">
+            <h2>Et c'est tout — <em>côté navigateur.</em></h2>
+            <p>Pas de serveur, pas de dépendance lourde, pas de données envoyées. Juste du HTML, du CSS et du
+               JavaScript, déployable tel quel sur GitHub&nbsp;Pages.</p>
+            <a class="cta" href="index.html">Trouver mon carburant →</a>
+        </section>
+
+        <footer>
+            Projet indépendant · données : data.economie.gouv.fr ·
+            géocodage <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a>.
+        </footer>
+    </div>
+
+    <script>
+    (function () {
+        var icon = document.getElementById('themeIcon');
+        function apply(t) {
+            if (t === 'light') { document.documentElement.setAttribute('data-theme', 'light'); icon.textContent = '☀'; }
+            else { document.documentElement.removeAttribute('data-theme'); icon.textContent = '☾'; }
+        }
+        apply(localStorage.getItem('octane-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+        document.getElementById('themeToggle').addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            localStorage.setItem('octane-theme', next); apply(next);
+        });
+
+        var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var reveals = document.querySelectorAll('.reveal');
+        if (reduce || !('IntersectionObserver' in window)) {
+            reveals.forEach(function (el) { el.classList.add('in'); });
+        } else {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+            }, { threshold: 0.18 });
+            reveals.forEach(function (el) { io.observe(el); });
+        }
+
+        var nums = document.querySelectorAll('.stat-num[data-count]');
+        function countUp(el) {
+            var target = parseInt(el.getAttribute('data-count'), 10);
+            if (reduce) { el.textContent = target.toLocaleString('fr-FR'); return; }
+            var start = null, dur = 1100;
+            function tick(ts) {
+                if (start === null) start = ts;
+                var p = Math.min(1, (ts - start) / dur);
+                var eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = Math.round(target * eased).toLocaleString('fr-FR');
+                if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+        if (!('IntersectionObserver' in window)) {
+            nums.forEach(countUp);
+        } else {
+            var io2 = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); io2.unobserve(e.target); } });
+            }, { threshold: 0.6 });
+            nums.forEach(function (el) { io2.observe(el); });
+        }
+    })();
+    </script>
+</body>
+</html>

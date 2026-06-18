@@ -1,0 +1,156 @@
+/* comment-ca-marche.css — page "Comment ça marche", réutilise les tokens de style.css */
+
+.hiw-hero { margin-top: 1rem; max-width: 760px; }
+.hiw-hero p { color: var(--ink-dim); font-size: 0.95rem; line-height: 1.7; max-width: 660px; }
+.hiw-hero strong { color: var(--ink); }
+
+a.logo { text-decoration: none; display: inline-block; }
+
+/* ---- Bandeau chiffres clés ---- */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 2.5rem 0 3rem;
+}
+.stat { background: var(--bg-card); padding: 1.75rem 1.25rem; text-align: center; }
+.stat-num {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    line-height: 1;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+.stat-num .unit { font-size: 0.4em; color: var(--ink-dim); margin-left: 0.15em; letter-spacing: 0; }
+.stat-lbl {
+    margin-top: 0.6rem;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-dim);
+}
+
+/* ---- Intro flux ---- */
+.flow-intro {
+    text-align: center;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--ink-dim);
+    margin-bottom: 1.5rem;
+}
+.flow-intro .arrow { display: inline-block; color: var(--accent); animation: bob 1.8s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+/* ---- Étapes ---- */
+.pipeline { list-style: none; display: flex; flex-direction: column; gap: 1.5rem; }
+.step { padding: 2rem; }
+.step-head { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.25rem; }
+.step-num {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    color: var(--accent);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+}
+.step-head h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+    letter-spacing: -0.01em;
+}
+.step-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: 2rem; align-items: center; }
+.step-text p { color: var(--ink-dim); font-size: 0.88rem; line-height: 1.7; margin-bottom: 0.75rem; }
+.step-text p:last-child { margin-bottom: 0; }
+.step-text strong { color: var(--ink); }
+.step-text em { color: var(--accent-soft); font-style: italic; }
+
+code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    padding: 0.05em 0.4em;
+    color: var(--accent-soft);
+    white-space: nowrap;
+}
+
+/* ---- Visuels ---- */
+.step-visual { min-width: 0; }
+.vchips { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.vchip {
+    font-size: 0.78rem;
+    padding: 0.6rem 0.9rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--ink);
+}
+
+/* Classement de prix (visuel spécifique Octane) */
+.rank { display: flex; flex-direction: column; gap: 0.5rem; }
+.rank-row {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--border);
+    font-size: 0.85rem;
+}
+.rank-row.best { border-left-color: var(--accent); }
+.rank-medal { font-size: 1.1rem; }
+.rank-name { color: var(--ink); }
+.rank-price { margin-left: auto; font-family: 'Archivo Black', sans-serif; font-variant-numeric: tabular-nums; }
+.rank-row.best .rank-price { color: var(--accent); }
+
+/* Bascule des deux modes de distance */
+.dmodes { display: flex; flex-direction: column; gap: 0.6rem; }
+.dmode {
+    display: flex; align-items: baseline; gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+}
+.dmode b { font-family: 'Archivo Black', sans-serif; color: var(--ink); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.badge {
+    font-size: 0.68rem; padding: 0.35rem 0.6rem;
+    background: var(--bg-soft); border: 1px solid var(--border); color: var(--ink-dim);
+}
+
+/* ---- Outro ---- */
+.outro { padding: 2.5rem; text-align: center; margin-top: 1rem; }
+.outro h2 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 0.75rem; }
+.outro h2 em { font-style: italic; color: var(--accent-soft); }
+.outro p { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.7; max-width: 560px; margin: 0 auto 1.5rem; }
+.cta {
+    display: inline-block;
+    background: var(--accent); color: #fff; text-decoration: none;
+    font-family: 'Archivo Black', sans-serif; font-size: 0.85rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.9rem 2rem; transition: transform 0.15s, background 0.15s;
+}
+.cta:hover { background: var(--accent-soft); transform: translateX(3px); }
+
+/* ---- Reveal ---- */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .flow-intro .arrow { animation: none; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 760px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .step-body { grid-template-columns: 1fr; gap: 1.5rem; }
+    .step { padding: 1.5rem; }
+}
+@media (max-width: 420px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+}

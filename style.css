@@ -362,6 +362,25 @@ header {
   gap: 0.3rem;
 }
 
+/* Lien retour vers le hub (← Tous les outils) */
+.nav-link {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.7rem;
+  margin-bottom: 0.6rem;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.nav-link:hover { color: var(--accent); border-color: var(--accent); }
+/* Sur l'en-tête de l'outil, empile les liens (← Tous les outils / Comment ça marche →). */
+.meta > .nav-link { display: block; width: fit-content; margin-left: auto; }
+
 .field select option {
   background: var(--bg-card);
   color: var(--ink);

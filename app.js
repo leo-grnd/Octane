@@ -141,14 +141,17 @@ function cacheSet(store, key, data) {
   try {
     store.setItem(key, payload);
   } catch (err) {
-    // QuotaExceededError : on purge les entrées les plus vieilles (hist:*, fuel:*, geo:*)
-    // puis on retente une fois. Sans ça, le cache se bloque silencieusement et
-    // toutes les écritures suivantes échouent aussi.
+    // QuotaExceededError : on purge les entrées les plus vieilles (hist:*, fuel:*,
+    // geo:*, drive:*) puis on retente une fois. Sans ça, le cache se bloque
+    // silencieusement et toutes les écritures suivantes échouent aussi.
+    // Les préfixes sont versionnés (hist2:, drive3:, fuel2:…), d'où le `\d*` :
+    // une liste en dur laissait échapper le plus gros poste de cache dès qu'un
+    // schéma changeait de version.
     if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
       const victims = [];
       for (let i = 0; i < store.length; i++) {
         const k = store.key(i);
-        if (!k || !/^(hist:|fuel:|geo:|drive:|drive2:)/.test(k)) continue;
+        if (!k || !/^(hist\d*:|fuel\d*:|geo:|drive\d*:)/.test(k)) continue;
         try {
           const { ts } = JSON.parse(store.getItem(k)) || {};
           victims.push({ k, ts: ts || 0 });
@@ -212,25 +215,72 @@ async function fetchWithRetry(fetcher, { tries = 3, backoff = [400, 1200, 2500],
   throw lastErr;
 }
 
-// Appel API prix carburants
+// ===== Appel API prix carburants =====
+const STATIONS_PAGE = 100;          // maximum autorisé par l'API Opendatasoft
+const MAX_STATIONS = 400;           // au-delà, la liste n'est plus exploitable
+const ODS_OFFSET_CEILING = 10000;   // contrainte API : offset + limit <= 10000
+
+// Champs réellement consommés par l'UI. Sans ce `select`, l'API renvoie en plus
+// `horaires`, `prix`, `rupture` et `services` (des blobs JSON sérialisés en
+// texte) et tout le découpage administratif : 275 Ko par page de 100 stations,
+// contre 76 Ko ici. Dérivé de FUEL_LABELS pour rester en phase automatiquement —
+// la bottom sheet affiche les 6 carburants, pas seulement celui recherché.
+const STATION_FIELDS = [
+  'id', 'cp', 'ville', 'adresse', 'geom', 'services_service',
+  ...Object.keys(FUEL_LABELS).flatMap(field => {
+    const base = field.replace('_prix', '');
+    return [`${base}_prix`, `${base}_maj`, `${base}_rupture_type`];
+  })
+].join(',');
+
+// Retourne { stations, total, truncated }. `total` = nombre de stations dans le
+// rayon côté API, `truncated` = on a dû s'arrêter à MAX_STATIONS.
 async function fetchStations(lat, lon, radiusKm, fuelField) {
-  const key = `fuel:${lat.toFixed(3)}:${lon.toFixed(3)}:${radiusKm}:${fuelField}`;
+  // `fuel2:` = v2 du schéma (objet au lieu d'un tableau nu). Les entrées v1
+  // seraient mal interprétées ; elles expireront seules grâce au TTL.
+  const key = `fuel2:${lat.toFixed(3)}:${lon.toFixed(3)}:${radiusKm}:${fuelField}`;
   const cached = cacheGet(sessionStorage, key, TTL_FUEL);
   if (cached) return cached;
   const whereClause = `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km) AND ${fuelField} IS NOT NULL`;
-  const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
+  const base = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
-    `&limit=100`;
-  const res = await fetchWithRetry(signal => fetch(url, { signal }));
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('API 4xx body:', body);
-    throw new Error(`API carburants: ${res.status}`);
+    `&select=${encodeURIComponent(STATION_FIELDS)}` +
+    // Tri serveur par prix croissant : si le rayon dépasse MAX_STATIONS, on
+    // tronque les stations les PLUS CHÈRES, pas un échantillon au hasard — le
+    // classement du moins cher reste donc exact. `id` départage les ex æquo,
+    // sans quoi la pagination pourrait dupliquer ou sauter des lignes.
+    `&order_by=${encodeURIComponent(`${fuelField},id`)}`;
+
+  const fetchPage = async (offset) => {
+    const url = `${base}&limit=${STATIONS_PAGE}&offset=${offset}`;
+    const res = await fetchWithRetry(signal => fetch(url, { signal }));
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('API 4xx body:', body);
+      throw new Error(`API carburants: ${res.status}`);
+    }
+    return res.json();
+  };
+
+  // `limit` est plafonné à 100 côté API. Sans pagination, une recherche à 50 km
+  // autour de Paris (754 stations) n'en remontait que 100.
+  const first = await fetchPage(0);
+  const results = (first.results || []).slice();
+  const total = first.total_count || results.length;
+  const pageCount = Math.min(
+    Math.ceil(Math.min(total, MAX_STATIONS) / STATIONS_PAGE),
+    Math.floor(ODS_OFFSET_CEILING / STATIONS_PAGE)
+  );
+  if (pageCount > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: pageCount - 1 }, (_, i) => fetchPage((i + 1) * STATIONS_PAGE))
+    );
+    rest.forEach(p => results.push(...(p.results || [])));
   }
-  const data = await res.json();
-  const results = data.results || [];
-  cacheSet(sessionStorage, key, results);
-  return results;
+  const stations = results.slice(0, MAX_STATIONS);
+  const payload = { stations, total, truncated: total > stations.length };
+  cacheSet(sessionStorage, key, payload);
+  return payload;
 }
 
 // ===== Routage routier (Valhalla primaire + OSRM fallback) =====
@@ -1042,7 +1092,17 @@ function renderStations() {
   stations.forEach((s, i) => {
     $stationList.appendChild(buildStationCard(s, i, total, fuelField, refStation));
   });
-  $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}`;
+  // Troncature : on ne prétend pas afficher un classement exhaustif quand le
+  // rayon contient plus de stations qu'on n'en charge.
+  if (currentResults.truncated) {
+    $resultsCount.textContent = `${total} sur ${currentResults.totalInRadius} stations`;
+    $resultsCount.title =
+      `Ce rayon contient ${currentResults.totalInRadius} stations ; Octane en charge ${MAX_STATIONS} au maximum, ` +
+      `en partant des moins chères. Réduis le rayon pour un classement exhaustif.`;
+  } else {
+    $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}`;
+    $resultsCount.removeAttribute('title');
+  }
 
   if (currentView === 'map') {
     renderMap(stations);
@@ -1185,7 +1245,8 @@ async function runSearch(lat, lon, label) {
     // Base de marques shippée statiquement : chargée une fois par session, < 1 s
     // même sur la toute première visite grâce à la taille (~200 Ko gzip).
     const brandsPromise = loadOSMBrands();
-    const rawStations = await fetchStations(lat, lon, fetchRadiusKm, fuelField);
+    const { stations: rawStations, total: totalInRadius, truncated } =
+      await fetchStations(lat, lon, fetchRadiusKm, fuelField);
     if (token !== currentSearchToken) return;
 
     hideStatus();
@@ -1210,7 +1271,9 @@ async function runSearch(lat, lon, label) {
       userLon: lon,
       label,
       distanceMode,
-      radiusKm
+      radiusKm,
+      totalInRadius,
+      truncated
     };
 
     // Applique les marques déjà chargées sur TOUT le superset (les objets sont

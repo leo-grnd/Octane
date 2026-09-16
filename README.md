@@ -10,6 +10,22 @@ Site statique qui interroge directement les APIs publiques :
 
 Pas de backend, pas de base de données, pas de clé API.
 
+## Récupération des stations
+
+L'API Opendatasoft plafonne `limit` à **100 lignes par requête** : une recherche à 50 km autour
+de Paris couvre 755 stations, dont seules 100 remontaient. Le client pagine donc sur `offset`
+(la 1re page fournit `total_count`, les suivantes partent en parallèle), jusqu'à un plafond de
+**400 stations** — au-delà, la liste n'est plus exploitable et le compteur l'indique.
+
+Les résultats sont triés côté serveur par prix croissant (`order_by=<carburant>,id`), ce qui
+rend la troncature inoffensive : ce sont les stations **les plus chères** qui sautent, jamais le
+classement du moins cher. Le `id` départage les ex æquo, faute de quoi la pagination pourrait
+dupliquer ou sauter des lignes.
+
+Un `select` explicite limite la réponse aux champs réellement affichés : **76 Ko par page au lieu
+de 275 Ko**, le reste étant des blobs JSON sérialisés (`horaires`, `prix`, `rupture`) et le
+découpage administratif.
+
 ## Développement local
 
 ```bash

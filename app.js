@@ -93,10 +93,28 @@ function normalizeFuelField(field) {
   return LEGACY_FUEL_FIELDS[field] || field;
 }
 
+// Échappe une valeur avant de l'injecter dans du HTML. À appliquer à tout ce qui
+// vient de l'extérieur : APIs (adresses, villes, libellés BAN), localStorage et
+// saisie utilisateur. Les données sont gouvernementales donc le risque
+// d'injection est faible, mais une apostrophe dans une adresse — « Avenue de
+// l'Opéra » — suffit déjà à casser un attribut title="…" ou data-copy="…".
+// L'esperluette doit être remplacée en premier, sinon on double-échappe.
+function esc(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// `msg` et `actionLabel` sont du texte brut par contrat — aucun appelant ne
+// passe de balise —, donc on échappe ici plutôt qu'à chaque point d'appel.
 function showStatus(msg, isError = false) {
   $status.classList.remove('hidden');
   $status.classList.toggle('error', isError);
-  $status.innerHTML = isError ? msg : `<span class="loader"></span>${msg}`;
+  $status.innerHTML = isError ? esc(msg) : `<span class="loader"></span>${esc(msg)}`;
 }
 
 function hideStatus() {
@@ -110,7 +128,7 @@ function hideStatus() {
 function showStatusAction(msg, actionLabel, onClick) {
   $status.classList.remove('hidden');
   $status.classList.add('error');
-  $status.innerHTML = `${msg} <button type="button" class="status-cta">${actionLabel}</button>`;
+  $status.innerHTML = `${esc(msg)} <button type="button" class="status-cta">${esc(actionLabel)}</button>`;
   const btn = $status.querySelector('.status-cta');
   if (btn && onClick) btn.addEventListener('click', onClick, { once: true });
 }
@@ -887,7 +905,7 @@ function buildStationCard(s, i, total, fuelField, refStation) {
   const title = brandName || s.adresse || 'Station sans nom';
   const badge = getBrandBadge(brandName);
   const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
     : '';
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
@@ -932,8 +950,8 @@ function buildStationCard(s, i, total, fuelField, refStation) {
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <span class="sr-only">${rankLabel}. </span>
     <div class="info">
-      <div class="name">${badgeHtml}<span class="name-text">${title}</span></div>
-      <div class="addr">${subtitle}</div>
+      <div class="name">${badgeHtml}<span class="name-text">${esc(title)}</span></div>
+      <div class="addr">${esc(subtitle)}</div>
       ${amenitiesHtml}
       ${economyHtml}
     </div>
@@ -942,7 +960,7 @@ function buildStationCard(s, i, total, fuelField, refStation) {
       <span class="dist-label">${s.driveKm != null ? 'par la route' : 'à vol d\'oiseau'}</span>
       ${s.driveMin != null ? `<span class="dist-eta" title="Temps de trajet estimé en voiture">≈ ${s.driveMin} min</span>` : ''}
       ${s.driveUnavailable ? `<span class="dist-warn" title="Trajet routier non disponible pour cette station — distance affichée à vol d'oiseau">⚠ routage indispo</span>` : ''}
-      <a class="dir-link" href="${dirUrl}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${title} (ouvre Google Maps)">Itinéraire ↗</a>
+      <a class="dir-link" href="${esc(dirUrl)}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${esc(title)} (ouvre Google Maps)">Itinéraire ↗</a>
     </div>
     <div class="price">
       ${formatPrice(s.price)}${trend ? `<span class="trend trend-${trend.sign}" title="${trendTitle}" aria-label="${trendTitle}">${trend.arrow}</span>` : ''}
@@ -960,7 +978,7 @@ function buildHistoryCard(s, i, total) {
   const title = brandName || s.adresse || 'Station sans nom';
   const badge = getBrandBadge(brandName);
   const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
     : '';
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
@@ -975,8 +993,8 @@ function buildHistoryCard(s, i, total) {
   el.innerHTML = `
     <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
     <div class="info">
-      <div class="name">${badgeHtml}<span class="name-text">${title}</span></div>
-      <div class="addr">${subtitle}</div>
+      <div class="name">${badgeHtml}<span class="name-text">${esc(title)}</span></div>
+      <div class="addr">${esc(subtitle)}</div>
     </div>
     <div class="hist-body"><div class="hist-empty"><span class="loader-sm" aria-hidden="true"></span>Chargement de l'historique…</div></div>
   `;
@@ -1434,7 +1452,7 @@ function renderSuggestions(features) {
   $suggestions.innerHTML = features.map((f, i) => {
     const label = f.properties.label || '';
     const context = f.properties.context || '';
-    return `<li role="option" data-idx="${i}" aria-selected="false">${label}<span class="sg-ctx">${context}</span></li>`;
+    return `<li role="option" data-idx="${i}" aria-selected="false">${esc(label)}<span class="sg-ctx">${esc(context)}</span></li>`;
   }).join('');
   $suggestions.classList.remove('hidden');
   $address.setAttribute('aria-expanded', 'true');
@@ -1468,7 +1486,7 @@ function renderHistory() {
   $suggestions.innerHTML =
     `<li class="sg-history" aria-hidden="true">Recherches récentes</li>` +
     hist.map((h, i) =>
-      `<li role="option" class="sg-hist-item" data-idx="${i}" aria-selected="false">${h.label}</li>`
+      `<li role="option" class="sg-hist-item" data-idx="${i}" aria-selected="false">${esc(h.label)}</li>`
     ).join('');
   $suggestions.classList.remove('hidden');
   $address.setAttribute('aria-expanded', 'true');
@@ -1842,8 +1860,8 @@ function renderMap(stations) {
       const distStr = `${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km${s.driveKm != null ? ' (route)' : ''}`;
       const etaStr = s.driveMin != null ? ` · ≈ ${s.driveMin} min` : '';
       marker.bindPopup(
-        `<strong>${name}</strong><br>` +
-        (addrLine ? `<span style="color:#666;font-size:0.75rem">${addrLine}</span><br>` : '') +
+        `<strong>${esc(name)}</strong><br>` +
+        (addrLine ? `<span style="color:#666;font-size:0.75rem">${esc(addrLine)}</span><br>` : '') +
         `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}`
       );
       markersLayer.addLayer(marker);
@@ -1901,7 +1919,7 @@ function buildSheetContent(s, fuelField) {
   const brandName = extractStationName(s) || s.adresse || 'Station sans nom';
   const badge = getBrandBadge(brandName);
   const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${badge.mono}</span>`
+    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
     : '';
   const fullAddr = [s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
@@ -1940,12 +1958,12 @@ function buildSheetContent(s, fuelField) {
 
   return `
     <header class="sheet-header">
-      <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${brandName}</h2></div>
-      ${fullAddr ? `<div class="sheet-addr">${fullAddr}</div>` : ''}
+      <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${esc(brandName)}</h2></div>
+      ${fullAddr ? `<div class="sheet-addr">${esc(fullAddr)}</div>` : ''}
       <div class="sheet-actions">
         <a class="sheet-btn sheet-btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps ↗</a>
         <a class="sheet-btn" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze ↗</a>
-        ${fullAddr ? `<button type="button" class="sheet-btn sheet-copy" data-copy="${fullAddr.replace(/"/g, '&quot;')}">Copier l'adresse</button>` : ''}
+        ${fullAddr ? `<button type="button" class="sheet-btn sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
       </div>
     </header>
     <section class="sheet-section">
@@ -2087,7 +2105,7 @@ function showResumeBanner(last) {
   banner.innerHTML = `
     <div class="resume-text">
       <span class="resume-dot" aria-hidden="true">↻</span>
-      Reprendre votre dernière recherche : <strong>${fuelLabel}</strong> autour de <strong>${last.q}</strong> (${last.radius} km)
+      Reprendre votre dernière recherche : <strong>${esc(fuelLabel)}</strong> autour de <strong>${esc(last.q)}</strong> (${esc(last.radius)} km)
     </div>
     <div class="resume-actions">
       <button type="button" class="resume-btn resume-go" aria-label="Reprendre la recherche">Reprendre</button>

@@ -1,144 +1,151 @@
-/* comment-ca-marche.css — page "Comment ça marche", réutilise les tokens de style.css */
+/* comment-ca-marche.css — page « Comment ça marche ».
+   S'appuie sur design-system.css pour les tokens et les composants, et sur
+   style.css pour la nav, le hero et le footer, partagés avec l'outil. */
 
-.hiw-hero { margin-top: 1rem; max-width: 760px; }
-.hiw-hero p { color: var(--ink-dim); font-size: 0.95rem; line-height: 1.7; max-width: 660px; }
-.hiw-hero strong { color: var(--ink); }
+a.nav-brand { text-decoration: none; color: inherit; }
+.hero strong { color: var(--color-text); font-weight: 600; }
 
-a.logo { text-decoration: none; display: inline-block; }
-
-/* ---- Bandeau chiffres clés ---- */
+/* ---- Bandeau chiffres clés ----
+   Une grille de filets plutôt que quatre cartes posées : dans un système sans
+   rayon ni ombre, la séparation se fait par le trait. */
 .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    margin: 2.5rem 0 3rem;
+    gap: 0;
+    margin: var(--space-8) 0;
+    border-top: 2px solid var(--color-divider);
+    border-bottom: 2px solid var(--color-divider);
 }
-.stat { background: var(--bg-card); padding: 1.75rem 1.25rem; text-align: center; }
+.stat {
+    padding: var(--space-6) var(--space-4);
+    text-align: left;
+}
+.stat + .stat { border-left: 1px solid var(--color-divider); }
 .stat-num {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-family: var(--font-heading);
+    font-weight: var(--font-heading-weight);
+    font-size: clamp(32px, 5vw, 52px);
     line-height: 1;
-    color: var(--accent);
-    letter-spacing: -0.03em;
+    color: var(--color-accent);
+    letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
 }
-.stat-num .unit { font-size: 0.4em; color: var(--ink-dim); margin-left: 0.15em; letter-spacing: 0; }
+.stat-num .unit { font-size: 0.4em; color: var(--color-neutral-700); margin-left: 0.15em; letter-spacing: 0; }
 .stat-lbl {
-    margin-top: 0.6rem;
-    font-size: 0.65rem;
+    margin-top: var(--space-2);
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--ink-dim);
+    color: var(--color-neutral-700);
 }
 
 /* ---- Intro flux ---- */
 .flow-intro {
-    text-align: center;
-    font-size: 0.7rem;
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.25em;
-    color: var(--ink-dim);
-    margin-bottom: 1.5rem;
+    letter-spacing: 0.14em;
+    color: var(--color-neutral-700);
+    margin-bottom: var(--space-6);
 }
-.flow-intro .arrow { display: inline-block; color: var(--accent); animation: bob 1.8s ease-in-out infinite; }
+.flow-intro .arrow { display: inline-block; color: var(--color-accent); animation: bob 1.8s ease-in-out infinite; }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
 /* ---- Étapes ---- */
-.pipeline { list-style: none; display: flex; flex-direction: column; gap: 1.5rem; }
-.step { padding: 2rem; }
-.step-head { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.25rem; }
+.pipeline { list-style: none; display: flex; flex-direction: column; }
+.step { padding: var(--space-8) 0; border-top: 2px solid var(--color-divider); }
+.step-head { display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-6); }
 .step-num {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    font-size: clamp(1.6rem, 5vw, 2.4rem);
-    color: var(--accent);
+    font-family: var(--font-heading);
+    font-weight: var(--font-heading-weight);
+    font-size: clamp(28px, 5vw, 40px);
+    color: var(--color-accent);
     line-height: 0.9;
     letter-spacing: -0.04em;
 }
 .step-head h2 {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    font-size: clamp(1.4rem, 3.5vw, 2rem);
-    letter-spacing: -0.01em;
+    font-family: var(--font-heading);
+    font-weight: var(--font-heading-weight);
+    font-size: clamp(24px, 3.5vw, 32px);
+    letter-spacing: -0.02em;
+    margin: 0;
 }
-.step-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: 2rem; align-items: center; }
-.step-text p { color: var(--ink-dim); font-size: 0.88rem; line-height: 1.7; margin-bottom: 0.75rem; }
+.step-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--space-8); align-items: start; }
+.step-text p { color: var(--color-neutral-800); font-size: 15px; line-height: 1.6; margin-bottom: var(--space-3); }
 .step-text p:last-child { margin-bottom: 0; }
-.step-text strong { color: var(--ink); }
-.step-text em { color: var(--accent-soft); font-style: italic; }
+.step-text strong { color: var(--color-text); font-weight: 600; }
+/* L'italique n'a plus de support typographique : l'emphase passe par l'accent. */
+.step-text em { color: var(--color-accent-700); font-style: normal; font-weight: 600; }
+.step-text .btn { margin-top: var(--space-2); min-height: 38px; justify-content: flex-start; }
 
 code {
     font-family: var(--font-body);
-    font-size: 0.82em;
-    background: var(--bg-soft);
-    border: 1px solid var(--border);
+    font-size: 0.9em;
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
     padding: 0.05em 0.4em;
-    color: var(--accent-soft);
+    color: var(--color-accent-700);
     white-space: nowrap;
 }
 
 /* ---- Visuels ---- */
 .step-visual { min-width: 0; }
-.vchips { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.vchip {
-    font-size: 0.78rem;
-    padding: 0.6rem 0.9rem;
-    background: var(--bg-soft);
-    border: 1px solid var(--border);
-    color: var(--ink);
-}
+.vchips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* .tag du système, agrandi : ces puces sont des exemples à lire, pas des
+   étiquettes de métadonnée. */
+.vchip { font-size: 13px; padding: 7px 12px; }
 
-/* Classement de prix (visuel spécifique Octane) */
-.rank { display: flex; flex-direction: column; gap: 0.5rem; }
+/* Classement de prix (visuel propre à la page) */
+.rank { display: flex; flex-direction: column; }
 .rank-row {
-    display: flex; align-items: center; gap: 0.85rem;
-    padding: 0.6rem 0.8rem;
-    background: var(--bg-soft);
-    border: 1px solid var(--border);
-    border-left: 5px solid var(--border);
-    font-size: 0.85rem;
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-divider);
+    font-size: 14px;
 }
-.rank-row.best { border-left-color: var(--accent); }
-.rank-medal { font-size: 1.1rem; }
-.rank-name { color: var(--ink); }
-.rank-price { margin-left: auto; font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-variant-numeric: tabular-nums; }
-.rank-row.best .rank-price { color: var(--accent); }
+.rank-row:first-child { border-top: 1px solid var(--color-divider); }
+.rank-medal { font-size: 16px; }
+.rank-name { color: var(--color-text); }
+.rank-price {
+    margin-left: auto;
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+    font-variant-numeric: tabular-nums;
+}
+.rank-row.best .rank-price { color: var(--color-accent); }
 
 /* Bascule des deux modes de distance */
-.dmodes { display: flex; flex-direction: column; gap: 0.6rem; }
+.dmodes { display: flex; flex-direction: column; }
 .dmode {
-    display: flex; align-items: baseline; gap: 0.6rem;
-    padding: 0.7rem 0.9rem;
-    background: var(--bg-soft);
-    border: 1px solid var(--border);
-    font-size: 0.82rem;
-    color: var(--ink-dim);
+    display: flex; align-items: baseline; gap: var(--space-2);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-divider);
+    font-size: 14px;
+    color: var(--color-neutral-700);
 }
-.dmode b { font-family: var(--font-heading); font-weight: var(--font-heading-weight); color: var(--ink); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.dmode:first-child { border-top: 1px solid var(--color-divider); }
+.dmode b {
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+    color: var(--color-text); font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
 
-.badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-.badge {
-    font-size: 0.68rem; padding: 0.35rem 0.6rem;
-    background: var(--bg-soft); border: 1px solid var(--border); color: var(--ink-dim);
-}
+.badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
 
 /* ---- Outro ---- */
-.outro { padding: 2.5rem; text-align: center; margin-top: 1rem; }
-.outro h2 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 0.75rem; }
-.outro h2 em { font-style: italic; color: var(--accent-soft); }
-.outro p { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.7; max-width: 560px; margin: 0 auto 1.5rem; }
-/* Précision de second plan : vraie mais secondaire par rapport au message. */
-.outro-note { font-size: 0.78rem; opacity: 0.85; }
-.cta {
-    display: inline-block;
-    background: var(--accent); color: #fff; text-decoration: none;
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 0.85rem;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 0.9rem 2rem; transition: transform 0.15s, background 0.15s;
+.outro {
+    padding: var(--space-8) 0 0;
+    border-top: 2px solid var(--color-divider);
+    margin-top: var(--space-4);
 }
-.cta:hover { background: var(--accent-soft); transform: translateX(3px); }
-/* Variante posée dans le corps d'une étape : plus discrète que le CTA final. */
-.cta-inline { margin-top: 0.4rem; padding: 0.7rem 1.4rem; font-size: 0.75rem; }
+.outro h2 {
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+    font-size: clamp(28px, 4vw, 44px);
+    letter-spacing: -0.03em;
+    margin-bottom: var(--space-3);
+}
+.outro h2 em { font-style: normal; color: var(--color-accent); }
+.outro p { color: var(--color-neutral-800); font-size: 15px; line-height: 1.6; max-width: 62ch; margin: 0 0 var(--space-4); }
+.outro-note { font-size: 13px; color: var(--color-neutral-700); }
+.cta-final { min-height: 44px; justify-content: flex-start; }
 
 /* ---- Reveal ---- */
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
@@ -151,8 +158,12 @@ code {
 /* ---- Responsive ---- */
 @media (max-width: 760px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
-    .step-body { grid-template-columns: 1fr; gap: 1.5rem; }
-    .step { padding: 1.5rem; }
+    /* En deux colonnes, le filet vertical doit repartir sur chaque rangée. */
+    .stat + .stat { border-left: none; }
+    .stat:nth-child(even) { border-left: 1px solid var(--color-divider); }
+    .stat:nth-child(n + 3) { border-top: 1px solid var(--color-divider); }
+    .step-body { grid-template-columns: 1fr; gap: var(--space-6); }
+    .step { padding: var(--space-6) 0; }
 }
 @media (max-width: 420px) {
     .stats { grid-template-columns: 1fr 1fr; }

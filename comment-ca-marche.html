@@ -19,27 +19,25 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <div>
-                <a class="logo" href="index.html">O<span>CTANE</span></a>
-                <div class="tagline">— Comment ça marche</div>
+        <nav class="nav">
+            <a class="nav-brand" href="index.html">OCTANE</a>
+            <div class="nav-links">
+                <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
+                <a class="btn btn-secondary" href="alertes.html">Alertes</a>
+                <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
+                    <span id="themeIcon" aria-hidden="true">☾</span>
+                </button>
             </div>
-            <div class="meta">
-                <div class="meta-right">
-                    <a class="nav-link" href="index.html">← Retour à l'outil</a>
-                    <a class="nav-link" href="alertes.html">Alerte quotidienne →</a>
-                    <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
-                        <span id="themeIcon" aria-hidden="true">☾</span>
-                    </button>
-                </div>
-            </div>
-        </header>
+        </nav>
 
-        <section class="hero hiw-hero">
-            <h1>Le bon plein, <em>au bon prix.</em></h1>
-            <p>OCTANE compare en direct les prix officiels des stations-service françaises et te montre, autour de
-               toi, où faire le plein le moins cher — par prix <strong>et</strong> par distance. Gratuit, sans pub,
-               sans compte.</p>
+        <section class="hero">
+            <h1>Le bon plein,<br /><em>au bon prix.</em></h1>
+            <div class="hero-aside">
+                <div class="kicker">Comment ça marche</div>
+                <p>OCTANE compare en direct les prix officiels des stations-service françaises et te montre, autour de
+                   toi, où faire le plein le moins cher — par prix <strong>et</strong> par distance. Gratuit, sans pub,
+                   sans compte.</p>
+            </div>
         </section>
 
         <section class="stats" aria-label="Chiffres clés">
@@ -53,7 +51,7 @@
 
         <ol class="pipeline">
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">01</span><h2>Dis où tu es</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -64,15 +62,15 @@
                     </div>
                     <div class="step-visual">
                         <div class="vchips">
-                            <span class="vchip">⊙ Ma position</span>
-                            <span class="vchip">🏠 Adresse ou ville</span>
-                            <span class="vchip">📏 Rayon 1–50 km</span>
+                            <span class="tag tag-neutral vchip">⊙ Ma position</span>
+                            <span class="tag tag-neutral vchip">🏠 Adresse ou ville</span>
+                            <span class="tag tag-neutral vchip">📏 Rayon 1–50 km</span>
                         </div>
                     </div>
                 </div>
             </li>
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">02</span><h2>Choisis ton carburant</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -83,18 +81,18 @@
                     </div>
                     <div class="step-visual">
                         <div class="vchips">
-                            <span class="vchip">SP95-E10</span>
-                            <span class="vchip">SP95</span>
-                            <span class="vchip">SP98</span>
-                            <span class="vchip">Gazole</span>
-                            <span class="vchip">E85</span>
-                            <span class="vchip">GPLc</span>
+                            <span class="tag tag-neutral vchip">SP95-E10</span>
+                            <span class="tag tag-neutral vchip">SP95</span>
+                            <span class="tag tag-neutral vchip">SP98</span>
+                            <span class="tag tag-neutral vchip">Gazole</span>
+                            <span class="tag tag-neutral vchip">E85</span>
+                            <span class="tag tag-neutral vchip">GPLc</span>
                         </div>
                     </div>
                 </div>
             </li>
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">03</span><h2>À vol d'oiseau ou en voiture</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -111,7 +109,7 @@
                 </div>
             </li>
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">04</span><h2>Le classement, le plein, la carte</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -129,7 +127,7 @@
                 </div>
             </li>
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">05</span><h2>D'où viennent les données</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -142,17 +140,17 @@
                     </div>
                     <div class="step-visual">
                         <div class="badges">
-                            <span class="badge">data.economie.gouv.fr</span>
-                            <span class="badge">Sans clé API</span>
-                            <span class="badge">100% navigateur</span>
-                            <span class="badge">Hors-ligne (cache)</span>
-                            <span class="badge">Aucun traceur</span>
+                            <span class="tag tag-outline">data.economie.gouv.fr</span>
+                            <span class="tag tag-outline">Sans clé API</span>
+                            <span class="tag tag-outline">100% navigateur</span>
+                            <span class="tag tag-outline">Hors-ligne (cache)</span>
+                            <span class="tag tag-outline">Aucun traceur</span>
                         </div>
                     </div>
                 </div>
             </li>
 
-            <li class="step card reveal">
+            <li class="step reveal">
                 <div class="step-head"><span class="step-num">06</span><h2>Reçois l'alerte chaque matin</h2></div>
                 <div class="step-body">
                     <div class="step-text">
@@ -164,14 +162,14 @@
                            carburant le moins cher du pays. Seules les stations ayant déclaré un
                            prix depuis moins de trois jours sont retenues&nbsp;: sans ce filtre, le
                            classement national est trusté par des stations qui ne déclarent plus.</p>
-                        <p><a class="cta cta-inline" href="alertes.html">Composer mon alerte →</a></p>
+                        <p><a class="btn btn-primary" href="alertes.html">Composer mon alerte</a></p>
                     </div>
                     <div class="step-visual">
                         <div class="vchips">
-                            <span class="vchip">✉ Un email par jour</span>
-                            <span class="vchip">🕗 À l'heure de ton choix</span>
-                            <span class="vchip">🇫🇷 Rayon ou France entière</span>
-                            <span class="vchip">✓ Prix de moins de 3 jours</span>
+                            <span class="tag tag-neutral vchip">✉ Un email par jour</span>
+                            <span class="tag tag-neutral vchip">🕗 À l'heure de ton choix</span>
+                            <span class="tag tag-neutral vchip">🇫🇷 Rayon ou France entière</span>
+                            <span class="tag tag-neutral vchip">✓ Prix de moins de 3 jours</span>
                         </div>
                     </div>
                 </div>
@@ -185,7 +183,7 @@
             <p class="outro-note">Seule exception : si tu demandes l'alerte quotidienne, ton adresse email est
                conservée pour te l'envoyer — un email planifié ne peut pas partir d'une page statique. Le reste
                de l'outil ne transmet rien.</p>
-            <a class="cta" href="index.html">Trouver mon carburant →</a>
+            <a class="btn btn-primary cta-final" href="index.html">Trouver mon carburant</a>
         </section>
 
         <footer>
@@ -197,13 +195,15 @@
     <script>
     (function () {
         var icon = document.getElementById('themeIcon');
+        // Convention alignée sur app.js et alertes.js : le clair est le défaut,
+        // seul le sombre porte l'attribut.
         function apply(t) {
-            if (t === 'light') { document.documentElement.setAttribute('data-theme', 'light'); icon.textContent = '☀'; }
+            if (t === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); icon.textContent = '☀'; }
             else { document.documentElement.removeAttribute('data-theme'); icon.textContent = '☾'; }
         }
-        apply(localStorage.getItem('octane-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+        apply(localStorage.getItem('octane-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
         document.getElementById('themeToggle').addEventListener('click', function () {
-            var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             localStorage.setItem('octane-theme', next); apply(next);
         });
 

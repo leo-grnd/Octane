@@ -75,13 +75,23 @@ const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
 
 const FUEL_LABELS = {
-  sp95_e10_prix: 'SP95-E10',
+  e10_prix: 'SP95-E10',
   sp95_prix: 'SP95',
   sp98_prix: 'SP98',
   gazole_prix: 'Gazole',
   e85_prix: 'E85',
   gplc_prix: 'GPLc'
 };
+
+// Le dataset a renommé `sp95_e10_prix` en `e10_prix` : l'ancien nom renvoie
+// désormais un 400 `ODSQLError: Unknown field`. Les liens partagés et les
+// recherches sauvegardées d'avant le renommage le contiennent encore, donc on
+// les migre à la volée sur chaque point d'entrée hérité (URL, localStorage).
+const LEGACY_FUEL_FIELDS = { sp95_e10_prix: 'e10_prix' };
+function normalizeFuelField(field) {
+  if (!field) return field;
+  return LEGACY_FUEL_FIELDS[field] || field;
+}
 
 function showStatus(msg, isError = false) {
   $status.classList.remove('hidden');
@@ -798,6 +808,9 @@ function loadLastSearch() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || Date.now() - data.ts > LAST_SEARCH_TTL) return null;
+    // Migration du carburant : une recherche enregistrée avant le renommage
+    // `sp95_e10_prix` → `e10_prix` ferait échouer la reprise en un clic.
+    data.fuel = normalizeFuelField(data.fuel);
     return data;
   } catch { return null; }
 }
@@ -1514,12 +1527,12 @@ const HIST_PREFETCH_CONCURRENCY = 4;
 // `price_gplc`, `price_e10`, `price_e85` (préfixe `price_`, pas `prix_`).
 // Timestamp ligne = `update`. 1 ligne par station par jour.
 const HIST_FUELS = new Set([
-  'gazole_prix', 'sp95_prix', 'sp95_e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
+  'gazole_prix', 'sp95_prix', 'e10_prix', 'sp98_prix', 'e85_prix', 'gplc_prix'
 ]);
 const HIST_FUEL_COL = {
   gazole_prix: 'price_gazole',
   sp95_prix: 'price_sp95',
-  sp95_e10_prix: 'price_e10',
+  e10_prix: 'price_e10',
   sp98_prix: 'price_sp98',
   e85_prix: 'price_e85',
   gplc_prix: 'price_gplc'
@@ -1771,7 +1784,7 @@ let lastSheetTrigger = null; // pour rendre le focus à la card cliquée à la f
 const ALL_FUELS = [
   { field: 'gazole_prix', label: 'Gazole' },
   { field: 'sp95_prix', label: 'SP95' },
-  { field: 'sp95_e10_prix', label: 'SP95-E10' },
+  { field: 'e10_prix', label: 'SP95-E10' },
   { field: 'sp98_prix', label: 'SP98' },
   { field: 'e85_prix', label: 'E85' },
   { field: 'gplc_prix', label: 'GPLc' }
@@ -1950,7 +1963,7 @@ if ('serviceWorker' in navigator) {
   setTankSize(urlTank || storedTank || TANK_DEFAULT);
 
   const q = params.get('q');
-  const fuel = params.get('fuel');
+  const fuel = normalizeFuelField(params.get('fuel'));
   const r = params.get('r');
   if (fuel && [...$fuel.options].some(o => o.value === fuel)) $fuel.value = fuel;
   if (r && !isNaN(parseInt(r, 10))) $radius.value = r;

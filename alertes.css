@@ -53,9 +53,8 @@
 }
 .alert-preview h2,
 .alert-output h2 {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.5rem;
-  font-weight: 400;
   letter-spacing: 0.01em;
 }
 .alert-preview-meta {
@@ -81,7 +80,7 @@
   border-left: 3px solid var(--rank-color, var(--border));
 }
 .alert-rank {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.1rem;
   color: var(--rank-color, var(--ink-dim));
   min-width: 1.6rem;
@@ -99,7 +98,7 @@
   margin-top: 0.25rem;
 }
 .alert-price {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.15rem;
   color: var(--rank-color, var(--ink));
   text-align: right;
@@ -107,7 +106,7 @@
 }
 .alert-price .alert-unit {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.6rem;
   font-weight: 400;
   letter-spacing: 0.12em;
@@ -116,7 +115,7 @@
 }
 .alert-maj {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.6rem;
   font-weight: 400;
   color: var(--ink-dim);
@@ -162,7 +161,7 @@
   background: var(--bg-soft);
   border: 1px solid var(--border);
   padding: 1rem 1.1rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.78rem;
   line-height: 1.7;
   color: var(--ink);

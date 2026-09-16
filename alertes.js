@@ -10,8 +10,8 @@
 (function initTheme() {
   const icon = document.getElementById('themeIcon');
   const apply = (t) => {
-    if (t === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
       icon.textContent = '☀';
     } else {
       document.documentElement.removeAttribute('data-theme');
@@ -20,9 +20,9 @@
   };
   let saved = null;
   try { saved = localStorage.getItem('octane-theme'); } catch {}
-  apply(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  apply(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem('octane-theme', next); } catch {}
     apply(next);
   });

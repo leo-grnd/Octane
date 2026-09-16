@@ -1,29 +1,18 @@
+/* Les variables historiques d'Octane sont désormais des ALIAS des tokens du
+   design system (design-system.css). Elles restent en place parce qu'elles sont
+   citées des centaines de fois dans cette feuille : les réécrire d'un bloc
+   aurait produit un diff illisible pour aucun gain. Le thème bascule donc en un
+   seul endroit — ici il n'y a plus rien à dupliquer, les tokens sombres étant
+   définis dans le design system. */
 :root {
-  --bg: #0d0d0d;
-  --bg-soft: #161616;
-  --bg-card: #1a1a1a;
-  --ink: #f5f1e8;
-  --ink-dim: #8a8278;
-  --accent: #ff6b00;
-  --accent-soft: #ffb800;
-  --grid: #222;
-  --border: #2a2a2a;
-  --grid-opacity: 0.35;
-  --glow-opacity: 0.12;
-}
-
-:root[data-theme="light"] {
-  --bg: #f5f1e8;
-  --bg-soft: #ebe4d2;
-  --bg-card: #fbf8ef;
-  --ink: #141210;
-  --ink-dim: #6b6356;
-  --accent: #e85f00;
-  --accent-soft: #c88a00;
-  --grid: #d9d1bc;
-  --border: #ccc3ab;
-  --grid-opacity: 0.55;
-  --glow-opacity: 0.08;
+  --bg: var(--color-bg);
+  --bg-soft: var(--color-surface);
+  --bg-card: var(--color-surface);
+  --ink: var(--color-text);
+  --ink-dim: var(--color-neutral-700);
+  --accent: var(--color-accent);
+  --accent-soft: var(--color-accent-600);
+  --border: var(--color-divider);
 }
 
 html, body {
@@ -35,32 +24,14 @@ html, body {
 html, body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: var(--grid-opacity);
-  pointer-events: none;
-  z-index: 0;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse at top, rgba(255,107,0, var(--glow-opacity)), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
+/* La grille de fond et le halo orange ont été retirés : Modernist est un
+   système plat, qui tire sa structure de filets francs et d'échelles
+   typographiques, pas d'une texture d'arrière-plan. */
 
 .container {
   position: relative;
@@ -80,7 +51,7 @@ body::after {
   text-align: center;
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   letter-spacing: 0.03em;
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
@@ -96,7 +67,7 @@ header {
 }
 
 .logo {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: clamp(2rem, 6vw, 3.5rem);
   letter-spacing: -0.04em;
   line-height: 0.9;
@@ -139,10 +110,9 @@ header {
 .hero { margin-bottom: 2.5rem; }
 
 .hero h1 {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: clamp(2.5rem, 7vw, 5rem);
   line-height: 1;
-  font-weight: 400;
   letter-spacing: -0.02em;
   margin-bottom: 1rem;
 }
@@ -201,7 +171,7 @@ header {
   border-radius: 3px;
   overflow: hidden;
   background: var(--bg-soft);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.75rem;
 }
 .distance-mode input[type="radio"] {
@@ -221,9 +191,6 @@ header {
 }
 .distance-mode input[type="radio"]:checked + .mode-option {
   background: var(--accent);
-  color: #fff;
-}
-:root[data-theme="light"] .distance-mode input[type="radio"]:checked + .mode-option {
   color: #fff;
 }
 .distance-mode .mode-option:hover {
@@ -310,7 +277,7 @@ header {
   border-bottom: 1px solid var(--border);
   color: var(--ink);
   padding: 0.6rem 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.2s;
@@ -323,14 +290,14 @@ header {
 
 .field select {
   appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%238a8278' stroke-width='1.5' fill='none'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23605d5d' stroke-width='1.5' fill='none'/></svg>");
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   padding-right: 2rem;
 }
 
-:root[data-theme="light"] .field select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%236b6356' stroke-width='1.5' fill='none'/></svg>");
+:root[data-theme="dark"] .field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23aeaaaa' stroke-width='1.5' fill='none'/></svg>");
 }
 
 /* Theme toggle button */
@@ -365,7 +332,7 @@ header {
 /* Lien retour vers le hub (← Tous les outils) */
 .nav-link {
   display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -391,7 +358,7 @@ header {
   color: #000;
   border: none;
   padding: 0.9rem 2rem;
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 0.85rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -448,7 +415,7 @@ header {
   background: var(--accent);
   color: #fff;
   border: none;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -486,12 +453,12 @@ header {
 .sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(20, 18, 16, 0.4);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: sheetFade 0.18s ease-out;
 }
-:root[data-theme="light"] .sheet-backdrop { background: rgba(20, 18, 16, 0.4); }
+:root[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, 0.55); }
 @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sheetSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .sheet-panel {
@@ -530,7 +497,7 @@ header {
   margin-right: 2rem;
 }
 .sheet-title-row h2 {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.15rem;
   color: var(--ink);
   margin: 0;
@@ -552,7 +519,7 @@ header {
   display: inline-flex;
   align-items: center;
   padding: 0.45rem 0.9rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -574,7 +541,7 @@ header {
 
 .sheet-section { margin-top: 1.3rem; }
 .sheet-section h3 {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -596,7 +563,7 @@ header {
 .sheet-table th {
   color: var(--ink-dim);
   font-weight: 500;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.72rem;
   letter-spacing: 0.05em;
   width: 40%;
@@ -605,14 +572,14 @@ header {
 .sheet-prices tr.current { background: rgba(255, 107, 0, 0.06); }
 .sheet-prices tr.current th { color: var(--accent); }
 .sheet-price {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 0.95rem;
   letter-spacing: -0.02em;
 }
 .sheet-fresh {
   display: inline-block;
   margin-left: 0.4rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.6rem;
   color: var(--ink-dim);
   letter-spacing: 0.03em;
@@ -692,7 +659,7 @@ body.sheet-open { overflow: hidden; }
 }
 
 .results-header h2 {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.2rem;
   letter-spacing: -0.02em;
 }
@@ -763,7 +730,7 @@ body.sheet-open { overflow: hidden; }
 .history-card .rank {
   grid-row: 1 / 3;
   align-self: center;
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.5rem;
   color: var(--rank-color, var(--ink-dim));
   letter-spacing: -0.05em;
@@ -798,7 +765,7 @@ body.sheet-open { overflow: hidden; }
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem 1.2rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   color: var(--ink-dim);
   letter-spacing: 0.03em;
 }
@@ -817,7 +784,7 @@ body.sheet-open { overflow: hidden; }
   padding: 0.4rem 0;
 }
 .hist-empty code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-style: normal;
   background: var(--bg-soft);
   padding: 0.05rem 0.35rem;
@@ -884,7 +851,7 @@ body.sheet-open { overflow: hidden; }
 }
 
 .rank {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.5rem;
   color: var(--rank-color, var(--ink-dim));
   letter-spacing: -0.05em;
@@ -914,7 +881,7 @@ body.sheet-open { overflow: hidden; }
   width: 26px;
   height: 26px;
   border-radius: 4px;
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -949,7 +916,7 @@ body.sheet-open { overflow: hidden; }
 
 /* Hint d'économie (rang ≥ 2) : "+1,20 € (60 L) vs n°1 mais 0,5 km plus près" */
 .economy-hint {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.66rem;
   color: var(--ink-dim);
   margin-top: 0.4rem;
@@ -961,19 +928,19 @@ body.sheet-open { overflow: hidden; }
 /* Chip "À vérifier" : prix qui s'écarte fort de la médiane locale */
 .outlier-chip {
   display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.58rem;
   letter-spacing: 0.04em;
   padding: 0.12rem 0.4rem;
   margin-top: 0.25rem;
   border-radius: 3px;
-  color: #f59e0b;
+  color: #b45309;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.3);
   cursor: help;
   text-transform: none;
 }
-:root[data-theme="light"] .outlier-chip { color: #b45309; }
+:root[data-theme="dark"] .outlier-chip { color: #f59e0b; }
 
 /* Bandeau "Reprendre dernière recherche" — au-dessus du hero, dismissable */
 .resume-banner {
@@ -1002,7 +969,7 @@ body.sheet-open { overflow: hidden; }
 }
 .resume-actions { display: flex; gap: 0.4rem; align-items: center; }
 .resume-btn {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.68rem;
   padding: 0.35rem 0.8rem;
   letter-spacing: 0.08em;
@@ -1058,18 +1025,14 @@ body.sheet-open { overflow: hidden; }
   margin-top: 0.2rem;
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
-  background: rgba(255, 107, 0, 0.1);
-  border: 1px solid rgba(255, 107, 0, 0.25);
-  font-family: 'JetBrains Mono', monospace;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
+  font-family: var(--font-body);
   cursor: help;
-}
-:root[data-theme="light"] .dist-eta {
-  background: rgba(232, 95, 0, 0.1);
-  border-color: rgba(232, 95, 0, 0.3);
 }
 
 .price {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.6rem;
   color: var(--rank-color, var(--ink));
   letter-spacing: -0.03em;
@@ -1084,7 +1047,7 @@ body.sheet-open { overflow: hidden; }
 
 .price .unit {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.6rem;
   color: var(--ink-dim);
   letter-spacing: 0.15em;
@@ -1103,15 +1066,15 @@ body.sheet-open { overflow: hidden; }
   user-select: none;
   font-weight: 700;
 }
-.price .trend-down { color: #4ade80; }
-.price .trend-up { color: #ef4444; }
+.price .trend-down { color: #15803d; }
+.price .trend-up { color: #b91c1c; }
 .price .trend-flat { color: var(--ink-dim); opacity: 0.55; font-weight: 500; }
-:root[data-theme="light"] .price .trend-down { color: #15803d; }
-:root[data-theme="light"] .price .trend-up { color: #b91c1c; }
+:root[data-theme="dark"] .price .trend-down { color: #4ade80; }
+:root[data-theme="dark"] .price .trend-up { color: #ef4444; }
 
 .price .freshness {
   display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.6rem;
   color: var(--ink-dim);
   letter-spacing: 0.05em;
@@ -1126,25 +1089,25 @@ body.sheet-open { overflow: hidden; }
 }
 /* Donnée potentiellement vieille (> 48 h) : chip orange discret */
 .price .freshness-stale {
-  color: #fb923c;
+  color: #c2410c;
   border-color: rgba(251, 146, 60, 0.35);
-  background: rgba(251, 146, 60, 0.08);
+  background: rgba(251, 146, 60, 0.14);
   opacity: 1;
 }
 /* Donnée probablement obsolète (> 7 j) : chip rouge */
 .price .freshness-veryStale {
-  color: #ef4444;
+  color: #b91c1c;
   border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.14);
   opacity: 1;
 }
-:root[data-theme="light"] .price .freshness-stale {
-  color: #c2410c;
-  background: rgba(251, 146, 60, 0.14);
+:root[data-theme="dark"] .price .freshness-stale {
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.08);
 }
-:root[data-theme="light"] .price .freshness-veryStale {
-  color: #b91c1c;
-  background: rgba(239, 68, 68, 0.14);
+:root[data-theme="dark"] .price .freshness-veryStale {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .dir-link {
@@ -1173,7 +1136,7 @@ body.sheet-open { overflow: hidden; }
   border: 1px solid rgba(255,107,0,0.25);
   border-left: 3px solid var(--accent);
   border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
 }
 .savings-delta {
   font-weight: 600;
@@ -1368,7 +1331,7 @@ footer a {
 
 /* Historique dans le dropdown */
 .suggestions .sg-history {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -1400,7 +1363,7 @@ footer a {
   border: none;
   color: var(--ink-dim);
   padding: 0.4rem 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1420,15 +1383,15 @@ footer a {
   background: var(--bg-card);
   margin-bottom: 1rem;
 }
-:root:not([data-theme="light"]) .station-map .leaflet-tile-pane {
+:root[data-theme="dark"] .station-map .leaflet-tile-pane {
   filter: hue-rotate(180deg) invert(0.92) brightness(0.95) contrast(0.9) saturate(0.8);
 }
 .leaflet-popup-content {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-body);
   font-size: 0.8rem;
   margin: 0.6rem 0.8rem;
 }
-.leaflet-popup-content strong { font-family: 'Archivo Black', sans-serif; letter-spacing: -0.02em; }
+.leaflet-popup-content strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); letter-spacing: -0.02em; }
 .map-pin {
   background: none;
   border: none;
@@ -1443,7 +1406,7 @@ footer a {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 0.7rem;
   color: #000;
 }

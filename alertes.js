@@ -77,8 +77,9 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Dégradé vert → rouge, aligné sur le classement de l'écran de recherche.
-const RANK_COLORS = ['#4ade80', '#facc15', '#fb923c'];
+// Aligné sur l'outil : le système n'a qu'un accent, on distingue seulement la
+// station la moins chère du reste plutôt qu'un dégradé vert → rouge.
+const RANK_COLORS = ['var(--color-accent)', 'var(--color-neutral-500)', 'var(--color-neutral-500)'];
 
 function formatRelativeTime(iso) {
   if (!iso) return null;

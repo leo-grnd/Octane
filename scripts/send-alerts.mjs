@@ -309,7 +309,22 @@ function stationLine(s, a, brandsData) {
   return { name, addr, dist, lat, lon, price: Number(s[a.fuel]), maj: s[majField(a.fuel)] };
 }
 
-const TONE_COLOR = { up: '#c0392b', down: '#1e8449', flat: '#6b6356' };
+// Palette de l'email : reprise des tokens du design system, mais en valeurs
+// littérales. Les clients mail ne résolvent ni les variables CSS ni color-mix,
+// et beaucoup suppriment purement et simplement la balise <style>.
+const MAIL = {
+  bg: '#f3f2f2',
+  surface: '#eae9e9',
+  text: '#201e1d',
+  muted: '#605d5d',
+  divider: '#c3c0c0',
+  accent: '#ec3013',
+  onAccent: '#f3f2f2'
+};
+// Archivo en premier pour les clients qui chargent les polices distantes
+// (Apple Mail, Thunderbird) ; Arial couvre les autres sans décaler la mise en page.
+const MAIL_FONT = "'Archivo', Arial, Helvetica, sans-serif";
+const TONE_COLOR = { up: '#b91c1c', down: '#15803d', flat: MAIL.muted };
 
 function buildEmail(a, { rows, total }, previous, brandsData) {
   const fuelLabel = FUEL_LABELS[a.fuel];
@@ -319,10 +334,10 @@ function buildEmail(a, { rows, total }, previous, brandsData) {
   if (!rows.length) {
     const subject = `Octane · ${fuelLabel} — aucune station à signaler`;
     const text = `Aucune station n'a mis à jour son prix ${fuelLabel} dans ${zone} depuis ${FRESH_DAYS} jours.\n\n${backLink(a)}`;
-    const html = `<p style="font-family:Arial,sans-serif;font-size:15px;color:#141210">` +
+    const html = `<p style="font-family:${MAIL_FONT};font-size:15px;color:${MAIL.text}">` +
       `Aucune station n'a mis à jour son prix <strong>${esc(fuelLabel)}</strong> dans ${esc(zone)} ` +
       `depuis ${FRESH_DAYS} jours.</p>` +
-      `<p><a href="${esc(backLink(a))}" style="color:#e85f00">Ouvrir Octane</a></p>`;
+      `<p><a href="${esc(backLink(a))}" style="color:${MAIL.accent}">Ouvrir Octane</a></p>`;
     return { subject, text, html };
   }
 
@@ -352,52 +367,55 @@ function buildEmail(a, { rows, total }, previous, brandsData) {
   // supportent ni <style> fiable, ni flex/grid, ni les variables CSS.
   const runners = podium.slice(1).map((s, i) => `
     <tr>
-      <td style="padding:8px 12px;border-top:1px solid #e3dcc9;font:13px Arial,sans-serif;color:#6b6356;width:28px">${i + 2}</td>
-      <td style="padding:8px 12px;border-top:1px solid #e3dcc9;font:13px Arial,sans-serif;color:#141210">
-        ${esc(s.name)}${s.dist ? ` <span style="color:#6b6356">· ${esc(s.dist)}</span>` : ''}
+      <td style="padding:10px 12px;border-top:1px solid ${MAIL.divider};font:13px ${MAIL_FONT};color:${MAIL.muted};width:30px">${String(i + 2).padStart(2, '0')}</td>
+      <td style="padding:10px 12px;border-top:1px solid ${MAIL.divider};font:13px ${MAIL_FONT};color:${MAIL.text}">
+        ${esc(s.name)}${s.dist ? ` <span style="color:${MAIL.muted}">· ${esc(s.dist)}</span>` : ''}
       </td>
-      <td style="padding:8px 12px;border-top:1px solid #e3dcc9;font:bold 14px Arial,sans-serif;color:#141210;text-align:right;white-space:nowrap">${eur(s.price)} €</td>
+      <td style="padding:10px 12px;border-top:1px solid ${MAIL.divider};font:bold 15px ${MAIL_FONT};color:${MAIL.text};text-align:right;white-space:nowrap">${eur(s.price)} €</td>
     </tr>`).join('');
 
+  // Structure calquée sur le bloc « le moins cher » du site : intitulé en
+  // capitales, prix à la plus grande échelle, le reste en commentaire.
   const html = `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background:#f5f1e8">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1e8;padding:24px 12px">
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet"></head>
+<body style="margin:0;padding:0;background:${MAIL.bg}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${MAIL.bg};padding:24px 12px">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fbf8ef;border:1px solid #ccc3ab">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${MAIL.bg}">
 
-        <tr><td style="padding:20px 24px;border-bottom:1px solid #ccc3ab">
-          <div style="font:bold 20px Arial,sans-serif;color:#141210;letter-spacing:-0.5px">O<span style="color:#e85f00">CTANE</span></div>
-          <div style="font:11px Arial,sans-serif;color:#6b6356;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px">
+        <tr><td style="padding:0 0 12px;border-bottom:2px solid ${MAIL.divider}">
+          <div style="font:800 20px ${MAIL_FONT};color:${MAIL.text};letter-spacing:-0.02em">OCTANE</div>
+          <div style="font:11px ${MAIL_FONT};color:${MAIL.muted};letter-spacing:0.14em;text-transform:uppercase;margin-top:6px">
             ${esc(fuelLabel)} · ${esc(zone)}
           </div>
         </td></tr>
 
-        <tr><td style="padding:24px">
-          <div style="font:12px Arial,sans-serif;color:#6b6356;text-transform:uppercase;letter-spacing:1.5px">${esc(today)}</div>
-          <div style="font:bold 40px Arial,sans-serif;color:#e85f00;margin:10px 0 2px">${eur(w.price)} <span style="font-size:18px">€/L</span></div>
-          ${delta ? `<div style="font:13px Arial,sans-serif;color:${TONE_COLOR[delta.tone]};margin-bottom:12px">${esc(delta.text)}</div>` : '<div style="height:12px"></div>'}
-          <div style="font:bold 16px Arial,sans-serif;color:#141210">${esc(w.name)}</div>
-          <div style="font:13px Arial,sans-serif;color:#6b6356;margin-top:4px;line-height:1.5">
+        <tr><td style="padding:24px 0;border-bottom:2px solid ${MAIL.divider}">
+          <div style="font:11px ${MAIL_FONT};color:${MAIL.accent};letter-spacing:0.14em;text-transform:uppercase">Le moins cher</div>
+          <div style="font:800 56px ${MAIL_FONT};color:${MAIL.text};letter-spacing:-0.045em;line-height:0.9;margin:12px 0 2px">${eur(w.price)}<span style="font-size:17px;letter-spacing:0.06em;margin-left:8px">€ / L</span></div>
+          ${delta ? `<div style="font:13px ${MAIL_FONT};color:${TONE_COLOR[delta.tone]};margin-top:10px">${esc(delta.text)}</div>` : ''}
+          <div style="font:800 18px ${MAIL_FONT};color:${MAIL.text};margin-top:20px">${esc(w.name)}</div>
+          <div style="font:13px ${MAIL_FONT};color:${MAIL.muted};margin-top:4px;line-height:1.5">
             ${esc(w.addr)}${w.dist ? `<br>à ${esc(w.dist)} de ${esc(a.label)}` : ''}
           </div>
-          ${w.lat != null ? `<div style="margin-top:16px">
-            <a href="${esc(mapsUrl(w.lat, w.lon))}" style="display:inline-block;background:#e85f00;color:#ffffff;font:bold 13px Arial,sans-serif;text-decoration:none;padding:11px 18px">Itinéraire →</a>
+          ${w.lat != null ? `<div style="margin-top:18px">
+            <a href="${esc(mapsUrl(w.lat, w.lon))}" style="display:inline-block;background:${MAIL.accent};color:${MAIL.onAccent};font:800 13px ${MAIL_FONT};text-decoration:none;padding:12px 20px">Itinéraire</a>
           </div>` : ''}
         </td></tr>
 
-        ${runners ? `<tr><td style="padding:0 12px 8px">
-          <div style="font:11px Arial,sans-serif;color:#6b6356;letter-spacing:1.5px;text-transform:uppercase;padding:0 12px 6px">Juste derrière</div>
+        ${runners ? `<tr><td style="padding:20px 0 0">
+          <div style="font:11px ${MAIL_FONT};color:${MAIL.muted};letter-spacing:0.14em;text-transform:uppercase;padding-bottom:8px">Juste derrière</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${runners}</table>
         </td></tr>` : ''}
 
-        <tr><td style="padding:16px 24px 22px;border-top:1px solid #ccc3ab">
-          <div style="font:12px Arial,sans-serif;color:#6b6356;line-height:1.6">
+        <tr><td style="padding:24px 0 0">
+          <div style="font:12px ${MAIL_FONT};color:${MAIL.muted};line-height:1.6;border-top:2px solid ${MAIL.divider};padding-top:16px">
             ${total} station${total > 1 ? 's' : ''} éligible${total > 1 ? 's' : ''} — seuls les prix mis à jour
             depuis moins de ${FRESH_DAYS} jours sont retenus.<br>
-            <a href="${esc(backLink(a))}" style="color:#e85f00">Voir le classement complet sur Octane</a>
+            <a href="${esc(backLink(a))}" style="color:${MAIL.accent}">Voir le classement complet sur Octane</a>
           </div>
-          <div style="font:11px Arial,sans-serif;color:#8a8278;margin-top:14px;line-height:1.6">
+          <div style="font:11px ${MAIL_FONT};color:${MAIL.muted};margin-top:14px;line-height:1.6">
             Données · data.economie.gouv.fr (Ministère de l'Économie).<br>
             Pour modifier ou arrêter cette alerte, réponds simplement à cet email.
           </div>

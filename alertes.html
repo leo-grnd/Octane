@@ -22,37 +22,36 @@
 </head>
 <body>
   <div class="container">
-    <header>
-      <div>
-        <a class="logo" href="index.html">O<span>CTANE</span></a>
-        <div class="tagline">— Alerte quotidienne</div>
+    <nav class="nav">
+      <a class="nav-brand" href="index.html">OCTANE</a>
+      <div class="nav-links">
+        <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
+        <a class="btn btn-secondary" href="comment-ca-marche.html">Comment ça marche</a>
+        <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
+          <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
       </div>
-      <div class="meta">
-        <div class="meta-right">
-          <a class="nav-link" href="index.html">← Retour à l'outil</a>
-          <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
-            <span id="themeIcon" aria-hidden="true">☾</span>
-          </button>
-        </div>
-      </div>
-    </header>
+    </nav>
 
     <section class="hero">
-      <h1>Le bon plein. <em>Chaque matin.</em><br />Sans y penser.</h1>
-      <p>Choisis un carburant, une zone et une heure : tu reçois chaque jour, par email, la station
-         la moins chère du périmètre. Y compris « la moins chère de France », si c'est ton genre.</p>
+      <h1>Le bon plein.<br /><em>Chaque matin.</em><br />Sans y penser.</h1>
+      <div class="hero-aside">
+        <div class="kicker">Alerte quotidienne</div>
+        <p>Choisis un carburant, une zone et une heure : tu reçois chaque jour, par email, la station
+           la moins chère du périmètre. Y compris « la moins chère de France », si c'est ton genre.</p>
+      </div>
     </section>
 
     <section class="search-panel">
       <form id="alertForm" class="alert-grid" novalidate>
         <div class="field alert-full">
-          <label for="email">→ Ton email</label>
-          <input id="email" type="email" placeholder="prenom@exemple.fr" autocomplete="email" required />
+          <label for="email">Ton email</label>
+          <input id="email" class="input" type="email" placeholder="prenom@exemple.fr" autocomplete="email" required />
         </div>
 
         <div class="field">
-          <label for="fuel">→ Carburant</label>
-          <select id="fuel">
+          <label for="fuel">Carburant</label>
+          <select id="fuel" class="input">
             <option value="e10_prix">SP95-E10</option>
             <option value="sp95_prix">SP95</option>
             <option value="sp98_prix">SP98</option>
@@ -63,34 +62,36 @@
         </div>
 
         <div class="field">
-          <label for="hour">→ Heure d'envoi</label>
-          <select id="hour" aria-describedby="hourHint"></select>
+          <label for="hour">Heure d'envoi</label>
+          <select id="hour" class="input" aria-describedby="hourHint"></select>
           <div id="hourHint" class="field-hint">heure de Paris</div>
         </div>
 
         <div class="field alert-full">
-          <label id="scopeLabel">→ Zone surveillée</label>
-          <div class="distance-mode" role="radiogroup" aria-labelledby="scopeLabel">
-            <input type="radio" id="scopeFrance" name="scope" value="france" checked />
-            <label for="scopeFrance" class="mode-option" title="La station la moins chère de tout le territoire">France entière</label>
-            <input type="radio" id="scopeRadius" name="scope" value="radius" />
-            <label for="scopeRadius" class="mode-option" title="La station la moins chère dans un rayon autour d'un point">Autour d'une adresse</label>
+          <label id="scopeLabel">Zone surveillée</label>
+          <div class="seg" role="radiogroup" aria-labelledby="scopeLabel">
+            <label class="seg-opt" title="La station la moins chère de tout le territoire">
+              <input type="radio" id="scopeFrance" name="scope" value="france" checked />France entière
+            </label>
+            <label class="seg-opt" title="La station la moins chère dans un rayon autour d'un point">
+              <input type="radio" id="scopeRadius" name="scope" value="radius" />Autour d'une adresse
+            </label>
           </div>
         </div>
 
         <div class="field field-address alert-zone hidden" id="addressField">
-          <label for="address">→ Adresse ou ville</label>
-          <input id="address" type="text" placeholder="Avignon" autocomplete="off"
+          <label for="address">Adresse ou ville</label>
+          <input id="address" class="input" type="text" placeholder="Avignon" autocomplete="off"
                  role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
           <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
         </div>
 
         <div class="field alert-zone hidden" id="radiusField">
-          <label for="radius">→ Rayon (km)</label>
-          <input id="radius" type="number" min="1" max="50" value="10" inputmode="numeric" />
+          <label for="radius">Rayon (km)</label>
+          <input id="radius" class="input" type="number" min="1" max="50" value="10" inputmode="numeric" />
         </div>
 
-        <button type="submit" id="previewBtn" class="btn-search alert-full">Voir le gagnant du jour ↗</button>
+        <button type="submit" id="previewBtn" class="btn btn-primary alert-full">Voir le gagnant du jour ↗</button>
       </form>
     </section>
 
@@ -118,8 +119,8 @@
       </p>
       <pre id="configBlock" class="alert-config" tabindex="0"></pre>
       <div class="alert-output-actions">
-        <button type="button" id="copyBtn" class="sheet-btn sheet-btn-primary">Copier la configuration</button>
-        <a id="mailtoBtn" class="sheet-btn hidden" href="#">Envoyer par email ↗</a>
+        <button type="button" id="copyBtn" class="btn btn-primary">Copier la configuration</button>
+        <a id="mailtoBtn" class="btn btn-secondary hidden" href="#">Envoyer par email ↗</a>
       </div>
     </section>
 

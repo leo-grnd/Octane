@@ -496,10 +496,16 @@ body.sheet-open { overflow: hidden; }
   gap: var(--space-3);
   padding: var(--space-4) 0 var(--space-2);
 }
-.results-header h2 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 20px;
-  letter-spacing: -0.02em;
+/* Ligne de méta de la maquette : « GAZOLE · AVIGNON · 5 KM · 24 STATIONS ».
+   Reste un <h2> pour la structure du document, mais s'affiche comme une
+   légende — le titre de la page, c'est le prix du bloc gagnant. */
+.results-meta {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
 }
 .results-count {
   font-size: 12px;

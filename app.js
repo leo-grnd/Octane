@@ -1085,7 +1085,15 @@ function renderStations() {
 
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
-  $resultsTitle.textContent = FUEL_LABELS[fuelField];
+  // Ligne de méta unique, comme la maquette : carburant, lieu, rayon, effectif.
+  // Elle remplace le couple titre + compteur, qui disait deux fois la même
+  // chose sur deux lignes.
+  $resultsTitle.textContent = [
+    FUEL_LABELS[fuelField],
+    currentResults.label,
+    `${currentResults.radiusKm || parseInt($radius.value, 10) || 5} km`,
+    `${total} station${total > 1 ? 's' : ''}`
+  ].join(' · ');
 
   if (total === 0) {
     const node = document.createElement('div');
@@ -1103,7 +1111,7 @@ function renderStations() {
       node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</div>`;
     }
     $stationList.appendChild(node);
-    $resultsCount.textContent = '0 station';
+    $resultsCount.textContent = '';
     return;
   }
 
@@ -1149,12 +1157,12 @@ function renderStations() {
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
   // rayon contient plus de stations qu'on n'en charge.
   if (currentResults.truncated) {
-    $resultsCount.textContent = `${total} sur ${currentResults.totalInRadius} stations`;
+    $resultsCount.textContent = `${MAX_STATIONS} chargées sur ${currentResults.totalInRadius}`;
     $resultsCount.title =
       `Ce rayon contient ${currentResults.totalInRadius} stations ; Octane en charge ${MAX_STATIONS} au maximum, ` +
       `en partant des moins chères. Réduis le rayon pour un classement exhaustif.`;
   } else {
-    $resultsCount.textContent = `${total} station${total > 1 ? 's' : ''}`;
+    $resultsCount.textContent = '';
     $resultsCount.removeAttribute('title');
   }
 

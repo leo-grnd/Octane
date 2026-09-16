@@ -1,0 +1,104 @@
+name: Daily fuel alerts
+
+# Octane n'a pas de backend : ce cron horaire tient lieu de planificateur. Le
+# script ne retient que les abonnés dont l'heure d'envoi correspond à l'heure
+# de Paris courante, et rattrape jusqu'à 3 heures manquées si un run a glissé —
+# les crons GitHub peuvent être retardés de plusieurs dizaines de minutes.
+on:
+  schedule:
+    - cron: '5 * * * *'   # toutes les heures à H+5 (UTC ; la conversion Paris est faite côté script)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "N'envoie rien, affiche seulement les emails générés"
+        type: boolean
+        default: true
+      force_hour:
+        description: "Simuler une heure de Paris (0-23), vide = heure réelle"
+        type: string
+        default: ''
+      force:
+        description: "Ignorer la garde anti-doublon (renvoie même si déjà envoyé aujourd'hui)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Un run horaire à la fois : deux runs concurrents pourraient envoyer en double
+# et se marcher dessus sur le commit d'état.
+concurrency:
+  group: daily-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Aucun `npm install` : le script n'a pas de dépendance, `fetch` est natif
+      # depuis Node 18.
+      - name: Envoyer les alertes
+        env:
+          OCTANE_ALERTS: ${{ secrets.OCTANE_ALERTS }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER: ${{ secrets.BREVO_SENDER }}
+          BREVO_SENDER_NAME: ${{ vars.BREVO_SENDER_NAME }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          # Les entrées passent par l'environnement et non par interpolation
+          # directe dans le shell : `${{ inputs.x }}` collé dans un `run` est
+          # une injection de commande en puissance.
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+          IN_FORCE: ${{ inputs.force }}
+          IN_FORCE_HOUR: ${{ inputs.force_hour }}
+        run: |
+          ARGS=""
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "$IN_FORCE" = "true" ]; then ARGS="$ARGS --force"; fi
+          # Borné à 1-2 chiffres : une entrée manuelle ne doit pas pouvoir
+          # transporter autre chose qu'une heure.
+          if echo "$IN_FORCE_HOUR" | grep -Eq '^[0-9]{1,2}$'; then
+            ARGS="$ARGS --force-hour=$IN_FORCE_HOUR"
+          fi
+          echo "node scripts/send-alerts.mjs $ARGS"
+          node scripts/send-alerts.mjs $ARGS
+
+      # L'état retient le prix de la veille (pour l'écart affiché dans l'email)
+      # et les marqueurs anti-doublon du jour. Il ne contient que des empreintes :
+      # ni email ni coordonnées en clair, le dépôt étant public.
+      - name: Commit de l'état
+        if: ${{ always() && inputs.dry_run != true }}
+        run: |
+          git config user.name  "octane-bot"
+          git config user.email "octane-bot@users.noreply.github.com"
+          # Le script n'écrit l'état que lorsqu'un envoi a eu lieu : sur une
+          # heure creuse le dossier peut ne pas exister, et `git add` sur un
+          # chemin absent échoue ("pathspec did not match any files"), ce qui
+          # ferait passer le job au rouge toutes les heures.
+          if [ ! -d data/alerts ]; then
+            echo "Pas d'état à committer"
+            exit 0
+          fi
+          git add data/alerts
+          if git diff --cached --quiet; then
+            echo "Aucun changement d'état"
+            exit 0
+          fi
+          git commit -m "chore(alerts): état des alertes quotidiennes"
+          # Push résilient : si main a avancé pendant le run (commit humain, ou
+          # le cron des marques OSM), on rebase et on ré-essaie.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "Push réussi (essai $attempt)"
+              exit 0
+            fi
+            echo "Push refusé (essai $attempt) — rebase puis retry"
+            git pull --rebase origin main
+          done
+          echo "Push échoué après 5 essais"
+          exit 1

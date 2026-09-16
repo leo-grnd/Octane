@@ -57,340 +57,194 @@ html, body {
 }
 .offline-banner.hidden { display: none; }
 
-header {
+/* ═══════════════════ En-tête ═══════════════════
+   Composant .nav du design system. Les liens sont des .btn-secondary, comme
+   dans la maquette : dans un système sans rayon, un lien encadré se lit comme
+   une cible cliquable là où un lien souligné se perdrait dans le filet. */
+.nav {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+.nav-brand { font-size: 20px; letter-spacing: -0.02em; }
+.nav-links { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.nav-links .btn { min-height: 34px; font-size: 13px; white-space: nowrap; justify-content: flex-start; }
+
+/* ═══════════════════ Hero ═══════════════════ */
+.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-8);
+  padding: var(--space-8) 0 var(--space-6);
+  border-bottom: 2px solid var(--color-divider);
+  margin-bottom: 0;
+}
+.hero h1 {
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  margin: 0;
+  text-wrap: pretty;
+}
+/* L'italique serif d'origine n'a plus de support typographique : l'emphase
+   passe par la couleur d'accent, seul registre expressif du système. */
+.hero h1 em { font-style: normal; color: var(--color-accent); }
+
+.hero-aside {
+  align-self: end;
+  border-top: 2px solid var(--color-divider);
+  padding-top: var(--space-3);
+  max-width: 42ch;
+}
+.hero-aside p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-neutral-800);
+}
+.kicker {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  margin-bottom: var(--space-2);
+}
+.live {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 3rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  letter-spacing: -0.04em;
-  line-height: 0.9;
-  color: var(--ink);
-}
-
-.logo span { color: var(--accent); }
-
-.tagline {
-  font-size: 0.7rem;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-4);
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--ink-dim);
-  margin-top: 0.5rem;
+  color: var(--color-neutral-600);
 }
-
-.meta {
-  text-align: right;
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-.meta .pulse {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
+.live .pulse {
+  width: 7px; height: 7px; flex: none;
   border-radius: 50%;
-  background: #4ade80;
-  margin-right: 0.4rem;
+  background: var(--color-accent);
   animation: pulse 2s infinite;
 }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.hero { margin-bottom: 2.5rem; }
-
-.hero h1 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: clamp(2.5rem, 7vw, 5rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  margin-bottom: 1rem;
-}
-
-.hero h1 em {
-  font-style: italic;
-  color: var(--accent-soft);
-}
-
-.hero p {
-  color: var(--ink-dim);
-  max-width: 550px;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
+/* ═══════════════════ Formulaire de recherche ═══════════════════
+   Plus de panneau encadré ni d'équerres d'angle : la maquette sépare les
+   sections par de simples filets de 2px. */
 .search-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 2rem;
-  margin-bottom: 2rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid var(--color-divider);
+  padding: var(--space-6) 0;
+  margin-bottom: 0;
   position: relative;
 }
-
-.search-panel::before {
-  content: '';
-  position: absolute;
-  top: -1px; left: -1px;
-  width: 20px; height: 20px;
-  border-top: 2px solid var(--accent);
-  border-left: 2px solid var(--accent);
-}
-
-.search-panel::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; right: -1px;
-  width: 20px; height: 20px;
-  border-bottom: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
-}
-
 .form-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
   align-items: end;
 }
+.form-grid .btn { min-height: 38px; justify-content: flex-start; }
+.field-address { grid-column: span 2; min-width: 0; }
+.field-distance-mode { grid-column: span 2; min-width: 0; }
+.field { position: relative; min-width: 0; }
 
-/* Ligne 2 du grid : taille réservoir (1 col) + mode de distance (le reste) */
-.field-tank { grid-column: 1 / span 1; }
-.field-distance-mode { grid-column: 2 / -1; align-self: end; }
-.distance-mode {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-  background: var(--bg-soft);
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-}
-.distance-mode input[type="radio"] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.distance-mode .mode-option {
-  padding: 0.55rem 1.1rem;
-  color: var(--ink-dim);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
-  letter-spacing: 0.04em;
-  display: block;
-  margin: 0;
-}
-.distance-mode input[type="radio"]:checked + .mode-option {
-  background: var(--accent);
-  color: #fff;
-}
-.distance-mode .mode-option:hover {
-  background: var(--bg-card);
-}
-.distance-mode input[type="radio"]:checked + .mode-option:hover {
-  background: var(--accent);
-}
-.distance-mode input[type="radio"]:focus-visible + .mode-option {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-@media (max-width: 900px) {
-  .form-grid { grid-template-columns: 1fr 1fr; }
-  .field:first-child { grid-column: 1 / -1; }
-  .btn-search { grid-column: 1 / -1; }
-  .field-tank { grid-column: 1; }
-  .field-distance-mode { grid-column: 2 / -1; }
-}
 @media (max-width: 560px) {
-  .form-grid { grid-template-columns: 1fr; gap: 1.1rem; }
-  .field:first-child,
-  .btn-search,
-  .field-tank,
-  .field-distance-mode { grid-column: auto; }
-  .btn-search { width: 100%; padding: 1rem; }
+  .field-address, .field-distance-mode { grid-column: auto; }
+  .form-grid .btn { width: 100%; }
+  /* La marque garde sa ligne : sans ça le `margin-right:auto` du composant
+     comprime les liens et le bouton de thème passe hors cadre. */
+  .nav { flex-wrap: wrap; gap: var(--space-3); }
+  .nav-brand { margin-right: 0; width: 100%; }
+  .nav-links { width: 100%; }
 }
 
-.field { position: relative; }
-
-.field label {
-  display: block;
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-  margin-bottom: 0.5rem;
-}
-
-/* Autocomplete suggestions (BAN) */
-.suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: none;
-  list-style: none;
-  margin: 0;
-  padding: 0.3rem 0;
-  z-index: 20;
-  max-height: 280px;
-  overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-}
-.suggestions li {
-  padding: 0.55rem 0.9rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: var(--ink);
-  border-left: 2px solid transparent;
-  transition: background 0.1s, border-color 0.1s;
-}
-.suggestions li .sg-ctx {
-  display: block;
-  font-size: 0.65rem;
-  color: var(--ink-dim);
-  margin-top: 0.15rem;
-  letter-spacing: 0.05em;
-}
-.suggestions li:hover,
-.suggestions li[aria-selected="true"] {
-  background: var(--bg-soft);
-  border-left-color: var(--accent);
-}
-
-.field input,
-.field select {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  color: var(--ink);
-  padding: 0.6rem 0;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.field input:focus,
-.field select:focus {
-  border-bottom-color: var(--accent);
-}
-
-.field select {
+/* Le sélecteur natif n'expose pas sa flèche au style : on la redessine. */
+select.input {
   appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23605d5d' stroke-width='1.5' fill='none'/></svg>");
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   padding-right: 2rem;
 }
-
-:root[data-theme="dark"] .field select {
+:root[data-theme="dark"] select.input {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23aeaaaa' stroke-width='1.5' fill='none'/></svg>");
 }
+select.input option { background: var(--color-surface); color: var(--color-text); }
 
-/* Theme toggle button */
-.theme-toggle {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--ink-dim);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+/* Autocomplétion BAN */
+.suggestions {
+  position: absolute;
+  top: 100%; left: 0; right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-top: none;
+  list-style: none;
+  margin: 0; padding: 0;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+.suggestions li {
+  padding: var(--space-2) var(--space-3);
+  font-size: 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  line-height: 1;
-  transition: border-color 0.2s, color 0.2s, transform 0.2s;
-  margin-top: 0.6rem;
+  color: var(--color-text);
+  border-left: 2px solid transparent;
 }
-.theme-toggle:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: rotate(15deg);
+.suggestions li .sg-ctx {
+  display: block;
+  font-size: 11px;
+  color: var(--color-neutral-600);
+  margin-top: 2px;
 }
-.meta .meta-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.3rem;
+.suggestions li:hover,
+.suggestions li[aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-left-color: var(--color-accent);
 }
 
-/* Lien retour vers le hub (← Tous les outils) */
+/* ═══ Transitoire : styles conservés pour comment-ca-marche.html et
+   alertes.html, qui portent encore l'ancien en-tête. Ils passeront au
+   composant .nav aux étapes 5 et 6, après quoi ce bloc disparaît. ═══ */
+.logo {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  color: var(--color-text);
+  text-decoration: none;
+  display: inline-block;
+}
+.logo span { color: var(--color-accent); }
+.tagline {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--color-neutral-600); margin-top: var(--space-2);
+}
+.meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); }
+.meta .meta-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
 .nav-link {
   display: inline-block;
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
+  font-size: 13px;
+  color: var(--color-text);
   text-decoration: none;
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.7rem;
-  margin-bottom: 0.6rem;
+  border: 1px solid var(--color-divider);
+  padding: 7px 12px;
   white-space: nowrap;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.nav-link:hover { color: var(--accent); border-color: var(--accent); }
-/* Sur l'en-tête de l'outil, empile les liens (← Tous les outils / Comment ça marche →). */
-.meta > .nav-link { display: block; width: fit-content; margin-left: auto; }
-
-.field select option {
-  background: var(--bg-card);
-  color: var(--ink);
-}
-
-.btn-search {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 0.9rem 2rem;
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 0.85rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
-  height: fit-content;
-}
-
-.btn-search:hover {
-  background: var(--accent-soft);
-  transform: translateX(2px);
-}
-
-.btn-search:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.geoloc-btn {
-  margin-top: 1rem;
-  font-size: 0.7rem;
+.nav-link:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.theme-toggle {
   background: none;
-  color: var(--ink-dim);
-  border: none;
+  border: 1px solid var(--color-divider);
+  color: var(--color-text);
+  width: 36px; height: 36px;
   cursor: pointer;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 0.3rem 0;
-  transition: color 0.2s;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
 }
-
-.geoloc-btn:hover { color: var(--accent); }
+.theme-toggle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 
 .status {
   padding: 1.5rem 2rem;
@@ -1182,13 +1036,9 @@ body.sheet-open { overflow: hidden; }
   .hero h1 { font-size: clamp(2rem, 9vw, 3rem); }
   .hero p { font-size: 0.85rem; }
 
-  /* Search panel */
-  .search-panel { padding: 1.25rem 1rem 1.3rem; }
-  .search-panel::before,
-  .search-panel::after { width: 14px; height: 14px; }
-  .field input,
-  .field select { font-size: 16px; padding: 0.7rem 0; } /* 16px = pas de zoom iOS */
-  .field select { padding-right: 2rem; }
+  /* Formulaire : 16px sur les champs, sans quoi iOS zoome au focus. */
+  .input { font-size: 16px; }
+  select.input { padding-right: 2rem; }
 
   /* Status */
   .status { padding: 1rem 1.1rem; font-size: 0.8rem; }
@@ -1322,12 +1172,7 @@ footer a {
   border-radius: 2px;
 }
 
-.field input:focus-visible,
-.field select:focus-visible {
-  outline: none;
-  border-bottom-color: var(--accent);
-  border-bottom-width: 2px;
-}
+/* Le design system pose déjà le focus visible sur .input ; on n'ajoute rien. */
 
 /* Historique dans le dropdown */
 .suggestions .sg-history {

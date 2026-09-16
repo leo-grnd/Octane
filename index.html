@@ -50,38 +50,40 @@
     <span aria-hidden="true">⚠</span> Hors ligne — résultats potentiellement périmés
   </div>
   <div class="container">
-    <header>
-      <div>
-        <div class="logo">O<span>CTANE</span></div>
-        <div class="tagline">— Prix carburants · Temps réel</div>
-      </div>
-      <div class="meta">
-        <a class="nav-link" href="https://leo-grnd.github.io/hub/">← Tous les outils</a>
-        <a class="nav-link" href="alertes.html">Alerte quotidienne →</a>
-        <a class="nav-link" href="comment-ca-marche.html">Comment ça marche →</a>
-        <div><span class="pulse" aria-hidden="true"></span>Data.gouv · Live</div>
-        <div id="timestamp" style="margin-top: 0.3rem;" aria-hidden="true"></div>
-        <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+    <nav class="nav">
+      <span class="nav-brand">OCTANE</span>
+      <div class="nav-links">
+        <a class="btn btn-secondary" href="alertes.html">Alertes</a>
+        <a class="btn btn-secondary" href="comment-ca-marche.html">Comment ça marche</a>
+        <a class="btn btn-secondary" href="https://leo-grnd.github.io/hub/">Tous les outils</a>
+        <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
           <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
       </div>
-    </header>
+    </nav>
 
     <section class="hero">
-      <h1>Le plein. <em>Le moins cher.</em><br />Autour de toi.</h1>
-      <p>Données officielles du Ministère de l'Économie. Comparaison instantanée des stations-service françaises, classées par prix et par distance.</p>
+      <h1>Le plein.<br /><em>Le moins cher.</em><br />Autour de toi.</h1>
+      <div class="hero-aside">
+        <div class="kicker">Source officielle</div>
+        <p>Prix relevés en continu par le Ministère de l'Économie. Une recherche, un classement, un itinéraire.</p>
+        <div class="live">
+          <span class="pulse" aria-hidden="true"></span>Data.gouv · Live
+          <span id="timestamp" aria-hidden="true"></span>
+        </div>
+      </div>
     </section>
 
     <section class="search-panel">
       <div class="form-grid">
         <div class="field field-address">
-          <label for="address">→ Adresse ou ville</label>
-          <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          <label for="address">Adresse ou ville</label>
+          <input id="address" class="input" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
           <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
         </div>
         <div class="field">
-          <label for="fuel">→ Carburant</label>
-          <select id="fuel">
+          <label for="fuel">Carburant</label>
+          <select id="fuel" class="input">
             <option value="e10_prix">SP95-E10</option>
             <option value="sp95_prix">SP95</option>
             <option value="sp98_prix">SP98</option>
@@ -91,25 +93,29 @@
           </select>
         </div>
         <div class="field">
-          <label for="radius">→ Rayon (km)</label>
-          <input id="radius" type="number" min="1" max="50" value="5" />
+          <label for="radius">Rayon (km)</label>
+          <input id="radius" class="input" type="number" min="1" max="50" value="5" />
         </div>
-        <button id="searchBtn" class="btn-search" aria-label="Lancer la recherche">Chercher ↗</button>
+        <button id="searchBtn" class="btn btn-primary" aria-label="Lancer la recherche">Chercher</button>
         <div class="field field-tank">
-          <label for="tank">→ Mon réservoir (L)</label>
-          <input id="tank" type="number" min="1" max="200" value="60" inputmode="numeric" />
+          <label for="tank">Mon réservoir (L)</label>
+          <input id="tank" class="input" type="number" min="1" max="200" value="60" inputmode="numeric" />
         </div>
         <div class="field field-distance-mode">
-          <label>→ Mode de distance</label>
-          <div class="distance-mode" role="radiogroup" aria-label="Mode de calcul de distance">
-            <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />
-            <label for="modeCrow" class="mode-option" title="Distance en ligne droite entre deux points">à vol d'oiseau</label>
-            <input type="radio" id="modeDrive" name="distanceMode" value="drive" />
-            <label for="modeDrive" class="mode-option" title="Distance par la route (routage OSRM)">en voiture</label>
+          <label id="distanceModeLabel">Mode de distance</label>
+          <!-- Contrôle segmenté du design system : la case doit être imbriquée
+               dans le label, `.seg-opt:has(input:checked)` s'appuyant dessus. -->
+          <div class="seg" role="radiogroup" aria-labelledby="distanceModeLabel">
+            <label class="seg-opt" title="Distance en ligne droite entre deux points">
+              <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />à vol d'oiseau
+            </label>
+            <label class="seg-opt" title="Distance par la route (routage Valhalla / OSRM)">
+              <input type="radio" id="modeDrive" name="distanceMode" value="drive" />en voiture
+            </label>
           </div>
         </div>
       </div>
-      <button id="geolocBtn" class="geoloc-btn" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
+      <button id="geolocBtn" class="btn btn-ghost" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
     </section>
 
     <div id="status" class="status hidden" role="status" aria-live="polite"></div>

@@ -1,6 +1,18 @@
 {
-  "updated": null,
-  "lastRun": null,
-  "groups": {},
-  "sent": {}
+  "updated": "2026-09-16T15:47:21.401Z",
+  "lastRun": {
+    "date": "2026-09-16",
+    "hour": 8
+  },
+  "groups": {
+    "61487daef34ebea3": {
+      "date": "2026-09-16",
+      "price": 2.189,
+      "stationId": 20189002,
+      "previous": null
+    }
+  },
+  "sent": {
+    "edae556b011a0f28": "2026-09-16"
+  }
 }

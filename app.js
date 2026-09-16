@@ -169,7 +169,7 @@ function cacheSet(store, key, data) {
       const victims = [];
       for (let i = 0; i < store.length; i++) {
         const k = store.key(i);
-        if (!k || !/^(hist\d*:|fuel\d*:|geo:|drive\d*:)/.test(k)) continue;
+        if (!k || !/^(hist\d*:|fuel\d*:|geo\d*:|drive\d*:)/.test(k)) continue;
         try {
           const { ts } = JSON.parse(store.getItem(k)) || {};
           victims.push({ k, ts: ts || 0 });
@@ -186,19 +186,49 @@ const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
 const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
 
 // Géocodage via API BAN (gouvernementale, gratuite)
+
+// `geo2:` = v2 du schéma : la sélection du résultat privilégie la commune.
+// Les entrées v1 pointent potentiellement sur le mauvais lieu, on change donc
+// de préfixe plutôt que d'attendre 24 h d'expiration.
+function geoCacheKey(address) {
+  return `geo2:${address.toLowerCase().trim()}`;
+}
+
+// BAN classe parfois une VOIE homonyme au-dessus de la commune cherchée, à un
+// millième de score près. « Avignon » renvoyait ainsi la rue Avignon de
+// Combourg (0,9570) plutôt que la ville d'Avignon (0,9562) — 800 km d'écart.
+// Même piège pour « Bourges » (→ Laroque-d'Olmes, Ariège) et « Châteauroux »
+// (→ Tonnay-Charente). À score quasi équivalent, on privilégie donc la commune.
+// Sans risque pour les recherches d'adresse précise : dès que la requête
+// contient une voie ou un numéro, BAN ne remonte aucune commune dans son top 5.
+const GEO_MUNICIPALITY_TOLERANCE = 0.02;
+function pickBestGeoFeature(features) {
+  const top = features[0];
+  if (!top) return null;
+  if (top.properties && top.properties.type === 'municipality') return top;
+  const topScore = (top.properties && top.properties.score) || 0;
+  const municipality = features.find(f =>
+    f.properties &&
+    f.properties.type === 'municipality' &&
+    topScore - (f.properties.score || 0) <= GEO_MUNICIPALITY_TOLERANCE
+  );
+  return municipality || top;
+}
+
 async function geocode(address) {
-  const key = `geo:${address.toLowerCase().trim()}`;
+  const key = geoCacheKey(address);
   const cached = cacheGet(localStorage, key, TTL_GEO);
   if (cached) return cached;
-  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`;
+  // limit=5 (et non 1) : il faut voir les suivants pour repérer la commune
+  // homonyme coiffée au poteau par une voie.
+  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetchWithRetry(signal => fetch(url, { signal }));
   if (!res.ok) throw new Error('Erreur géocodage');
   const data = await res.json();
-  if (!data.features || data.features.length === 0) {
-    throw new Error('Adresse introuvable');
-  }
-  const [lon, lat] = data.features[0].geometry.coordinates;
-  const result = { lat, lon, label: data.features[0].properties.label };
+  const best = pickBestGeoFeature(data.features || []);
+  if (!best) throw new Error('Adresse introuvable');
+  const [lon, lat] = best.geometry.coordinates;
+  const result = { lat, lon, label: best.properties.label };
   cacheSet(localStorage, key, result);
   return result;
 }
@@ -1474,7 +1504,7 @@ function selectSuggestion(feature) {
   $address.value = label;
   closeSuggestions();
   // Cache le géocodage pour éviter un nouvel appel BAN
-  cacheSet(localStorage, `geo:${label.toLowerCase().trim()}`, { lat, lon, label });
+  cacheSet(localStorage, geoCacheKey(label), { lat, lon, label });
   pushHistory(label, label);
   updateUrlParams();
   runSearch(lat, lon, label);

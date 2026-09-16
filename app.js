@@ -1511,15 +1511,17 @@ $geolocBtn.addEventListener('click', () => {
 });
 
 // ===== Historique des prix (runtime, dataset j-1 d'Opendatasoft) =====
-// Pour chaque station, on récupère les 30 dernières mises à jour de prix sur
-// le dataset public `prix-des-carburants-j-1` (12 mois glissants). Cache mémoire
-// + localStorage (TTL 24h) + dédup des requêtes en vol. Aucun fichier généré :
-// tout est calculé à la volée côté client, et pré-chargé en arrière-plan dès
-// qu'une recherche retourne des résultats.
+// Pour chaque station, on trace l'évolution du prix sur les 100 derniers jours
+// via le dataset public `prix-des-carburants-j-1` (12 mois glissants). Cache
+// mémoire + localStorage (TTL 24h) + dédup des requêtes en vol. Aucun fichier
+// généré : tout est calculé à la volée côté client, et pré-chargé en arrière-plan
+// dès qu'une recherche retourne des résultats.
 
 const TTL_HISTORY = 24 * 60 * 60 * 1000;
-const HIST_KEEP = 30;                 // nb de points gardés après dédup
-const HIST_FETCH_LIMIT = 100;         // nb de records bruts demandés (marge pour dédup)
+const HIST_DAYS = 100;                // fenêtre réellement couverte, en JOURS
+const HIST_PAGE = 100;                // maximum autorisé par l'API Opendatasoft
+const HIST_MAX_PAGES = 3;             // 300 relevés : tient 100 j même à 3 relevés/jour
+const HIST_KEEP = 150;                // plafond de points stockés (garde-fou localStorage)
 const HIST_PREFETCH_CONCURRENCY = 4;
 
 // Dataset `prix-des-carburants-j-1` (public.opendatasoft.com, 12 mois glissants).
@@ -1547,27 +1549,52 @@ async function loadStationHistory(stationId, fuelField) {
   if (key in historyMemCache) return historyMemCache[key];
   if (historyInflight[key]) return historyInflight[key];
 
-  const storageKey = `hist:${key}`;
+  // `hist2:` = v2 du schéma : fenêtre bornée en jours + queue plate conservée.
+  // Les entrées v1 sont ignorées pour forcer un recalcul ; elles expireront
+  // seules grâce au TTL.
+  const storageKey = `hist2:${key}`;
   const persisted = cacheGet(localStorage, storageKey, TTL_HISTORY);
   if (persisted) { historyMemCache[key] = persisted; return persisted; }
 
   historyInflight[key] = (async () => {
     try {
       const col = HIST_FUEL_COL[fuelField];
-      // On filtre par id station ET exige un prix non-null pour ce carburant
-      // (sinon on récupère 365 lignes dont la majorité inutiles).
-      const where = `id="${stationId}" AND ${col} IS NOT NULL`;
-      const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
-        `where=${encodeURIComponent(where)}` +
-        `&order_by=${encodeURIComponent('update desc')}` +
-        `&limit=${HIST_FETCH_LIMIT}`;
-      const res = await fetchWithRetry(signal => fetch(url, { signal }));
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(`API j-1: ${res.status} — ${body.slice(0, 200)}`);
+      // Fenêtre bornée dans le TEMPS, pas en nombre de lignes. Le dataset a en
+      // principe 1 ligne par station par jour, mais il monte parfois à 4 : un
+      // `limit=100` sec ne couvrait donc pas 100 jours, mais parfois 25.
+      // On exige aussi un prix non-null pour ce carburant, sinon on récupère
+      // des lignes inutiles pour les stations multi-carburants.
+      const where = `id="${stationId}" AND ${col} IS NOT NULL AND update >= now(days=-${HIST_DAYS})`;
+      const fetchPage = async (offset) => {
+        const url = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/prix-des-carburants-j-1/records?` +
+          `where=${encodeURIComponent(where)}` +
+          `&order_by=${encodeURIComponent('update desc')}` +
+          `&select=${encodeURIComponent(`update,${col}`)}` +
+          `&limit=${HIST_PAGE}&offset=${offset}`;
+        const res = await fetchWithRetry(signal => fetch(url, { signal }));
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`API j-1: ${res.status} — ${body.slice(0, 200)}`);
+        }
+        return res.json();
+      };
+
+      // `limit` est plafonné à 100 côté API : on pagine tant qu'il reste des
+      // relevés dans la fenêtre. La 1re page donne `total_count`, donc on sait
+      // exactement combien de pages tirer — et la plupart des stations tiennent
+      // en une seule.
+      const first = await fetchPage(0);
+      const raw = (first.results || []).slice();
+      const pages = Math.min(
+        Math.ceil((first.total_count || raw.length) / HIST_PAGE),
+        HIST_MAX_PAGES
+      );
+      if (pages > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: pages - 1 }, (_, i) => fetchPage((i + 1) * HIST_PAGE))
+        );
+        rest.forEach(p => raw.push(...(p.results || [])));
       }
-      const data = await res.json();
-      const raw = data.results || [];
       const sorted = raw.map(r => {
         const ts = r.update ? Date.parse(r.update) : NaN;
         const v = r[col] != null ? Number(r[col]) : NaN;
@@ -1579,6 +1606,15 @@ async function loadStationHistory(stationId, fuelField) {
         const prev = dedup[dedup.length - 1];
         if (!prev || prev[1] !== p[1]) dedup.push(p);
       }
+      // La dédup supprime les doublons consécutifs, donc la série s'arrête à la
+      // dernière *variation* de prix — souvent des semaines en arrière, une
+      // station pouvant garder le même prix 2 mois. La courbe semblait alors
+      // s'interrompre dans le passé et l'axe des dates devenait mensonger. On
+      // ré-ancre donc le dernier point sur le relevé le plus récent : le palier
+      // final est tracé jusqu'à aujourd'hui, ce qui est la réalité.
+      const latest = sorted[sorted.length - 1];
+      const lastKept = dedup[dedup.length - 1];
+      if (latest && lastKept && latest[0] !== lastKept[0]) dedup.push(latest);
       const points = dedup.slice(-HIST_KEEP);
       historyMemCache[key] = points;
       cacheSet(localStorage, storageKey, points);

@@ -26,9 +26,14 @@ Hébergé en live sur **GitHub Pages** depuis la branche `main`.
 
 ## Historique des prix (sparklines)
 
-Chaque station affiche l'évolution de son prix sur les **30 dernières mises à jour**, calculée
+Chaque station affiche l'évolution de son prix sur les **100 derniers jours**, calculée
 en temps réel à partir du dataset public `prix-des-carburants-j-1` (`public.opendatasoft.com`,
 12 mois glissants, Ministère de l'Économie).
+
+La fenêtre est bornée en **jours** (`update >= now(days=-100)`), pas en nombre de lignes : le
+dataset a en principe une ligne par station et par jour, mais il monte parfois à quatre, si bien
+qu'un simple `limit=100` ne couvrait pas 100 jours. Comme l'API plafonne `limit` à 100, le client
+pagine sur `offset` (3 pages au maximum, la plupart des stations tenant en une seule).
 
 > ℹ️ Les deux portails Opendatasoft (`data.economie.gouv.fr` + `public.opendatasoft.com`)
 > refusaient autrefois les origins non-allowlistées (403 `x-deny-reason: host_not_allowed`),
@@ -40,6 +45,10 @@ en temps réel à partir du dataset public `prix-des-carburants-j-1` (`public.op
 Pas de fichier généré, pas de cron : dès qu'une recherche retourne des stations, le client
 pré-charge l'historique de chacune en arrière-plan (4 requêtes en parallèle), dédupli­que les
 relevés consécutifs identiques, et met en cache le résultat dans `localStorage` (TTL 24 h).
+
+La dédup conserve le dernier relevé même s'il répète le prix précédent : sans ça, la courbe
+s'arrêtait à la dernière *variation* de prix — parfois deux mois en arrière — et l'axe des dates
+affichait une plage trompeuse.
 
 Si le dataset ne retourne pas assez de points pour une station, le client affiche simplement
 « Historique indisponible ».

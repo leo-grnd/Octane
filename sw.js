@@ -2,7 +2,7 @@
 // sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v25';
+const VERSION = 'octane-v26';
 const SHELL = [
   './',
   './index.html',
@@ -38,7 +38,6 @@ self.addEventListener('fetch', (e) => {
   const bypass = [
     'data.economie.gouv.fr',
     'public.opendatasoft.com',
-    'corsproxy.io',
     'api-adresse.data.gouv.fr',
     'overpass.kumi.systems',
     'overpass-api.de',

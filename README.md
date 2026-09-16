@@ -30,12 +30,12 @@ Chaque station affiche l'évolution de son prix sur les **30 dernières mises à
 en temps réel à partir du dataset public `prix-des-carburants-j-1` (`public.opendatasoft.com`,
 12 mois glissants, Ministère de l'Économie).
 
-> ⚠️ Les deux portails Opendatasoft (`data.economie.gouv.fr` + `public.opendatasoft.com`)
-> refusent les origins non-allowlistées avec un 403 `x-deny-reason: host_not_allowed`.
-> `leo-grnd.github.io` n'étant pas dans leur allowlist, **toutes les requêtes données sont
-> routées via `corsproxy.io`** (proxy public gratuit, sans auth). Voir `CORS_PROXY` dans
-> `app.js` — remplace par ton propre Worker Cloudflare si tu veux éliminer la dépendance
-> externe, ou ouvre un ticket chez Opendatasoft pour être whitelisté.
+> ℹ️ Les deux portails Opendatasoft (`data.economie.gouv.fr` + `public.opendatasoft.com`)
+> refusaient autrefois les origins non-allowlistées (403 `x-deny-reason: host_not_allowed`),
+> ce qui obligeait à router les appels via un proxy CORS public. Ils renvoient désormais
+> `Access-Control-Allow-Origin: *` : **les requêtes partent en direct depuis le navigateur**,
+> sans proxy ni clé. Le proxy a été retiré en septembre 2026 — `corsproxy.io` est passé en
+> freemium (401 sans clé API) et faisait tomber l'app entière.
 
 Pas de fichier généré, pas de cron : dès qu'une recherche retourne des stations, le client
 pré-charge l'historique de chacune en arrière-plan (4 requêtes en parallèle), dédupli­que les

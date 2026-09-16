@@ -172,30 +172,12 @@ async function geocode(address) {
   return result;
 }
 
-// Opendatasoft (data.economie.gouv.fr + public.opendatasoft.com) refuse les
-// origins non-allowlistées avec un 403 `x-deny-reason: host_not_allowed`. En
-// attendant un whitelisting officiel, on route ces deux hosts via un proxy CORS
-// public. On garde une liste de miroirs : si le premier tombe (corsproxy.io
-// monte/descend régulièrement), on bascule automatiquement sur le suivant.
-const CORS_PROXIES = [
-  (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
-  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
-];
-const PROXIED_HOSTS = /(?:data\.economie\.gouv\.fr|public\.opendatasoft\.com)/;
-
-async function proxyFetch(url, opts) {
-  if (!PROXIED_HOSTS.test(url)) return fetch(url, opts);
-  let lastErr;
-  for (const wrap of CORS_PROXIES) {
-    try {
-      const res = await fetch(wrap(url), opts);
-      // 5xx côté proxy → essaie le suivant. 4xx côté API cible = vrai erreur, on propage.
-      if (res.status >= 500 && res.status < 600) { lastErr = new Error(`proxy ${res.status}`); continue; }
-      return res;
-    } catch (err) { lastErr = err; }
-  }
-  throw lastErr || new Error('Tous les proxies CORS sont indisponibles');
-}
+// Historique : `data.economie.gouv.fr` et `public.opendatasoft.com` refusaient
+// autrefois les origins non-allowlistées (403 `x-deny-reason: host_not_allowed`),
+// ce qui imposait de router leurs appels via un proxy CORS public. Les deux
+// portails renvoient désormais `Access-Control-Allow-Origin: *`, donc on tape
+// en direct. Le proxy a été retiré : corsproxy.io est passé en freemium (401
+// sans clé API) et faisait tomber toute l'app, miroirs compris.
 
 // Retry générique avec backoff exponentiel + timeout global. À utiliser pour
 // les APIs publiques sans redondance native (BAN, Opendatasoft). Overpass a
@@ -229,7 +211,7 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
     `where=${encodeURIComponent(whereClause)}` +
     `&limit=100`;
-  const res = await fetchWithRetry(signal => proxyFetch(url, { signal }));
+  const res = await fetchWithRetry(signal => fetch(url, { signal }));
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     console.error('API 4xx body:', body);
@@ -1566,7 +1548,7 @@ async function loadStationHistory(stationId, fuelField) {
         `where=${encodeURIComponent(where)}` +
         `&order_by=${encodeURIComponent('update desc')}` +
         `&limit=${HIST_FETCH_LIMIT}`;
-      const res = await fetchWithRetry(signal => proxyFetch(url, { signal }));
+      const res = await fetchWithRetry(signal => fetch(url, { signal }));
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`API j-1: ${res.status} — ${body.slice(0, 200)}`);

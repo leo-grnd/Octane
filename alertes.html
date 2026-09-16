@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerte quotidienne — OCTANE</title>
+  <meta name="description" content="Reçois chaque matin par email la station-service la moins chère de ta zone, pour le carburant de ton choix. Données officielles du Ministère de l'Économie." />
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
+  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://data.economie.gouv.fr" />
+  <link rel="preconnect" href="https://api-adresse.data.gouv.fr" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="alertes.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <a class="logo" href="index.html">O<span>CTANE</span></a>
+        <div class="tagline">— Alerte quotidienne</div>
+      </div>
+      <div class="meta">
+        <div class="meta-right">
+          <a class="nav-link" href="index.html">← Retour à l'outil</a>
+          <button id="themeToggle" class="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+            <span id="themeIcon" aria-hidden="true">☾</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1>Le bon plein. <em>Chaque matin.</em><br />Sans y penser.</h1>
+      <p>Choisis un carburant, une zone et une heure : tu reçois chaque jour, par email, la station
+         la moins chère du périmètre. Y compris « la moins chère de France », si c'est ton genre.</p>
+    </section>
+
+    <section class="search-panel">
+      <form id="alertForm" class="alert-grid" novalidate>
+        <div class="field alert-full">
+          <label for="email">→ Ton email</label>
+          <input id="email" type="email" placeholder="prenom@exemple.fr" autocomplete="email" required />
+        </div>
+
+        <div class="field">
+          <label for="fuel">→ Carburant</label>
+          <select id="fuel">
+            <option value="e10_prix">SP95-E10</option>
+            <option value="sp95_prix">SP95</option>
+            <option value="sp98_prix">SP98</option>
+            <option value="gazole_prix" selected>Gazole</option>
+            <option value="e85_prix">E85</option>
+            <option value="gplc_prix">GPLc</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="hour">→ Heure d'envoi</label>
+          <select id="hour" aria-describedby="hourHint"></select>
+          <div id="hourHint" class="field-hint">heure de Paris</div>
+        </div>
+
+        <div class="field alert-full">
+          <label id="scopeLabel">→ Zone surveillée</label>
+          <div class="distance-mode" role="radiogroup" aria-labelledby="scopeLabel">
+            <input type="radio" id="scopeFrance" name="scope" value="france" checked />
+            <label for="scopeFrance" class="mode-option" title="La station la moins chère de tout le territoire">France entière</label>
+            <input type="radio" id="scopeRadius" name="scope" value="radius" />
+            <label for="scopeRadius" class="mode-option" title="La station la moins chère dans un rayon autour d'un point">Autour d'une adresse</label>
+          </div>
+        </div>
+
+        <div class="field field-address alert-zone hidden" id="addressField">
+          <label for="address">→ Adresse ou ville</label>
+          <input id="address" type="text" placeholder="Avignon" autocomplete="off"
+                 role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
+        </div>
+
+        <div class="field alert-zone hidden" id="radiusField">
+          <label for="radius">→ Rayon (km)</label>
+          <input id="radius" type="number" min="1" max="50" value="10" inputmode="numeric" />
+        </div>
+
+        <button type="submit" id="previewBtn" class="btn-search alert-full">Voir le gagnant du jour ↗</button>
+      </form>
+    </section>
+
+    <div id="status" class="status hidden" role="status" aria-live="polite"></div>
+
+    <section id="preview" class="alert-preview hidden" aria-label="Aperçu de l'alerte">
+      <div class="alert-preview-head">
+        <h2>Ce que tu recevrais ce matin</h2>
+        <div id="previewMeta" class="alert-preview-meta"></div>
+      </div>
+      <ol id="previewPodium" class="alert-podium"></ol>
+      <p class="alert-fresh-note">
+        Seules les stations ayant mis à jour leur prix depuis moins de 3 jours sont retenues — sans
+        ce filtre, le podium national est trusté par des stations qui ont cessé de déclarer depuis
+        des mois.
+      </p>
+    </section>
+
+    <section id="output" class="alert-output hidden" aria-label="Configuration de l'alerte">
+      <h2>Ta configuration</h2>
+      <p class="alert-output-intro">
+        L'inscription n'est pas encore automatique : Octane n'a pas de serveur, les alertes sont
+        envoyées par une tâche planifiée qui lit une liste côté dépôt. Copie cette ligne et
+        transmets-la au mainteneur pour être ajouté.
+      </p>
+      <pre id="configBlock" class="alert-config" tabindex="0"></pre>
+      <div class="alert-output-actions">
+        <button type="button" id="copyBtn" class="sheet-btn sheet-btn-primary">Copier la configuration</button>
+        <a id="mailtoBtn" class="sheet-btn hidden" href="#">Envoyer par email ↗</a>
+      </div>
+    </section>
+
+    <footer>
+      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a>
+    </footer>
+  </div>
+
+  <script src="alertes.js" defer></script>
+</body>
+</html>

@@ -46,14 +46,12 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #b04a00;
-  color: #fff;
+  background: var(--color-accent-700);
+  color: var(--color-neutral-100);
   text-align: center;
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  font-family: var(--font-body);
-  letter-spacing: 0.03em;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  padding: var(--space-2) var(--space-4);
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
 }
 .offline-banner.hidden { display: none; }
 
@@ -257,8 +255,8 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 }
 
 .status.error {
-  border-color: #7f1d1d;
-  color: #fca5a5;
+  border-color: var(--color-accent);
+  color: var(--color-accent-700);
 }
 
 /* CTA inline dans la barre status (réessayer, élargir le rayon, etc.) */
@@ -277,7 +275,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   border-radius: 2px;
   transition: background 0.15s, transform 0.1s;
 }
-.status-cta:hover { background: var(--accent-soft, #ff8c33); transform: translateY(-1px); }
+.status-cta:hover { background: var(--color-accent-600); transform: translateY(-1px); }
 .status-cta:active { transform: translateY(0); }
 
 /* État vide affiché directement dans la liste des stations */
@@ -391,7 +389,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   color: #fff;
   border-color: var(--accent);
 }
-.sheet-btn-primary:hover { background: var(--accent-soft, #ff8c33); color: #fff; }
+.sheet-btn-primary:hover { background: var(--color-accent-600); color: var(--color-bg); }
 
 .sheet-section { margin-top: 1.3rem; }
 .sheet-section h3 {
@@ -423,7 +421,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   width: 40%;
 }
 .sheet-table td { color: var(--ink); text-align: right; }
-.sheet-prices tr.current { background: rgba(255, 107, 0, 0.06); }
+.sheet-prices tr.current { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
 .sheet-prices tr.current th { color: var(--accent); }
 .sheet-price {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
@@ -438,9 +436,10 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   color: var(--ink-dim);
   letter-spacing: 0.03em;
 }
-.sheet-fresh-stale { color: #fb923c; }
-.sheet-fresh-veryStale { color: #ef4444; }
-.sheet-rupture { color: #ef4444; font-size: 0.75rem; font-style: italic; }
+.sheet-fresh-stale { color: #c2410c; }
+.sheet-fresh-veryStale { color: var(--color-accent-700); }
+.sheet-rupture { color: var(--color-accent-700); font-size: 12px; }
+:root[data-theme="dark"] .sheet-fresh-stale { color: #fb923c; }
 .sheet-unavailable { color: var(--ink-dim); font-size: 0.75rem; font-style: italic; }
 
 .sheet-services {
@@ -463,7 +462,6 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 body.sheet-open { overflow: hidden; }
 
 /* La carte station doit indiquer visuellement qu'elle est cliquable */
-.station { cursor: pointer; }
 .station:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -525,487 +523,135 @@ body.sheet-open { overflow: hidden; }
   text-transform: uppercase;
 }
 
-.station-list {
-  display: grid;
-  gap: 0.5rem;
-}
+.station-list { display: block; }
 
-.osm-hint {
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 0.6rem 0 0.9rem;
-  display: flex;
-  align-items: center;
-}
-
-.loader-sm {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.6rem;
-}
-
-.station {
+/* ═══════════════════ Bloc « Le moins cher » ═══════════════════
+   Le prix est l'information qu'on vient chercher : il est posé à l'échelle
+   qu'elle mérite, tout le reste la commente. */
+.winner {
   display: grid;
-  grid-template-columns: 60px 1fr auto auto;
-  gap: 1.2rem;
-  align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--rank-color, var(--border));
-  padding: 1.2rem 1.5rem;
-  transition: transform 0.15s, background 0.15s;
-  animation: slideIn 0.4s ease-out backwards;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-6);
+  align-items: end;
+  padding: var(--space-6) 0;
+  border-top: 2px solid var(--color-divider);
+  border-bottom: 2px solid var(--color-divider);
 }
-
-/* ============ ONGLET HISTORIQUE ============ */
-.history-list {
-  display: grid;
-  gap: 0.6rem;
+.winner-price {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: clamp(56px, 9vw, 104px);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
 }
-.history-card {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  grid-template-rows: auto auto;
-  gap: 0.3rem 1.2rem;
-  align-items: start;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--rank-color, var(--border));
-  padding: 1.1rem 1.4rem;
-  animation: slideIn 0.4s ease-out backwards;
+.winner-unit {
+  font-size: 0.28em;
+  letter-spacing: 0.06em;
+  margin-left: 0.35em;
+  vertical-align: 0.9em;
 }
-.history-card .rank {
-  grid-row: 1 / 3;
-  align-self: center;
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.5rem;
-  color: var(--rank-color, var(--ink-dim));
-  letter-spacing: -0.05em;
+.winner-trend { margin-top: var(--space-3); font-size: 13px; }
+.winner-name {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
 }
-.history-card .info { grid-column: 2; grid-row: 1; }
-.history-card .info .name {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--ink);
-  margin-bottom: 0.25rem;
-}
-.history-card .info .addr {
-  font-size: 0.75rem;
-  color: var(--ink-dim);
-  line-height: 1.4;
-}
-.history-card .hist-body {
-  grid-column: 2;
-  grid-row: 2;
-  color: var(--rank-color, var(--ink));
-  padding-top: 0.4rem;
-  font-size: 0.75rem;
-}
-.history-card .hist-body .sparkline {
-  width: 100%;
-  height: auto;
-  max-width: 520px;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-.hist-stats {
+.winner-addr { font-size: 14px; color: var(--color-neutral-700); margin-top: var(--space-1); }
+.winner-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem 1.2rem;
-  font-family: var(--font-body);
-  color: var(--ink-dim);
-  letter-spacing: 0.03em;
-}
-.hist-stats strong {
-  color: var(--ink);
-  font-weight: 500;
-  margin-left: 0.2rem;
-}
-.hist-trend.up { color: #ef4444; }
-.hist-trend.down { color: #4ade80; }
-.hist-trend.flat { color: var(--ink-dim); }
-.hist-empty {
-  font-size: 0.75rem;
-  color: var(--ink-dim);
-  font-style: italic;
-  padding: 0.4rem 0;
-}
-.hist-empty code {
-  font-family: var(--font-body);
-  font-style: normal;
-  background: var(--bg-soft);
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--border);
-  font-size: 0.7rem;
-}
-
-.station:hover {
-  background: var(--bg-soft);
-  transform: translateX(4px);
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-/* ============ Skeleton loaders ============ */
-/* Animation shimmer : bande lumineuse qui glisse de gauche à droite,
-   sans JS, pour signaler clairement qu'on charge sans figer la zone. */
-@keyframes skShimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.station-skeleton {
-  display: grid;
-  grid-template-columns: 60px 1fr auto auto;
-  gap: 1.2rem;
-  align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
-  padding: 1.2rem 1.5rem;
-  animation: slideIn 0.4s ease-out backwards;
-  pointer-events: none;
-}
-.station-skeleton .sk-rank { width: 40px; height: 28px; }
-.station-skeleton .sk-info { display: flex; flex-direction: column; gap: 0.45rem; }
-.station-skeleton .sk-distance { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end; min-width: 80px; }
-.station-skeleton .sk-price { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end; min-width: 100px; }
-.station-skeleton .sk-line,
-.station-skeleton .sk-rank {
-  border-radius: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--border) 0%,
-    var(--bg-soft) 30%,
-    var(--bg-soft) 50%,
-    var(--border) 80%
-  );
-  background-size: 200% 100%;
-  animation: skShimmer 1.6s ease-in-out infinite;
-  opacity: 0.55;
-}
-.station-skeleton .sk-line-name { width: 60%; height: 16px; }
-.station-skeleton .sk-line-addr { width: 90%; height: 11px; }
-.station-skeleton .sk-line-km   { width: 56px; height: 16px; }
-.station-skeleton .sk-line-label { width: 70px; height: 10px; }
-.station-skeleton .sk-line-price { width: 84px; height: 22px; }
-.station-skeleton .sk-line-unit { width: 36px; height: 10px; }
-
-@media (max-width: 640px) {
-  .station-skeleton { padding: 0.85rem 0.9rem; gap: 0.3rem 0.7rem; }
-}
-
-.rank {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.5rem;
-  color: var(--rank-color, var(--ink-dim));
-  letter-spacing: -0.05em;
-}
-
-.info .name {
-  font-size: 0.95rem;
-  font-weight: 500;
-  margin-bottom: 0.3rem;
-  color: var(--ink);
-}
-
-.info .addr {
-  font-size: 0.75rem;
-  color: var(--ink-dim);
-  line-height: 1.4;
-}
-
-/* Badge marque (monogramme coloré à gauche du nom de station) */
-.info .name { display: flex; align-items: center; gap: 0.55rem; }
-.history-card .info .name { display: flex; align-items: center; gap: 0.55rem; }
-.brand-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 4px;
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1;
-  text-transform: uppercase;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-  user-select: none;
-}
-.name-text { flex: 1; min-width: 0; word-break: break-word; }
-
-/* Ligne d'icônes services (boutique, lavage, automate CB, etc.) */
-.amenities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-}
-.amenity {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 0.85rem;
-  line-height: 1;
-  opacity: 0.65;
-  cursor: help;
-  user-select: none;
-  transition: opacity 0.15s, transform 0.15s;
-}
-.amenity:hover { opacity: 1; transform: scale(1.15); }
-
-/* Hint d'économie (rang ≥ 2) : "+1,20 € (60 L) vs n°1 mais 0,5 km plus près" */
-.economy-hint {
-  font-family: var(--font-body);
-  font-size: 0.66rem;
-  color: var(--ink-dim);
-  margin-top: 0.4rem;
-  letter-spacing: 0.02em;
-  opacity: 0.8;
-  line-height: 1.3;
-}
-
-/* Chip "À vérifier" : prix qui s'écarte fort de la médiane locale */
-.outlier-chip {
-  display: inline-block;
-  font-family: var(--font-body);
-  font-size: 0.58rem;
-  letter-spacing: 0.04em;
-  padding: 0.12rem 0.4rem;
-  margin-top: 0.25rem;
-  border-radius: 3px;
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  cursor: help;
-  text-transform: none;
-}
-:root[data-theme="dark"] .outlier-chip { color: #f59e0b; }
-
-/* Bandeau "Reprendre dernière recherche" — au-dessus du hero, dismissable */
-.resume-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  padding: 0.7rem 1rem;
-  margin-bottom: 1.5rem;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 3px;
-  font-size: 0.78rem;
-  color: var(--ink);
-  animation: slideIn 0.35s ease-out;
-}
-.resume-banner strong { color: var(--accent); font-weight: 500; }
-.resume-dot {
-  display: inline-block;
-  margin-right: 0.4rem;
-  font-size: 0.95rem;
-  color: var(--accent);
-  font-weight: bold;
-}
-.resume-actions { display: flex; gap: 0.4rem; align-items: center; }
-.resume-btn {
-  font-family: var(--font-body);
-  font-size: 0.68rem;
-  padding: 0.35rem 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.resume-btn:hover { background: var(--accent-soft, #ff8c33); }
-.resume-dismiss {
-  background: transparent;
-  color: var(--ink-dim);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.85rem;
-}
-.resume-dismiss:hover { background: var(--border); color: var(--ink); }
-@media (max-width: 640px) {
-  .resume-banner { font-size: 0.72rem; padding: 0.6rem 0.8rem; }
-  .resume-banner .resume-text { flex: 1; min-width: 0; }
-}
-
-.distance {
-  font-size: 0.75rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.1em;
-  text-align: right;
-  min-width: 70px;
-}
-
-.distance strong {
-  color: var(--ink);
-  font-size: 1.1rem;
-  font-weight: 500;
-  display: block;
-}
-.dist-warn {
-  display: block;
-  font-size: 0.55rem;
-  color: var(--accent-soft);
-  letter-spacing: 0.05em;
-  margin-top: 0.15rem;
-  cursor: help;
-}
-/* ETA en mode trajet : durée estimée en voiture, sous le km */
-.dist-eta {
-  display: inline-block;
-  font-size: 0.65rem;
-  color: var(--ink);
-  letter-spacing: 0.04em;
-  margin-top: 0.2rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
-  font-family: var(--font-body);
-  cursor: help;
-}
-
-.price {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.6rem;
-  color: var(--rank-color, var(--ink));
-  letter-spacing: -0.03em;
-  text-align: right;
-  min-width: 100px;
-}
-
-.price .cents {
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
-
-.price .unit {
-  display: block;
-  font-family: var(--font-body);
-  font-size: 0.6rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.15em;
-  margin-top: 0.2rem;
-  font-weight: 400;
-}
-
-/* Flèche de tendance vs moyenne 7 jours (à droite du prix) */
-.price .trend {
-  display: inline-block;
-  margin-left: 0.3rem;
-  font-size: 1.05rem;
-  line-height: 1;
-  vertical-align: 0.05em;
-  cursor: help;
-  user-select: none;
-  font-weight: 700;
-}
-.price .trend-down { color: #15803d; }
-.price .trend-up { color: #b91c1c; }
-.price .trend-flat { color: var(--ink-dim); opacity: 0.55; font-weight: 500; }
-:root[data-theme="dark"] .price .trend-down { color: #4ade80; }
-:root[data-theme="dark"] .price .trend-up { color: #ef4444; }
-
-.price .freshness {
-  display: inline-block;
-  font-family: var(--font-body);
-  font-size: 0.6rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.05em;
-  margin-top: 0.25rem;
-  font-weight: 400;
-  opacity: 0.7;
-  text-transform: none;
-  padding: 0.12rem 0.4rem;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  cursor: default;
-}
-/* Donnée potentiellement vieille (> 48 h) : chip orange discret */
-.price .freshness-stale {
-  color: #c2410c;
-  border-color: rgba(251, 146, 60, 0.35);
-  background: rgba(251, 146, 60, 0.14);
-  opacity: 1;
-}
-/* Donnée probablement obsolète (> 7 j) : chip rouge */
-.price .freshness-veryStale {
-  color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.14);
-  opacity: 1;
-}
-:root[data-theme="dark"] .price .freshness-stale {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.08);
-}
-:root[data-theme="dark"] .price .freshness-veryStale {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.dir-link {
-  display: inline-block;
-  margin-top: 0.4rem;
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s;
-}
-.dir-link:hover { border-bottom-color: var(--accent); }
-.dist-label { display: block; }
-
-/* ============ Bandeau "gain potentiel" ============ */
-.savings-banner {
-  display: flex;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+  font-size: 14px;
   align-items: baseline;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.8rem;
-  background: linear-gradient(135deg, rgba(255,107,0,0.12), rgba(255,107,0,0.04));
-  border: 1px solid rgba(255,107,0,0.25);
-  border-left: 3px solid var(--accent);
-  border-radius: 4px;
-  font-family: var(--font-body);
 }
-.savings-delta {
-  font-weight: 600;
-  color: var(--accent);
-  font-size: 1rem;
-  letter-spacing: 0.02em;
+.winner-num {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 22px;
 }
-.savings-tank {
-  font-size: 0.82rem;
-  color: var(--ink-dim);
+.winner-fresh { align-self: end; }
+.winner-warn {
+  margin-top: var(--space-3);
+  font-size: 13px;
+  color: var(--color-accent-700);
 }
-.savings-tank strong {
-  color: var(--ink);
-  font-weight: 600;
+.winner-actions { display: flex; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
+.winner-actions .btn { min-height: 40px; justify-content: flex-start; white-space: nowrap; }
+
+/* ═══════════════════ Tableau des autres stations ═══════════════════ */
+.station-table { margin-top: var(--space-6); }
+.station-table .col-rank {
+  width: 48px;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
 }
+.station-table th.col-dist,
+.station-table th.col-price,
+.station-table th.col-extra,
+.station-table td.col-dist,
+.station-table td.col-price,
+.station-table td.col-extra { text-align: right; white-space: nowrap; }
+.station-table td.col-price {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.station-table td.col-extra { color: var(--color-neutral-700); }
+.col-station-sub { font-size: 12px; color: var(--color-neutral-700); }
+.col-eta { font-size: 12px; color: var(--color-neutral-700); }
+.row-warn { color: var(--color-accent); margin-left: 4px; cursor: help; }
+.station-row { cursor: pointer; }
+.station-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.more-btn { margin-top: var(--space-4); min-height: 38px; justify-content: flex-start; }
+
+/* ═══════════════════ Écart dans le rayon ═══════════════════
+   Traitement le plus fort de la page : c'est l'argument qui justifie l'outil. */
+.savings {
+  margin-top: var(--space-8);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: var(--space-8) var(--space-6);
+}
+.savings-kicker {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.savings-line {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: clamp(30px, 5vw, 52px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin-top: var(--space-3);
+  max-width: 20ch;
+}
+
+/* ═══════════════════ Squelettes ═══════════════════ */
+.winner-skeleton .sk-line, .station-table .sk-line {
+  background: linear-gradient(90deg,
+    var(--color-neutral-200) 0%, var(--color-neutral-300) 50%, var(--color-neutral-200) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+}
+@keyframes skeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-kicker { width: 120px; height: 12px; }
+.sk-bigprice { width: 260px; max-width: 100%; height: 72px; margin-top: var(--space-3); }
+.sk-line-name { width: 60%; height: 20px; }
+.sk-line-addr { width: 85%; height: 12px; margin-top: var(--space-2); }
+.sk-line-km { width: 40%; height: 16px; margin-top: var(--space-4); }
+.sk-line-row { width: 100%; height: 18px; }
+@media (prefers-reduced-motion: reduce) {
+  .winner-skeleton .sk-line, .station-table .sk-line { animation: none; }
+}
+
 
 
 /* ============ RESPONSIVE ============ */
@@ -1047,13 +693,15 @@ body.sheet-open { overflow: hidden; }
   .results-header { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
   .results-header h2 { font-size: 1.05rem; }
 
-  /* Stations : rank + nom + prix en haut, adresse + distance en bas */
-  .station {
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
-    gap: 0.4rem 0.9rem;
-    padding: 0.95rem 1rem;
-  }
+  /* Bloc gagnant : le prix reprend la main sur la colonne */
+  .winner { gap: var(--space-4); padding: var(--space-4) 0; }
+  .winner-facts { gap: var(--space-4); }
+
+  /* Tableau : la colonne « Sur un plein » saute, c'est la moins essentielle
+     et la seule qu'on retrouve telle quelle dans la fiche détail. */
+  .station-table th.col-extra, .station-table td.col-extra { display: none; }
+  .station-table th, .station-table td { padding: var(--space-2) 6px; }
+  .col-station-sub { font-size: 11px; }
 
   /* History cards : rank + (name + sparkline) */
   .history-card {
@@ -1072,52 +720,6 @@ body.sheet-open { overflow: hidden; }
   .history-card .hist-body { font-size: 0.7rem; padding-top: 0.3rem; }
   .history-card .hist-body .sparkline { max-width: 100%; }
   .hist-stats { gap: 0.25rem 0.7rem; font-size: 0.7rem; }
-  .rank {
-    grid-column: 1; grid-row: 1;
-    font-size: 1.05rem;
-    align-self: center;
-  }
-  .info {
-    grid-column: 2; grid-row: 1;
-    min-width: 0;
-  }
-  .info .name {
-    font-size: 0.9rem;
-    margin-bottom: 0.15rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .info .addr { font-size: 0.7rem; }
-  .price {
-    grid-column: 3; grid-row: 1 / 3;
-    font-size: 1.35rem;
-    min-width: 0;
-    align-self: center;
-  }
-  .distance {
-    grid-column: 1 / span 2;
-    grid-row: 2;
-    text-align: left;
-    font-size: 0.65rem;
-    padding-top: 0.4rem;
-    margin-top: 0.1rem;
-    border-top: 1px dashed var(--border);
-    min-width: 0;
-  }
-  .distance strong {
-    display: inline;
-    font-size: 0.8rem;
-    color: var(--ink);
-    margin-right: 0.35rem;
-  }
-  .dist-label { display: inline; }
-  .dir-link {
-    margin-top: 0;
-    margin-left: 0.5rem;
-    font-size: 0.6rem;
-  }
-  .price .freshness { font-size: 0.55rem; }
 
   /* Footer */
   footer {
@@ -1131,9 +733,7 @@ body.sheet-open { overflow: hidden; }
 @media (max-width: 380px) {
   .logo { font-size: 1.8rem; }
   .hero h1 { font-size: 1.85rem; }
-  .station { padding: 0.85rem 0.9rem; gap: 0.3rem 0.7rem; }
-  .price { font-size: 1.2rem; }
-  .info .name { font-size: 0.85rem; }
+  .winner-price { font-size: clamp(44px, 13vw, 56px); }
 }
 
 footer {
@@ -1262,3 +862,41 @@ footer a {
   .results-actions { flex-direction: column-reverse; align-items: flex-start; gap: 0.5rem; }
   .view-toggle { align-self: flex-end; }
 }
+
+
+/* ═══════════════════ Fiche détail : repères déplacés du tableau ═══════════ */
+.sheet-facts { display: grid; gap: var(--space-3); }
+.sheet-facts > div { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; }
+.sheet-facts dt {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-neutral-600); flex: none;
+}
+.sheet-facts dd { margin: 0; font-size: 14px; text-align: right; }
+.sheet-warn {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  color: var(--color-accent-800);
+  background: var(--color-accent-100);
+  border-left: 3px solid var(--color-accent);
+}
+.sheet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.sheet-actions .btn { min-height: 38px; justify-content: flex-start; }
+
+/* ═══════════════════ Tendance et fraîcheur ═══════════════════
+   Ces classes sont composées dynamiquement (`trend-${sign}`,
+   `freshness-${tier}`), d'où leur absence de toute recherche littérale dans
+   app.js. Elles habillent le bloc gagnant et la fiche détail.
+   Vert et rouge sont les deux seules couleurs hors charte admises : une hausse
+   de prix signalée par l'accent de la marque serait illisible. */
+.trend-up { color: #b91c1c; }
+.trend-down { color: #15803d; }
+.trend-flat { color: var(--color-neutral-600); }
+:root[data-theme="dark"] .trend-up { color: #ef4444; }
+:root[data-theme="dark"] .trend-down { color: #4ade80; }
+
+.freshness-fresh { color: var(--color-neutral-600); }
+.freshness-stale { color: #c2410c; }
+.freshness-veryStale { color: #b91c1c; }
+:root[data-theme="dark"] .freshness-stale { color: #fb923c; }
+:root[data-theme="dark"] .freshness-veryStale { color: #ef4444; }

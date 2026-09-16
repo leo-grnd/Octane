@@ -814,29 +814,11 @@ function extractStationName(s) {
 }
 
 // Couleur par rang (vert → rouge)
-function getColorForRank(rank, total) {
-  if (total === 1) return '#4ade80';
-  const ratio = rank / (total - 1);
-  const stops = [
-    { t: 0, rgb: [74, 222, 128] },
-    { t: 0.33, rgb: [250, 204, 21] },
-    { t: 0.66, rgb: [251, 146, 60] },
-    { t: 1, rgb: [239, 68, 68] }
-  ];
-  let lower = stops[0], upper = stops[stops.length - 1];
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (ratio >= stops[i].t && ratio <= stops[i + 1].t) {
-      lower = stops[i];
-      upper = stops[i + 1];
-      break;
-    }
-  }
-  const range = upper.t - lower.t;
-  const localRatio = range === 0 ? 0 : (ratio - lower.t) / range;
-  const rgb = lower.rgb.map((c, i) =>
-    Math.round(c + (upper.rgb[i] - c) * localRatio)
-  );
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+// Le design system n'a qu'un accent : le dégradé vert→jaune→orange→rouge
+// d'origine n'y a pas sa place. On ne distingue donc plus que la station la
+// moins chère du reste, ce que la maquette fait elle aussi.
+function getColorForRank(rank) {
+  return rank === 0 ? 'var(--color-accent)' : 'var(--color-neutral-500)';
 }
 
 function formatPrice(price) {
@@ -934,77 +916,86 @@ function pushHistory(query, label) {
 let currentResults = null; // { stations (enrichies, triées), fuelField, userLat, userLon, label }
 let currentView = 'list';
 
-function buildStationCard(s, i, total, fuelField, refStation) {
-  const color = getColorForRank(i, total);
+// Données d'affichage communes au bloc gagnant et aux lignes du tableau.
+function stationView(s, fuelField) {
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
-  const badge = getBrandBadge(brandName);
-  const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
-    : '';
+  const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
-  const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   if (cpVille) subParts.push(cpVille);
-  const subtitle = subParts.join(' · ');
-  const majField = fuelField.replace('_prix', '_maj');
-  const freshness = formatRelativeTime(s[majField]);
-  const freshnessTitle = freshness && freshness.tier !== 'fresh'
-    ? (freshness.tier === 'veryStale'
-        ? 'Prix possiblement obsolète : aucune mise à jour depuis plus d\'une semaine'
-        : 'Prix relativement ancien : mise à jour il y a plus de 48 h')
-    : '';
-  const economyHint = i > 0 ? buildEconomyHint(s, refStation) : null;
-  const economyHtml = economyHint
-    ? `<div class="economy-hint">${economyHint}</div>` : '';
-  const amenities = getAmenities(s.services_service);
-  const amenitiesHtml = amenities.length
-    ? `<div class="amenities" aria-label="Services disponibles">${amenities.map(a => `<span class="amenity" title="${a.label}" aria-label="${a.label}">${a.icon}</span>`).join('')}</div>`
-    : '';
-  const outlierHtml = s._outlier
-    ? `<span class="outlier-chip" title="Prix qui s'écarte de ${Math.round(s._outlier.ratio * 100)}% de la médiane locale (${s._outlier.median.toFixed(3).replace('.', ',')} €). Peut indiquer une saisie erronée — à vérifier sur place.">⚠ À vérifier</span>`
-    : '';
-  const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
-  const trendTitle = trend
-    ? (trend.sign === 'flat'
-        ? 'Prix stable par rapport à la moyenne 7 jours'
-        : `${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours`)
-    : '';
-  const dirUrl = directionsUrl(s.lat, s.lon, title);
-  const rankLabel = i === 0 ? 'moins cher' : (i === total - 1 && total > 1 ? 'plus cher' : `rang ${i + 1} sur ${total}`);
+  return {
+    title,
+    subtitle: subParts.join(' · '),
+    freshness: formatRelativeTime(s[fuelField.replace('_prix', '_maj')]),
+    distKm: s.driveKm != null ? s.driveKm : s.distance,
+    byRoad: s.driveKm != null,
+    dirUrl: directionsUrl(s.lat, s.lon, title)
+  };
+}
 
-  const el = document.createElement('div');
-  el.className = 'station';
-  el.style.setProperty('--rank-color', color);
-  el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
-  el.dataset.stationIdx = String(i);
-  el.setAttribute('role', 'button');
-  el.setAttribute('tabindex', '0');
-  el.setAttribute('aria-label', `Voir les détails de ${title}, prix ${s.price.toFixed(3)} euros par litre`);
+const km1 = (v) => `${v.toFixed(1).replace('.', ',')} km`;
+const eur2 = (v) => `${v.toFixed(2).replace('.', ',')} €`;
+
+// Bloc « Le moins cher » : l'objet de la page, traité à l'échelle qu'il mérite.
+// Le prix est posé en clamp(56px, 9vw, 104px) comme dans la maquette — c'est
+// l'information qu'on vient chercher, tout le reste la commente.
+function buildWinnerBlock(s, fuelField) {
+  const v = stationView(s, fuelField);
+  const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
+  const [euros, cents] = s.price.toFixed(3).split('.');
+
+  const el = document.createElement('section');
+  el.className = 'winner';
   el.innerHTML = `
-    <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
-    <span class="sr-only">${rankLabel}. </span>
-    <div class="info">
-      <div class="name">${badgeHtml}<span class="name-text">${esc(title)}</span></div>
-      <div class="addr">${esc(subtitle)}</div>
-      ${amenitiesHtml}
-      ${economyHtml}
+    <div class="winner-price-col">
+      <div class="kicker">Le moins cher</div>
+      <div class="winner-price">${euros},${cents}<span class="winner-unit">€ / L</span></div>
+      ${trend ? `<div class="winner-trend trend-${trend.sign}">${trend.arrow} ${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours</div>` : ''}
     </div>
-    <div class="distance">
-      <strong>${(s.driveKm != null ? s.driveKm : s.distance).toFixed(1)} km</strong>
-      <span class="dist-label">${s.driveKm != null ? 'par la route' : 'à vol d\'oiseau'}</span>
-      ${s.driveMin != null ? `<span class="dist-eta" title="Temps de trajet estimé en voiture">≈ ${s.driveMin} min</span>` : ''}
-      ${s.driveUnavailable ? `<span class="dist-warn" title="Trajet routier non disponible pour cette station — distance affichée à vol d'oiseau">⚠ routage indispo</span>` : ''}
-      <a class="dir-link" href="${esc(dirUrl)}" target="_blank" rel="noopener" aria-label="Itinéraire vers ${esc(title)} (ouvre Google Maps)">Itinéraire ↗</a>
-    </div>
-    <div class="price">
-      ${formatPrice(s.price)}${trend ? `<span class="trend trend-${trend.sign}" title="${trendTitle}" aria-label="${trendTitle}">${trend.arrow}</span>` : ''}
-      <span class="unit">€ / L</span>
-      ${outlierHtml}
-      ${freshness ? `<span class="freshness freshness-${freshness.tier}"${freshnessTitle ? ` title="${freshnessTitle}"` : ''}>Mis à jour ${freshness.text}</span>` : ''}
+    <div class="winner-info">
+      <h3 class="winner-name">${esc(v.title)}</h3>
+      <div class="winner-addr">${esc(v.subtitle)}</div>
+      <div class="winner-facts">
+        <div><span class="winner-num">${v.distKm != null ? esc(km1(v.distKm)) : '—'}</span> <span class="text-muted">${v.byRoad ? 'par la route' : 'à vol d’oiseau'}</span></div>
+        ${s.driveMin != null ? `<div><span class="winner-num">${s.driveMin}</span> <span class="text-muted">min</span></div>` : ''}
+        ${v.freshness ? `<div class="text-muted winner-fresh freshness-${v.freshness.tier}">relevé ${esc(v.freshness.text)}</div>` : ''}
+      </div>
+      ${s._outlier ? `<div class="winner-warn">⚠ Prix qui s'écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale — à vérifier sur place.</div>` : ''}
+      <div class="winner-actions">
+        <a class="btn btn-primary" href="${esc(v.dirUrl)}" target="_blank" rel="noopener">Itinéraire</a>
+        <button type="button" class="btn btn-secondary" data-station-idx="0">Détails</button>
+      </div>
     </div>
   `;
   return el;
+}
+
+// Une ligne du tableau. La maquette ne garde que rang, station, distance, prix
+// et surcoût sur un plein ; badges, services, fraîcheur et tendance basculent
+// dans la fiche détail, qui s'ouvre au clic sur la ligne.
+function buildStationRow(s, i, fuelField, refStation) {
+  const v = stationView(s, fuelField);
+  const extra = (s.price - refStation.price) * getTankSize();
+
+  const tr = document.createElement('tr');
+  tr.className = 'station-row';
+  tr.dataset.stationIdx = String(i);
+  tr.setAttribute('tabindex', '0');
+  tr.setAttribute('role', 'button');
+  tr.setAttribute('aria-label', `Voir les détails de ${v.title}, ${s.price.toFixed(3)} euros par litre`);
+  tr.innerHTML = `
+    <td class="col-rank">${String(i + 1).padStart(2, '0')}</td>
+    <td class="col-station">
+      ${esc(v.title)}
+      ${s._outlier ? '<span class="row-warn" title="Prix qui s’écarte fortement de la médiane locale — à vérifier sur place.">⚠</span>' : ''}
+      <div class="col-station-sub">${esc(v.subtitle)}</div>
+    </td>
+    <td class="col-dist">${v.distKm != null ? esc(km1(v.distKm)) : '—'}${s.driveMin != null ? `<div class="col-eta">${s.driveMin} min</div>` : ''}</td>
+    <td class="col-price">${s.price.toFixed(3).replace('.', ',')}</td>
+    <td class="col-extra">${extra >= 0.005 ? `+${esc(eur2(extra))}` : '—'}</td>
+  `;
+  return tr;
 }
 
 function buildHistoryCard(s, i, total) {
@@ -1036,78 +1027,56 @@ function buildHistoryCard(s, i, total) {
   return el;
 }
 
-// Petit hint par carte (rang ≥ 2) : combien tu paies en plus vs station n°1
-// sur le volume du réservoir user, et est-ce que c'est plus près ou plus loin
-// que n°1. Aide à arbitrer "vaut le coup de bouger ?" sans calcul mental.
-function buildEconomyHint(s, ref) {
-  if (!ref || s === ref) return null;
-  const priceDelta = s.price - ref.price;
-  if (priceDelta < 0.005) return null; // < 0,5 ct/L : bruit, on n'affiche pas
-  const tankSize = getTankSize();
-  const tankExtra = priceDelta * tankSize;
-  const distS = s.driveKm != null ? s.driveKm : s.distance;
-  const distR = ref.driveKm != null ? ref.driveKm : ref.distance;
-  const tankStr = `+${tankExtra.toFixed(2).replace('.', ',')} € (${tankSize} L) vs n°1`;
-  if (distS == null || distR == null) return tankStr;
-  const distDelta = distR - distS; // > 0 si cette station est plus PROCHE que n°1
-  if (Math.abs(distDelta) < 0.3) return `${tankStr} · même distance`;
-  const distAbs = Math.abs(distDelta).toFixed(1).replace('.', ',');
-  return distDelta > 0
-    ? `${tankStr} mais ${distAbs} km plus près`
-    : `${tankStr} et ${distAbs} km plus loin`;
-}
-
-// Calcule et insère le bandeau "gain potentiel" : écart max de prix × volume
-// réservoir choisi par l'user (60L par défaut). Seulement si ≥ 2 stations
-// avec un vrai écart (> 1 ct/L).
+// Bloc d'écart, en pleine largeur sur fond d'accent : c'est l'argument qui
+// justifie l'outil, la maquette lui donne donc le traitement le plus fort de
+// la page. Seulement si l'écart dépasse 1 ct/L, sinon il n'y a rien à dire.
 function buildSavingsBanner(stations) {
   if (!stations || stations.length < 2) return null;
-  const min = stations[0].price;
-  const max = stations[stations.length - 1].price;
-  const delta = max - min;
+  const delta = stations[stations.length - 1].price - stations[0].price;
   if (delta < 0.01) return null;
   const tankSize = getTankSize();
-  const tankEur = delta * tankSize;
-  const el = document.createElement('div');
-  el.className = 'savings-banner';
+  const el = document.createElement('section');
+  el.className = 'savings';
   el.innerHTML = `
-    <div class="savings-delta">${delta.toFixed(2).replace('.', ',')} € / L d'écart</div>
-    <div class="savings-tank">soit <strong>${tankEur.toFixed(2).replace('.', ',')} €</strong> économisés sur un plein de ${tankSize} L</div>
+    <div class="savings-kicker">Écart dans votre rayon</div>
+    <div class="savings-line">${eur2(delta * tankSize)} d’écart sur un plein de ${tankSize} litres.</div>
   `;
   return el;
 }
 
-// Affiche un placeholder de chargement (5 cartes squelette + shimmer CSS) pour
-// que l'utilisateur ait un feedback visuel pendant l'appel API au lieu d'une
-// zone vide. Affiché dès le clic, retiré au premier render réel.
-function renderSkeletons(count = 5) {
-  $stationList.innerHTML = '';
+// Squelettes calqués sur la structure réelle : un bloc gagnant puis des lignes
+// de tableau. Un placeholder qui ne ressemble pas au résultat final provoque un
+// saut de mise en page au premier rendu.
+function renderSkeletons(rows = 4) {
   $stationList.setAttribute('aria-busy', 'true');
   $resultsTitle.textContent = '';
   $resultsCount.textContent = '';
   $results.classList.remove('hidden');
-  for (let i = 0; i < count; i++) {
-    const el = document.createElement('div');
-    el.className = 'station station-skeleton';
-    el.style.animationDelay = `${i * 0.06}s`;
-    el.innerHTML = `
-      <div class="sk-rank"></div>
-      <div class="sk-info">
+  $stationList.innerHTML = `
+    <section class="winner winner-skeleton">
+      <div class="winner-price-col">
+        <div class="sk-line sk-kicker"></div>
+        <div class="sk-line sk-bigprice"></div>
+      </div>
+      <div class="winner-info">
         <div class="sk-line sk-line-name"></div>
         <div class="sk-line sk-line-addr"></div>
-      </div>
-      <div class="sk-distance">
         <div class="sk-line sk-line-km"></div>
-        <div class="sk-line sk-line-label"></div>
       </div>
-      <div class="sk-price">
-        <div class="sk-line sk-line-price"></div>
-        <div class="sk-line sk-line-unit"></div>
-      </div>
-    `;
-    $stationList.appendChild(el);
-  }
+    </section>
+    <table class="table station-table">
+      <tbody>
+        ${Array.from({ length: rows }, () => `
+          <tr><td colspan="5"><div class="sk-line sk-line-row"></div></td></tr>`).join('')}
+      </tbody>
+    </table>
+  `;
 }
+
+// Nombre de lignes affichées avant le bouton « Afficher les N autres ». Au-delà,
+// le tableau devient un mur : la maquette coupe volontairement.
+const ROWS_VISIBLE = 12;
+let rowsExpanded = false;
 
 function renderStations() {
   if (!currentResults) return;
@@ -1125,7 +1094,7 @@ function renderStations() {
     const nextR = Math.min(50, currentR * 2);
     if (nextR > currentR) {
       node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km.</div>
-        <button type="button" class="status-cta">Élargir à ${nextR} km</button>`;
+        <button type="button" class="btn btn-primary status-cta">Élargir à ${nextR} km</button>`;
       node.querySelector('button').addEventListener('click', () => {
         $radius.value = String(nextR);
         doAddressSearch();
@@ -1138,13 +1107,45 @@ function renderStations() {
     return;
   }
 
+  const refStation = stations[0];
+  $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+
+  if (total > 1) {
+    const rest = stations.slice(1);
+    const shown = rowsExpanded ? rest.length : Math.min(rest.length, ROWS_VISIBLE);
+    const table = document.createElement('table');
+    table.className = 'table station-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th class="col-rank">Nº</th>
+          <th>Station</th>
+          <th class="col-dist">Distance</th>
+          <th class="col-price">Prix</th>
+          <th class="col-extra">Sur un plein</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody');
+    rest.slice(0, shown).forEach((s, i) => {
+      tbody.appendChild(buildStationRow(s, i + 1, fuelField, refStation));
+    });
+    $stationList.appendChild(table);
+
+    if (rest.length > shown) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'btn btn-secondary more-btn';
+      more.textContent = `Afficher les ${rest.length - shown} autres stations`;
+      more.addEventListener('click', () => { rowsExpanded = true; renderStations(); });
+      $stationList.appendChild(more);
+    }
+  }
+
   const savings = buildSavingsBanner(stations);
   if (savings) $stationList.appendChild(savings);
 
-  const refStation = stations[0];
-  stations.forEach((s, i) => {
-    $stationList.appendChild(buildStationCard(s, i, total, fuelField, refStation));
-  });
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
   // rayon contient plus de stations qu'on n'en charge.
   if (currentResults.truncated) {
@@ -1286,6 +1287,7 @@ async function runSearch(lat, lon, label) {
   }
 
   const token = ++currentSearchToken;
+  rowsExpanded = false; // toute nouvelle recherche repart sur un tableau replié
   // En mode voiture, on sur-fetch en vol d'oiseau pour ne pas manquer de
   // stations accessibles qui sont au-delà du cercle haversine.
   const fetchRadiusKm = distanceMode === 'drive'
@@ -1875,7 +1877,7 @@ function renderMap(stations) {
   if (userMarker) { m.removeLayer(userMarker); userMarker = null; }
 
   userMarker = L.circleMarker([userLat, userLon], {
-    radius: 8, color: '#ff6b00', fillColor: '#ff6b00', fillOpacity: 0.9, weight: 2
+    radius: 8, color: 'var(--color-accent)', fillColor: 'var(--color-accent)', fillOpacity: 0.9, weight: 2
   }).addTo(m).bindPopup('Ta position');
 
   const bounds = L.latLngBounds([[userLat, userLon]]);
@@ -1896,7 +1898,7 @@ function renderMap(stations) {
       const etaStr = s.driveMin != null ? ` · ≈ ${s.driveMin} min` : '';
       marker.bindPopup(
         `<strong>${esc(name)}</strong><br>` +
-        (addrLine ? `<span style="color:#666;font-size:0.75rem">${esc(addrLine)}</span><br>` : '') +
+        (addrLine ? `<span style="color:var(--color-neutral-600);font-size:12px">${esc(addrLine)}</span><br>` : '') +
         `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}`
       );
       markersLayer.addLayer(marker);
@@ -1982,6 +1984,37 @@ function buildSheetContent(s, fuelField) {
     </tr>`;
   }).join('');
 
+  // --- Repères déplacés du tableau vers la fiche : distance, ETA, tendance sur
+  // 7 jours, surcoût sur un plein et alerte de prix aberrant. La maquette a
+  // volontairement allégé la liste, mais aucune de ces données ne doit être
+  // perdue — elles sont regroupées ici.
+  const ref = currentResults && currentResults.stations && currentResults.stations[0];
+  const distKm = s.driveKm != null ? s.driveKm : s.distance;
+  const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
+  const extra = ref && ref !== s ? (s.price - ref.price) * getTankSize() : 0;
+  const facts = [];
+  if (distKm != null) {
+    facts.push(`<div><dt>Distance</dt><dd>${esc(km1(distKm))} <span class="text-muted">${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}</span></dd></div>`);
+  }
+  if (s.driveMin != null) {
+    facts.push(`<div><dt>Trajet</dt><dd>≈ ${s.driveMin} min</dd></div>`);
+  }
+  if (trend) {
+    const label = trend.sign === 'flat'
+      ? 'stable sur 7 jours'
+      : `${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours`;
+    facts.push(`<div><dt>Tendance</dt><dd class="trend-${trend.sign}">${trend.arrow} ${esc(label)}</dd></div>`);
+  }
+  if (extra >= 0.005) {
+    facts.push(`<div><dt>Sur un plein</dt><dd>+${esc(eur2(extra))} <span class="text-muted">vs la moins chère (${getTankSize()} L)</span></dd></div>`);
+  }
+  const factsHtml = facts.length
+    ? `<section class="sheet-section"><h3>Ce trajet</h3><dl class="sheet-facts">${facts.join('')}</dl></section>`
+    : '';
+  const outlierHtml = s._outlier
+    ? `<div class="sheet-warn">⚠ Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale (${esc(s._outlier.median.toFixed(3).replace('.', ','))} €). Possible saisie erronée — à vérifier sur place.</div>`
+    : '';
+
   // --- Services
   const amenities = getAmenities(s.services_service);
   const servicesHtml = amenities.length
@@ -1996,14 +2029,16 @@ function buildSheetContent(s, fuelField) {
       <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${esc(brandName)}</h2></div>
       ${fullAddr ? `<div class="sheet-addr">${esc(fullAddr)}</div>` : ''}
       <div class="sheet-actions">
-        <a class="sheet-btn sheet-btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps ↗</a>
-        <a class="sheet-btn" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze ↗</a>
-        ${fullAddr ? `<button type="button" class="sheet-btn sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
+        <a class="btn btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps</a>
+        <a class="btn btn-secondary" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze</a>
+        ${fullAddr ? `<button type="button" class="btn btn-secondary sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
       </div>
     </header>
+    ${outlierHtml}
+    ${factsHtml}
     <section class="sheet-section">
       <h3>Prix par carburant</h3>
-      <table class="sheet-table sheet-prices">${pricesRows}</table>
+      <table class="table sheet-prices">${pricesRows}</table>
     </section>
     ${servicesHtml}
   `;
@@ -2059,23 +2094,23 @@ if ($stationSheet) {
 // Click handler global sur la liste : on remonte au .station, on retrouve
 // l'objet station depuis currentResults.stations par index (data-station-idx
 // posé au render). Ignore les clics sur les liens internes (Itinéraire).
+// Deux points d'entrée vers la fiche : une ligne du tableau, ou le bouton
+// « Détails » du bloc gagnant. Les deux portent data-station-idx.
 function openCardFromEvent(e) {
-  if (e.target.closest('a, button')) return; // laisse passer Itinéraire, etc.
-  const card = e.target.closest('.station');
-  if (!card || card.classList.contains('station-skeleton')) return;
-  const idx = parseInt(card.dataset.stationIdx, 10);
+  const trigger = e.target.closest('[data-station-idx]');
+  if (!trigger) return;
+  // On laisse passer les vrais liens (Itinéraire) sauf s'ils SONT le déclencheur.
+  if (e.target.closest('a') && e.target.closest('a') !== trigger) return;
+  const idx = parseInt(trigger.dataset.stationIdx, 10);
   if (isNaN(idx) || !currentResults) return;
   const s = currentResults.stations[idx];
-  if (s) openStationSheet(s, currentResults.fuelField, card);
+  if (s) openStationSheet(s, currentResults.fuelField, trigger);
 }
 $stationList.addEventListener('click', openCardFromEvent);
 $stationList.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    const card = e.target.closest('.station');
-    if (card && !card.classList.contains('station-skeleton')) {
-      e.preventDefault();
-      openCardFromEvent(e);
-    }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.station-row')) {
+    e.preventDefault();
+    openCardFromEvent(e);
   }
 });
 

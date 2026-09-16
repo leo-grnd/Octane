@@ -1888,8 +1888,10 @@ function renderMap(stations) {
       const icon = L.divIcon({
         className: 'map-pin',
         html: `<div class="map-pin-inner" style="background:${color}"><span>${i + 1}</span></div>`,
-        iconSize: [28, 36],
-        iconAnchor: [14, 32]
+        // Carré de 26px ancré en son centre — l'ancrage bas d'origine visait
+        // la pointe de la goutte, que le système sans rayon a supprimée.
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
       });
       const marker = L.marker([s.lat, s.lon], { icon });
       const name = extractStationName(s) || s.adresse || 'Station';

@@ -245,49 +245,33 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .theme-toggle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 
 .status {
-  padding: 1.5rem 2rem;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
-  font-size: 0.85rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-divider);
+  font-size: 14px;
+  color: var(--color-neutral-800);
+  margin: var(--space-4) 0;
 }
-
 .status.error {
-  border-color: var(--color-accent);
-  color: var(--color-accent-700);
+  border-left-color: var(--color-accent);
+  color: var(--color-text);
 }
-
-/* CTA inline dans la barre status (réessayer, élargir le rayon, etc.) */
-.status-cta {
-  display: inline-block;
-  margin-left: 0.6rem;
-  padding: 0.35rem 0.9rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: background 0.15s, transform 0.1s;
-}
-.status-cta:hover { background: var(--color-accent-600); transform: translateY(-1px); }
-.status-cta:active { transform: translateY(0); }
+/* Le CTA de rattrapage est un vrai bouton du système : c'est une action, pas
+   une décoration de la barre. */
+.status-cta { min-height: 34px; }
 
 /* État vide affiché directement dans la liste des stations */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.8rem;
-  color: var(--ink);
-  background: var(--bg-card);
+  gap: var(--space-3);
+  color: var(--color-text);
 }
-.empty-state .status-cta { margin-left: 0; }
 
 /* ============ Bottom sheet "détails station" ============ */
 /* Desktop : panneau centré (modal). Mobile : feuille qui glisse depuis le bas.
@@ -318,11 +302,11 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   width: min(540px, calc(100% - 2rem));
   max-height: 85vh;
   overflow-y: auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1.5rem 1.7rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  background: var(--color-surface);
+  border: 2px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-lg);
   animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
@@ -339,7 +323,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   padding: 0.4rem 0.6rem;
   transition: color 0.15s;
 }
-.sheet-close:hover { color: var(--ink); }
+.sheet-close:hover { color: var(--color-accent); }
 
 .sheet-header { margin-bottom: 1.2rem; }
 .sheet-title-row {
@@ -367,6 +351,8 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   gap: 0.5rem;
   margin-top: 1rem;
 }
+/* Transitoire : alertes.html utilise encore .sheet-btn pour ses actions ;
+   la fiche est passée aux .btn du système. Retiré à l'étape 6. */
 .sheet-btn {
   display: inline-flex;
   align-items: center;
@@ -401,6 +387,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   margin: 0 0 0.6rem;
   font-weight: 500;
 }
+.sheet-section h3 + .table { margin-top: var(--space-2); }
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
@@ -489,8 +476,8 @@ body.sheet-open { overflow: hidden; }
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border: 2px solid var(--color-divider);
+  border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 0.6rem;
@@ -505,21 +492,19 @@ body.sheet-open { overflow: hidden; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-2);
 }
-
 .results-header h2 {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.2rem;
+  font-size: 20px;
   letter-spacing: -0.02em;
 }
-
 .results-count {
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  letter-spacing: 0.15em;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -737,13 +722,12 @@ body.sheet-open { overflow: hidden; }
 }
 
 footer {
-  margin-top: 4rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  text-align: center;
-  letter-spacing: 0.15em;
+  margin-top: var(--space-8);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--color-divider);
+  font-size: 12px;
+  color: var(--color-neutral-700);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -797,65 +781,63 @@ footer a {
   gap: 1rem;
   align-items: center;
 }
+/* Reprend l'apparence de .seg du design system. Les onglets étant des <button>
+   avec role=tab et non des radios, `.seg-opt:has(input:checked)` ne peut pas
+   s'appliquer : on réplique les états sur .active. */
 .view-toggle {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 2px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 .view-btn {
   background: transparent;
   border: none;
-  color: var(--ink-dim);
-  padding: 0.4rem 0.75rem;
+  color: var(--color-text);
+  padding: 7px 12px;
   font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
 }
-.view-btn:hover { color: var(--ink); }
-.view-btn.active {
-  background: var(--accent);
-  color: #000;
-}
+.view-btn + .view-btn { border-left: 1px solid var(--color-divider); }
+.view-btn:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.view-btn.active { background: var(--color-accent); color: var(--color-bg); }
+.view-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 
 /* ============ CARTE LEAFLET ============ */
 .station-map {
   height: 540px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  margin-bottom: 1rem;
+  border: 2px solid var(--color-divider);
+  background: var(--color-surface);
+  margin-bottom: var(--space-4);
 }
 :root[data-theme="dark"] .station-map .leaflet-tile-pane {
   filter: hue-rotate(180deg) invert(0.92) brightness(0.95) contrast(0.9) saturate(0.8);
 }
 .leaflet-popup-content {
   font-family: var(--font-body);
-  font-size: 0.8rem;
-  margin: 0.6rem 0.8rem;
+  font-size: 13px;
+  margin: var(--space-2) var(--space-3);
 }
 .leaflet-popup-content strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); letter-spacing: -0.02em; }
 .map-pin {
   background: none;
   border: none;
 }
+/* Carré franc plutôt que la goutte arrondie d'origine : le système pose
+   --radius-* à 0, une épingle en demi-cercle y jurerait. */
 .map-pin-inner {
-  width: 28px;
-  height: 28px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  border: 2px solid #000;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-sm);
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 0.7rem;
-  color: #000;
+  font-size: 11px;
+  color: var(--color-bg);
 }
-.map-pin-inner > span { transform: rotate(45deg); line-height: 1; }
 
 @media (max-width: 640px) {
   .station-map { height: 420px; }
@@ -900,3 +882,182 @@ footer a {
 .freshness-veryStale { color: #b91c1c; }
 :root[data-theme="dark"] .freshness-stale { color: #fb923c; }
 :root[data-theme="dark"] .freshness-veryStale { color: #ef4444; }
+
+/* ═══════════════════ Onglet Historique ═══════════════════
+   Une ligne par station : rang, identité, courbe. Les filets remplacent les
+   encadrés, comme partout ailleurs. */
+.history-list { display: block; }
+.history-card {
+  display: grid;
+  grid-template-columns: 48px 1fr minmax(240px, 1.2fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.history-card .rank {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+  color: var(--color-neutral-600);
+}
+.history-card .info { min-width: 0; }
+.history-card .name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 15px;
+}
+.history-card .addr { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
+.name-text { min-width: 0; word-break: break-word; }
+
+.hist-body { min-width: 0; }
+.hist-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-neutral-600);
+}
+.sparkline {
+  width: 100%;
+  max-width: 260px;
+  height: 60px;
+  color: var(--color-accent);
+  display: block;
+}
+.hist-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-1);
+  font-size: 11px;
+  color: var(--color-neutral-700);
+}
+.hist-stats strong { color: var(--color-text); font-weight: 600; }
+.hist-trend { width: 100%; }
+.hist-trend.flat { color: var(--color-neutral-600); }
+
+/* ═══════════════════ Badge d'enseigne ═══════════════════
+   Les couleurs viennent des marques elles-mêmes (Total, Shell…), pas du
+   système : c'est leur identité, la neutraliser rendrait le repère inutile. */
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  flex: none;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* ═══════════════════ Bandeau « reprendre la dernière recherche » ═══════════ */
+.resume-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-accent);
+  font-size: 14px;
+}
+.resume-text { display: flex; align-items: center; gap: var(--space-2); }
+.resume-dot { color: var(--color-accent); }
+.resume-actions { display: flex; gap: var(--space-2); }
+.resume-btn {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 13px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.resume-go { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
+.resume-go:hover { background: var(--color-accent-600); border-color: var(--color-accent-600); }
+.resume-dismiss:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+
+/* ═══════════════════ Indication de chargement des enseignes ═══════════════ */
+.osm-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  font-size: 12px;
+  color: var(--color-neutral-600);
+}
+.osm-hint.hidden { display: none; }
+.loader-sm {
+  display: inline-block;
+  width: 10px; height: 10px; flex: none;
+  border: 2px solid var(--color-divider);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .history-card { grid-template-columns: 40px 1fr; }
+  .history-card .hist-body { grid-column: 1 / -1; }
+}
+
+/* ═══════════════════ Leaflet : habillage des composants tiers ═══════════════
+   MarkerCluster et les contrôles de zoom arrivent avec leur propre feuille
+   (vert d'eau, coins arrondis, ombres douces) qui jure avec un système plat
+   sans rayon. On les réaccorde plutôt que de les laisser dépareillés. */
+.marker-cluster,
+.marker-cluster div {
+  background: var(--color-accent) !important;
+  border-radius: 0 !important;
+  color: var(--color-bg);
+}
+.marker-cluster {
+  border: 2px solid var(--color-text) !important;
+  box-shadow: var(--shadow-sm);
+}
+.marker-cluster div {
+  width: 100%; height: 100%;
+  margin: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.marker-cluster span {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.leaflet-bar,
+.leaflet-bar a {
+  border-radius: 0 !important;
+  border-color: var(--color-divider) !important;
+}
+.leaflet-bar a {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+}
+.leaflet-bar a:hover { background: var(--color-neutral-200); color: var(--color-accent); }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 0;
+  box-shadow: var(--shadow-md);
+}
+.leaflet-container a.leaflet-popup-close-button { color: var(--color-neutral-600); }
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent) !important;
+  color: var(--color-neutral-700);
+  font-size: 10px;
+}
+.leaflet-control-attribution a { color: var(--color-accent); }

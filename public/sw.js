@@ -2,7 +2,7 @@
 // sans unregister manuel), stale-while-revalidate pour les ressources tierces, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v53';
+const VERSION = 'octane-v56';
 // URL canoniques, sans « .html » : Cloudflare redirige /page.html vers /page,
 // et une réponse redirigée mise en cache ne peut pas servir une navigation.
 const SHELL = [
@@ -23,9 +23,6 @@ const SHELL = [
   './comment-ca-marche',
   './comment-ca-marche.css',
   './comment-ca-marche.js',
-  './alertes',
-  './alertes.css',
-  './alertes.js',
   './mentions-legales',
   './mentions-legales.css',
   './favicon.svg',

@@ -35,19 +35,13 @@
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
           <span class="brand-word" aria-hidden="true">CTANE</span>
         </a>
-        <div class="nav-links" id="navMenu">
-          <a class="nav-link" href="alertes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes</a>
-          <a class="nav-link" href="comment-ca-marche"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Comment ça marche</a>
-          <a class="nav-link" href="https://leo-grnd.github.io/hub/"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Tous les outils</a>
+        <div class="nav-links">
+          <a class="nav-link" href="comment-ca-marche"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span class="nav-label">Comment ça marche</span></a>
         </div>
         <span class="nav-sep" aria-hidden="true"></span>
         <button id="themeToggle" class="icon-btn theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
           <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        </button>
-        <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navMenu">
-          <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
-          <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </nav>
     </header>
@@ -60,8 +54,8 @@
           <span class="icon-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg></span>
           <span class="hero-kicker">En bref</span>
         </div>
-        <p>Octane n'a ni compte, ni cookie, ni publicité, et ne revend rien. Les seules données personnelles
-           qu'il conserve sont celles des alertes email, avec ton accord, jusqu'à ta désinscription.</p>
+        <p>Octane n'a ni compte, ni cookie, ni publicité, et ne revend rien. Tes recherches s'exécutent dans
+           ton navigateur : l'éditeur n'en conserve aucune.</p>
         <div class="hero-card-foot"><span>Dernière mise à jour · 2 octobre 2026</span></div>
       </div>
     </section>
@@ -238,7 +232,6 @@
               <tr><td>Adresses géocodées, historiques de prix</td><td>Éviter de les redemander</td><td>24 heures</td></tr>
               <tr><td>Distances par la route (avec ta position arrondie à ~100 m)</td><td>Éviter de les recalculer</td><td>30 jours</td></tr>
               <tr><td>Prix d'une recherche</td><td>Affichage instantané au retour sur la page</td><td>5 minutes, effacé à la fermeture de l'onglet</td></tr>
-              <tr><td>Brouillon du formulaire d'alerte, email compris</td><td>Ne pas avoir à tout ressaisir</td><td>Jusqu'à effacement</td></tr>
               <tr><td>Fichiers du site (cache hors ligne)</td><td>Fonctionner sans connexion</td><td>Jusqu'à la version suivante</td></tr>
             </tbody>
           </table>
@@ -251,25 +244,6 @@
            et sans identifiant persistant, conçu pour ne pas suivre les visiteurs d'un site à l'autre. Il ne
            produit que des statistiques agrégées (pages vues, pays, type de navigateur, site d'origine). Cette
            mesure, limitée au fonctionnement et à l'amélioration du site, est exemptée de consentement.</p>
-
-        <h3>Les alertes email</h3>
-        <dl class="legal-facts">
-          <div><dt>Données</dt><dd>Adresse email, carburant, zone (France entière, ou point, rayon et libellé
-            du lieu), heure d'envoi, dates d'inscription, de confirmation et de dernier envoi, empreinte de
-            l'adresse IP d'inscription (hachée avec une clé secrète, l'adresse elle-même n'est pas conservée).</dd></div>
-          <div><dt>Finalités</dt><dd>T'envoyer chaque jour l'alerte demandée ; limiter les inscriptions
-            abusives.</dd></div>
-          <div><dt>Base légale</dt><dd>Ton consentement, confirmé par un lien envoyé par email, pour l'alerte ;
-            l'intérêt légitime de l'éditeur à prévenir les abus, pour l'empreinte de l'adresse IP.</dd></div>
-          <div><dt>Durée</dt><dd>Jusqu'à ta désinscription, qui supprime l'abonnement. Une inscription non
-            confirmée est supprimée sous 48 heures, une inscription en liste d'attente sous 6 mois. L'empreinte
-            de l'adresse IP est effacée au bout de 7 jours.</dd></div>
-          <div><dt>Destinataires</dt><dd>L'éditeur et ses sous-traitants : Cloudflare, Inc. (hébergement du
-            service et de la base des abonnements) et Brevo — Sendinblue SAS, 17 rue Salneuve, 75017 Paris
-            (envoi des emails). Aucune donnée n'est vendue, louée ni utilisée à des fins publicitaires.</dd></div>
-        </dl>
-        <p>Chaque email contient un lien de désinscription. L'inscription aux alertes est réservée aux personnes
-           âgées d'au moins 15 ans.</p>
 
         <h3>Les échanges par email</h3>
         <p>Si tu écris à l'éditeur, ton message et ton adresse sont conservés le temps de traiter ta demande, et
@@ -285,9 +259,8 @@
            niveau de protection adéquat.</p>
 
         <h3>Sécurité</h3>
-        <p>Le site est servi exclusivement en HTTPS. Les liens de confirmation et de désinscription reposent sur
-           des jetons aléatoires dont seule une empreinte est conservée. Aucune décision automatisée ni aucun
-           profilage n'est fondé sur tes données.</p>
+        <p>Le site est servi exclusivement en HTTPS. Aucune décision automatisée ni aucun profilage n'est fondé
+           sur tes données.</p>
 
         <h3>Tes droits</h3>
         <p>Tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation et d'opposition, d'un
@@ -302,10 +275,7 @@
       <section id="conditions" class="legal-section">
         <h2><span class="legal-num">06</span>Conditions d'utilisation</h2>
         <p>L'utilisation d'Octane est gratuite, sans inscription, et vaut acceptation des présentes conditions.
-           Les alertes email sont un service gratuit et sans engagement, ouvert dans la limite des places
-           disponibles ; au-delà, les inscriptions sont placées en liste d'attente. L'éditeur peut faire évoluer,
-           suspendre ou arrêter tout ou partie du service, en prévenant les abonnés aux alertes lorsque c'est
-           possible.</p>
+           L'éditeur peut faire évoluer, suspendre ou arrêter tout ou partie du service.</p>
         <p>Ces mentions et conditions peuvent être mises à jour ; la date en tête de page fait foi. Elles sont
            régies par le droit français. En cas de litige, une solution amiable sera recherchée avant toute
            action ; à défaut, les tribunaux français seront compétents dans les conditions du droit commun.</p>

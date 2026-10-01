@@ -1,4 +1,4 @@
-// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
+// Thème clair / sombre : site.js, commun à toutes les pages.
 
 // Éléments
 const $address = document.getElementById('address');
@@ -317,9 +317,9 @@ const ODS_OFFSET_CEILING = 10000;   // contrainte API : offset + limit <= 10000
 // `horaires`, `prix`, `rupture` et `services` (des blobs JSON sérialisés en
 // texte) et tout le découpage administratif : 275 Ko par page de 100 stations,
 // contre 76 Ko ici. Dérivé de FUEL_LABELS pour rester en phase automatiquement —
-// la bottom sheet affiche les 6 carburants, pas seulement celui recherché.
+// la fiche détail affiche les autres carburants, pas seulement celui recherché.
 const STATION_FIELDS = [
-  'id', 'cp', 'ville', 'adresse', 'geom', 'services_service',
+  'id', 'cp', 'ville', 'adresse', 'geom',
   ...Object.keys(FUEL_LABELS).flatMap(field => {
     const base = field.replace('_prix', '');
     return [`${base}_prix`, `${base}_maj`, `${base}_rupture_type`];
@@ -694,48 +694,6 @@ const KNOWN_BRANDS = [
   { re: /\bagip\b/i, name: 'Agip' }
 ];
 
-// ===== Services / amenities (champ services_service de l'API) =====
-// L'API retourne un array de noms en français. On mappe vers une icône Unicode
-// discrète + un label court pour l'a11y. Patterns d'ordre : variantes longues
-// AVANT versions courtes (ex: "Lavage automatique" avant "Lavage").
-const AMENITY_ICONS = [
-  { re: /boutique\s*alim/i,         icon: '🛒', label: 'Boutique alimentaire' },
-  { re: /boutique/i,                icon: '🏪', label: 'Boutique' },
-  { re: /lavage\s*auto/i,           icon: '🧼', label: 'Lavage automatique' },
-  { re: /lavage/i,                  icon: '🧽', label: 'Lavage manuel' },
-  { re: /gonflage/i,                icon: '⊙',  label: 'Station de gonflage' },
-  { re: /carburant\s*additiv/i,     icon: '⛽', label: 'Carburant additivé' },
-  { re: /piste\s*poids\s*lourds/i,  icon: '🚛', label: 'Piste poids lourds' },
-  { re: /gaz\s*domestique|butane|propane/i, icon: '🔥', label: 'Vente de gaz domestique' },
-  { re: /automate\s*cb/i,           icon: '💳', label: 'Automate CB 24/24' },
-  { re: /dab|distributeur\s*automatique\s*de\s*billets/i, icon: '💰', label: 'Distributeur de billets' },
-  { re: /restauration\s*sur\s*place/i, icon: '🍽', label: 'Restauration sur place' },
-  { re: /restauration\s*[aà]\s*emporter|snack/i, icon: '🥪', label: 'Restauration à emporter' },
-  { re: /toilettes/i,               icon: '🚻', label: 'Toilettes' },
-  { re: /\bbar\b/i,                 icon: '🍺', label: 'Bar' },
-  { re: /wifi/i,                    icon: '📶', label: 'Wi-Fi' },
-  { re: /borne|recharge|[eé]lectrique/i, icon: '⚡', label: 'Borne électrique' },
-  { re: /fioul/i,                   icon: '🛢', label: 'Vente de fioul' },
-  { re: /alcool/i,                  icon: '🍷', label: 'Vente d\'alcool' }
-];
-
-function getAmenities(servicesArray) {
-  if (!Array.isArray(servicesArray) || !servicesArray.length) return [];
-  const seen = new Set();
-  const out = [];
-  for (const raw of servicesArray) {
-    if (typeof raw !== 'string') continue;
-    for (const { re, icon, label } of AMENITY_ICONS) {
-      if (re.test(raw)) {
-        if (seen.has(icon)) break;
-        seen.add(icon);
-        out.push({ icon, label });
-        break;
-      }
-    }
-  }
-  return out;
-}
 
 // Mapping enseigne → badge visuel (monogramme + couleur de marque).
 // Liste ordonnée : variantes spécifiques (TotalEnergies, Total Access) AVANT
@@ -2098,9 +2056,18 @@ function setView(view) {
   if (view === 'map' && currentResults) renderMap(currentResults.stations);
   if (view === 'history' && currentResults) renderPriceHistory();
 }
-$viewList.addEventListener('click', () => setView('list'));
-$viewMap.addEventListener('click', () => setView('map'));
-$viewHistory.addEventListener('click', () => setView('history'));
+// Choix d'un onglet par l'utilisateur : la page descend jusqu'au panneau
+// affiché, comme elle descend jusqu'aux résultats après une recherche
+// (défilement doux, 16 px de marge haute via scroll-margin-top). Sans ça, le
+// panneau s'ouvre sous le bloc gagnant et l'écart, souvent hors de l'écran.
+function showView(view) {
+  setView(view);
+  const panel = { list: $stationList, map: $stationMap, history: $historyList }[view];
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$viewList.addEventListener('click', () => showView('list'));
+$viewMap.addEventListener('click', () => showView('map'));
+$viewHistory.addEventListener('click', () => showView('history'));
 
 // ===== Bottom sheet "détails station" =====
 // Ouvert au clic sur une carte. Recyclable : un seul DOM, rempli dynamiquement.
@@ -2129,94 +2096,66 @@ function wazeUrl(lat, lon) {
 function buildSheetContent(s, fuelField) {
   const brandName = extractStationName(s) || s.adresse || 'Station sans nom';
   const badgeHtml = brandBadgeHtml(brandName);
-  const fullAddr =[s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const fullAddr = [s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
-  // --- Tous les prix : montre dispo + rupture (temporaire / définitive)
-  const pricesRows = ALL_FUELS.map(f => {
-    const v = s[f.field];
-    const ruptureType = s[f.field.replace('_prix', '_rupture_type')];
-    const ruptureLabel = ruptureType === 'definitive' ? 'Rupture définitive'
-                       : ruptureType === 'temporaire' ? 'Rupture temporaire'
-                       : null;
-    const majIso = s[f.field.replace('_prix', '_maj')];
-    const fresh = formatRelativeTime(majIso);
-    const isCurrent = f.field === fuelField;
-    let priceCell;
-    if (typeof v === 'number' && v > 0) {
-      priceCell = `<span class="sheet-price">${v.toFixed(3).replace('.', ',')} €</span>`;
-      if (fresh) priceCell += ` <span class="sheet-fresh sheet-fresh-${fresh.tier}">${fresh.text}</span>`;
-    } else if (ruptureLabel) {
-      priceCell = `<span class="sheet-rupture">${ruptureLabel}</span>`;
-    } else {
-      priceCell = `<span class="sheet-unavailable">Non distribué</span>`;
-    }
-    return `<tr${isCurrent ? ' class="current"' : ''}>
-      <th scope="row">${f.label}</th><td>${priceCell}</td>
-    </tr>`;
-  }).join('');
-
-  // --- Repères déplacés du tableau vers la fiche : distance, ETA, tendance sur
-  // 7 jours, surcoût sur un plein et alerte de prix aberrant. La maquette a
-  // volontairement allégé la liste, mais aucune de ces données ne doit être
-  // perdue — elles sont regroupées ici.
-  // Référence du surcoût : la moins chère ACTUALISÉE. Rien à comparer quand
-  // aucune ne l'est, ni quand la station ouverte a elle-même un prix périmé.
-  const first = currentResults && currentResults.stations && currentResults.stations[0];
-  const ref = first && !first._stale ? first : null;
+  // Fiche volontairement courte : uniquement les données officielles utiles
+  // pour décider d'y aller. Le prix recherché et son relevé, la distance, les
+  // réserves éventuelles, les liens d'itinéraire, puis les autres carburants
+  // réellement vendus. Services, tendance et surcoût n'y figurent plus (le
+  // surcoût reste dans le tableau, la tendance dans le bloc gagnant).
+  const fresh = formatRelativeTime(s[fuelField.replace('_prix', '_maj')]);
   const distKm = s.driveKm != null ? s.driveKm : s.distance;
-  const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
-  const extra = ref && ref !== s && !s._stale ? (s.price - ref.price) * getTankSize() : 0;
-  const facts = [];
-  if (distKm != null) {
-    facts.push(`<div><dt>Distance</dt><dd>${esc(km1(distKm))} <span class="text-muted">${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}</span></dd></div>`);
-  }
-  if (s.driveMin != null) {
-    facts.push(`<div><dt>Trajet</dt><dd>≈ ${s.driveMin} min</dd></div>`);
-  }
-  if (trend) {
-    facts.push(`<div><dt>Tendance</dt><dd class="trend-${trend.sign}">${icon(TREND_ICONS[trend.sign])}${esc(formatTrend(trend))}</dd></div>`);
-  }
-  if (extra >= 0.005) {
-    facts.push(`<div><dt>Sur un plein</dt><dd>+${esc(eur2(extra))} <span class="text-muted">vs la moins chère (${getTankSize()} L)</span></dd></div>`);
-  }
-  const factsHtml = facts.length
-    ? `<section class="sheet-section"><h3>Ce trajet</h3><dl class="sheet-facts">${facts.join('')}</dl></section>`
-    : '';
+  const keyHtml = `
+    <div class="sheet-key">
+      <div class="sheet-key-price">
+        <span class="sheet-key-fuel">${esc(FUEL_LABELS[fuelField])}</span>
+        <span class="sheet-key-value">${s.price.toFixed(3).replace('.', ',')}<span class="sheet-key-unit">€ / L</span></span>
+        ${fresh ? `<span class="sheet-key-fresh freshness-${fresh.tier}">${icon('clock')}relevé ${esc(fresh.text)}</span>` : ''}
+      </div>
+      ${distKm != null ? `<div class="sheet-key-dist">
+        <span class="sheet-key-num">${esc(km1(distKm))}</span>
+        <span>${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}${s.driveMin != null ? ` · ${s.driveMin} min` : ''}</span>
+      </div>` : ''}
+    </div>`;
+
   const outlierHtml = s._outlier
     ? `<div class="sheet-warn">${icon('alert')}<p>Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale (${esc(s._outlier.median.toFixed(3).replace('.', ','))} €). Possible saisie erronée — à vérifier sur place.</p></div>`
     : '';
-  const staleFresh = s._stale ? formatRelativeTime(s[fuelField.replace('_prix', '_maj')]) : null;
   const staleHtml = s._stale
-    ? `<div class="sheet-note">${icon('info')}<p>Prix ${esc(FUEL_LABELS[fuelField])} relevé ${esc(staleFresh ? staleFresh.text : 'à une date inconnue')} : la station ne l’a pas redéclaré depuis plus de ${STALE_DAYS} jours, il est donc exclu du classement. À vérifier sur place.</p></div>`
+    ? `<div class="sheet-note">${icon('info')}<p>La station n’a pas redéclaré ce prix depuis plus de ${STALE_DAYS} jours : il est exclu du classement. À vérifier sur place.</p></div>`
     : '';
 
-  // --- Services
-  const amenities = getAmenities(s.services_service);
-  const servicesHtml = amenities.length
-    ? `<section class="sheet-section">
-        <h3>Services</h3>
-        <ul class="sheet-services">${amenities.map(a => `<li><span class="amenity-big">${a.icon}</span>${a.label}</li>`).join('')}</ul>
-       </section>`
-    : '';
+  // Autres carburants : seulement les prix fiables, c'est-à-dire déclarés
+  // depuis moins de STALE_DAYS jours (le seuil du classement). Une rupture
+  // temporaire est signalée (pas de plein possible aujourd'hui) ; un carburant
+  // non distribué, en rupture définitive ou au prix trop ancien n'est pas listé.
+  const others = ALL_FUELS.filter(f => f.field !== fuelField).map(f => {
+    const rupture = s[f.field.replace('_prix', '_rupture_type')];
+    if (rupture === 'temporaire') {
+      return `<li><span class="sheet-fuel">${f.label}</span><span class="sheet-rupture">Rupture temporaire</span></li>`;
+    }
+    const v = s[f.field];
+    const f2 = formatRelativeTime(s[f.field.replace('_prix', '_maj')]);
+    if (rupture === 'definitive' || typeof v !== 'number' || v <= 0 || !f2 || f2.tier === 'veryStale') return '';
+    return `<li><span class="sheet-fuel">${f.label}</span>` +
+      `<span class="sheet-other-price">${v.toFixed(3).replace('.', ',')} €</span>` +
+      `<span class="sheet-fresh freshness-${f2.tier}">${esc(f2.text)}</span></li>`;
+  }).join('');
 
   return `
     <header class="sheet-header">
       <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${esc(brandName)}</h2></div>
       ${fullAddr ? `<div class="sheet-addr">${esc(fullAddr)}</div>` : ''}
-      <div class="sheet-actions">
-        <a class="btn btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">${icon('navigation')}Google Maps</a>
-        <a class="btn btn-secondary" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze</a>
-        ${fullAddr ? `<button type="button" class="btn btn-secondary sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
-      </div>
     </header>
+    ${keyHtml}
     ${staleHtml}
     ${outlierHtml}
-    ${factsHtml}
-    <section class="sheet-section">
-      <h3>Prix par carburant</h3>
-      <table class="sheet-prices"><tbody>${pricesRows}</tbody></table>
-    </section>
-    ${servicesHtml}
+    <div class="sheet-actions">
+      <a class="btn btn-primary" href="${googleMapsUrl(s.lat, s.lon)}" target="_blank" rel="noopener">${icon('navigation')}Google Maps</a>
+      <a class="btn btn-secondary" href="${wazeUrl(s.lat, s.lon)}" target="_blank" rel="noopener">Waze</a>
+      ${fullAddr ? `<button type="button" class="btn btn-secondary sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
+    </div>
+    ${others ? `<section class="sheet-section"><h3>Autres carburants</h3><ul class="sheet-others">${others}</ul></section>` : ''}
   `;
 }
 
@@ -2284,12 +2223,11 @@ function openCardFromEvent(e) {
   if (s) openStationSheet(s, currentResults.fuelField, trigger);
 }
 // Écoute sur toute la section : le bloc gagnant (au-dessus des onglets) comme
-// le tableau. « Voir sur la carte » bascule sur l'onglet Carte et l'amène à
-// l'écran, sous le bloc gagnant qui reste en place.
+// le tableau. « Voir sur la carte » fait comme l'onglet Carte : il l'ouvre et
+// descend jusqu'à elle.
 $results.addEventListener('click', (e) => {
   if (e.target.closest('[data-show-map]')) {
-    setView('map');
-    $stationMap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showView('map');
     return;
   }
   openCardFromEvent(e);

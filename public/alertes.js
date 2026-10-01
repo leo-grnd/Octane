@@ -6,7 +6,7 @@
 // esc(), les libellés carburants, la préférence commune du géocodeur. Toute
 // correction sur l'un doit être reportée sur l'autre.
 
-// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
+// Thème clair / sombre : site.js, commun à toutes les pages.
 
 // ===== Constantes partagées avec le job d'envoi =====
 // Le filtre de fraîcheur est le cœur de la fiabilité de l'alerte : sans lui, le

@@ -289,6 +289,11 @@
 .results-top { display: flex; flex-direction: column; gap: 16px; }
 .results-top:empty,
 .station-list:empty { display: none; }
+/* Panneaux des onglets : même marge que la section quand la page y descend
+   (showView dans app.js). */
+.station-list,
+.station-map,
+.history-list { scroll-margin-top: 16px; }
 
 .results-header {
   display: flex;
@@ -910,7 +915,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-title-row .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
 .sheet-title-row h2 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
 .sheet-addr { font-size: 14px; color: var(--o-subtle); }
-.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .sheet-actions .btn { flex: 1 1 auto; }
 
 .sheet-section { margin-top: 22px; }
@@ -925,54 +930,57 @@ body.sheet-open { overflow: hidden; }
   color: var(--o-subtle);
 }
 
-/* Repères du trajet et prix par carburant : listes à filets, encadrées. */
-.sheet-facts,
-.sheet-prices {
+/* Bloc principal : le prix du carburant recherché, son relevé, la distance. */
+.sheet-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--o-chip);
+}
+.sheet-key-price { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.sheet-key-fuel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-accent-ink);
+}
+.sheet-key-value {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 40px;
+  line-height: .95;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--o-ink);
+  white-space: nowrap;
+}
+.sheet-key-unit { margin-left: .3em; font-size: .35em; font-weight: 700; letter-spacing: .02em; color: var(--o-subtle); }
+.sheet-key-fresh { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.sheet-key-fresh .ic { width: 14px; height: 14px; }
+.sheet-key-dist { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px; color: var(--o-subtle); text-align: right; }
+.sheet-key-num { font-family: var(--font-heading); font-weight: 800; font-size: 22px; color: var(--o-ink); }
+
+/* Autres carburants vendus : liste à filets, encadrée. */
+.sheet-others {
   overflow: hidden;
   margin: 0;
+  padding: 0;
   border: 1px solid var(--o-line-soft);
   border-radius: 14px;
-}
-.sheet-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 14px; }
-.sheet-facts > div + div { border-top: 1px solid var(--o-line-soft); }
-.sheet-facts dt { flex: none; font-size: 13px; color: var(--o-muted); }
-.sheet-facts dd { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 6px; margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
-.sheet-facts dd .text-muted { font-weight: 400; }
-
-.sheet-prices { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
-.sheet-prices th,
-.sheet-prices td { padding: 10px 14px; border-bottom: 1px solid var(--o-line-soft); text-align: left; }
-.sheet-prices tr:last-child th,
-.sheet-prices tr:last-child td { border-bottom: 0; }
-.sheet-prices th { width: 40%; font-weight: 500; color: var(--o-muted); }
-.sheet-prices tr.current { background: var(--o-accent-soft); }
-.sheet-prices tr.current th { font-weight: 700; color: var(--o-accent-ink); }
-.sheet-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
-.sheet-fresh { margin-left: 8px; font-size: 12px; color: var(--o-subtle); }
-.sheet-fresh-stale { color: var(--o-stale); }
-.sheet-fresh-veryStale { color: var(--o-up); }
-.sheet-rupture { font-size: 13px; color: var(--o-accent-ink); }
-.sheet-unavailable { font-size: 13px; color: var(--o-faint); }
-
-.sheet-services {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
   list-style: none;
 }
-.sheet-services li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--o-radius-sm);
-  background: var(--o-chip);
-  font-size: 13px;
-  color: var(--o-text);
-}
-.amenity-big { font-size: 16px; line-height: 1; }
+.sheet-others li { display: flex; align-items: baseline; gap: 12px; padding: 10px 14px; font-size: 14px; }
+.sheet-others li + li { border-top: 1px solid var(--o-line-soft); }
+.sheet-fuel { flex: none; width: 84px; font-weight: 500; color: var(--o-muted); }
+.sheet-other-price { font-family: var(--font-heading); font-weight: 800; font-variant-numeric: tabular-nums; }
+.sheet-fresh { margin-left: auto; font-size: 12px; }
+.sheet-rupture { font-size: 13px; color: var(--o-accent-ink); }
 
 /* Réserves : prix aberrant (accent) ou prix ancien (neutre). */
 .sheet-warn,
@@ -1008,5 +1016,4 @@ body.sheet-open { overflow: hidden; }
     to { transform: translateY(0); opacity: 1; }
   }
   .sheet-title-row h2 { font-size: 19px; }
-  .sheet-services { grid-template-columns: 1fr 1fr; }
 }

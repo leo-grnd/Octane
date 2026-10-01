@@ -92,7 +92,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 // Aligné sur l'outil : le système n'a qu'un accent, on distingue seulement la
 // station la moins chère du reste plutôt qu'un dégradé vert → rouge.
-const RANK_COLORS = ['var(--color-accent)', 'var(--color-neutral-500)', 'var(--color-neutral-500)'];
+const RANK_COLORS = ['var(--o-accent)', 'var(--o-faint)', 'var(--o-faint)'];
 
 function formatRelativeTime(iso) {
   if (!iso) return null;
@@ -307,7 +307,7 @@ function renderPreview(cfg, { results, total }) {
       <div>
         <div class="alert-name">${esc(s.ville || 'Station')}${dist ? ` <span class="alert-maj">à ${esc(dist)}</span>` : ''}</div>
         <div class="alert-addr">${esc(addr)}</div>
-        ${maps ? `<div class="alert-links"><a href="${esc(maps)}" target="_blank" rel="noopener">Itinéraire ↗</a></div>` : ''}
+        ${maps ? `<div class="alert-links"><a href="${esc(maps)}" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Itinéraire</a></div>` : ''}
       </div>
       <div class="alert-price">
         ${price.toFixed(3).replace('.', ',')}
@@ -430,7 +430,9 @@ async function handleSubmit(e) {
     }
   }
 
+  // aria-busy : le bouton passe en « Recherche… » avec sa roue (style.css).
   $previewBtn.disabled = true;
+  $previewBtn.setAttribute('aria-busy', 'true');
   try {
     showStatus('Interrogation des prix en temps réel...');
     const data = await fetchCheapest(cfg);
@@ -445,6 +447,7 @@ async function handleSubmit(e) {
     showStatus(friendlyError(err, 'prix'), true);
   } finally {
     $previewBtn.disabled = false;
+    $previewBtn.setAttribute('aria-busy', 'false');
   }
 }
 $form.addEventListener('submit', handleSubmit);

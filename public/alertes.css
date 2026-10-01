@@ -1,170 +1,163 @@
 /* Page « Alerte quotidienne ».
    S'appuie sur design-system.css pour les tokens, les composants (.input,
    .btn, .seg, .field), l'en-tête, le hero et le pied de page, et sur
-   style.css pour la barre de statut et l'autocomplétion. On ne définit ici que la grille du
-   formulaire et les deux blocs propres à la page : aperçu et configuration. */
+   style.css pour la carte du formulaire (.search-panel), son bouton
+   (.search-cta), la barre d'état et l'autocomplétion. On ne définit ici que
+   la grille du formulaire et les deux blocs propres à la page : aperçu et
+   configuration. */
 
-/* Grille propre à la page : .form-grid de l'outil embarque des règles
-   spécifiques à l'écran de recherche qui n'ont pas de sens ici. */
+/* Grille propre à la page : celle de l'outil (.search-grid) range des champs
+   qui n'existent pas ici. */
 .alert-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
   align-items: end;
 }
 .alert-full { grid-column: 1 / -1; }
-.alert-grid .btn { min-height: 38px; justify-content: flex-start; }
-.alert-zone.hidden { display: none; }
+.alert-grid .search-cta { margin-top: 6px; }
 
-.field-hint {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-neutral-600);
-  margin-top: var(--space-1);
-}
+.field-hint { margin-top: 6px; font-size: 12px; color: var(--o-subtle); }
 
 @media (max-width: 560px) {
-  .alert-grid { grid-template-columns: 1fr; }
+  .alert-grid { grid-template-columns: minmax(0, 1fr); }
   .alert-full { grid-column: auto; }
-  .alert-grid .btn { width: 100%; }
 }
 
-/* ═══════════════════ Aperçu du jour ═══════════════════
-   Même langage que la page de résultats : filets francs, pas d'encadré. */
+/* ═══════════════════ Aperçu du jour et configuration ═══════════════════
+   Deux cartes, comme le bloc gagnant et la liste de l'outil. */
 .alert-preview,
 .alert-output {
-  padding: var(--space-8) 0;
-  border-top: 2px solid var(--color-divider);
+  margin-top: clamp(28px, 4vw, 48px);
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
 }
-.alert-preview.hidden,
-.alert-output.hidden { display: none; }
+.alert-output { margin-top: 16px; }
 
 .alert-preview-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  gap: 8px 16px;
+  margin-bottom: 16px;
 }
 .alert-preview h2,
-.alert-output h2 {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: clamp(24px, 3.5vw, 32px);
-  letter-spacing: -0.02em;
-  margin: 0;
-}
+.alert-output h2 { margin: 0; font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.02em; }
 .alert-preview-meta {
   font-size: 12px;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--color-neutral-700);
+  color: var(--o-muted);
 }
 
-.alert-podium { list-style: none; }
+/* Podium : lignes du tableau de l'outil (rang, station, prix). */
+.alert-podium { margin: 0; padding: 0; list-style: none; }
 .alert-row {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--color-divider);
+  padding: 14px 0;
+  border-top: 1px solid var(--o-line-soft);
 }
-.alert-row:first-child { border-top: 1px solid var(--color-divider); }
 .alert-rank {
   font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 16px;
-  color: var(--rank-color, var(--color-neutral-600));
-}
-.alert-name {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  font-weight: 800;
   font-size: 15px;
+  color: var(--rank-color, var(--o-faint));
 }
-.alert-addr { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
+.alert-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 15px; font-weight: 600; }
+.alert-addr { margin-top: 2px; font-size: 12.5px; color: var(--o-subtle); }
 .alert-price {
   font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
+  font-weight: 800;
   font-size: 22px;
   font-variant-numeric: tabular-nums;
-  color: var(--rank-color, var(--color-text));
+  color: var(--o-ink);
   text-align: right;
   white-space: nowrap;
 }
+/* Seul le prix gagnant prend l'accent ; les autres restent lisibles. */
+.alert-row:first-child .alert-price { color: var(--o-accent); }
 .alert-price .alert-unit {
   display: block;
+  margin-top: 2px;
   font-family: var(--font-body);
   font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  color: var(--color-neutral-600);
-  margin-top: 2px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  color: var(--o-subtle);
 }
 .alert-maj {
   display: block;
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--color-neutral-600);
   margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--o-subtle);
 }
-.alert-links { font-size: 12px; margin-top: var(--space-1); }
-.alert-links a { color: var(--color-accent); text-decoration: none; }
-.alert-links a:hover { text-decoration: underline; }
+.alert-name .alert-maj { display: inline; margin: 0; }
+.alert-links { margin-top: 6px; font-size: 13px; }
+.alert-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--o-accent);
+  text-decoration: none;
+}
+.alert-links a:hover { color: var(--o-accent-hover); }
+.alert-links .ic { width: 14px; height: 14px; stroke-width: 2.2; }
 
 .alert-fresh-note {
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-divider);
+  max-width: 70ch;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--o-line-soft);
   font-size: 13px;
   line-height: 1.6;
-  color: var(--color-neutral-700);
-  max-width: 70ch;
+  color: var(--o-muted);
 }
 
 .alert-empty {
+  padding: 16px;
+  border-radius: var(--o-radius-md);
+  background: var(--o-chip);
   font-size: 14px;
-  color: var(--color-neutral-700);
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-divider);
+  color: var(--o-text);
 }
 
 /* ═══════════════════ Bloc configuration ═══════════════════ */
 .alert-output-intro {
+  max-width: 62ch;
+  margin: 10px 0 16px;
   font-size: 15px;
   line-height: 1.6;
-  color: var(--color-neutral-800);
-  margin: var(--space-3) 0 var(--space-4);
-  max-width: 62ch;
+  color: var(--o-muted);
 }
 .alert-config {
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-accent);
-  padding: var(--space-4);
-  font-family: var(--font-body);
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--o-line-soft);
+  border-radius: var(--o-radius-md);
+  background: var(--o-field);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--color-text);
-  overflow-x: auto;
+  color: var(--o-ink);
   white-space: pre;
 }
-.alert-config:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.alert-output-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-.alert-output-actions .btn { min-height: 38px; justify-content: flex-start; }
-.alert-output-actions .hidden { display: none; }
+.alert-output-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 
 @media (max-width: 560px) {
-  .alert-row { grid-template-columns: 40px 1fr; }
-  .alert-price { grid-column: 2; text-align: left; margin-top: var(--space-2); }
+  .alert-row { grid-template-columns: 30px minmax(0, 1fr); gap: 4px 12px; }
+  .alert-price { grid-column: 2; text-align: left; }
+  .alert-price .alert-unit,
+  .alert-price .alert-maj { display: inline; margin-left: 6px; }
 }

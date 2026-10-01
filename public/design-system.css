@@ -116,38 +116,12 @@
   --o-sh-cta: 0 10px 24px -8px rgba(255, 86, 60, .45);
 }
 
-/* ── Transition : anciens noms de tokens (Modernist) ──────────────────────
-   Les feuilles pas encore redessinées lisent encore --color-*, --shadow-*,
-   --radius-*. Chaque nom est rebranché sur son équivalent v3, thème sombre
-   compris. Bloc temporaire : supprimé quand plus aucune feuille ne s'en sert. */
-:root {
-  --color-bg: var(--o-bg);
-  --color-surface: var(--o-surface);
-  --color-text: var(--o-ink);
-  --color-accent: var(--o-accent);
-  --color-divider: var(--o-line);
-  --color-neutral-100: var(--o-chip);
-  --color-neutral-200: var(--o-line-soft);
-  --color-neutral-300: var(--o-line);
-  --color-neutral-500: var(--o-faint);
-  --color-neutral-600: var(--o-subtle);
-  --color-neutral-700: var(--o-muted);
-  --color-neutral-800: var(--o-text);
-  --color-accent-100: var(--o-accent-soft);
-  --color-accent-600: var(--o-accent-hover);
-  --color-accent-700: var(--o-accent-ink);
-  --color-accent-800: var(--o-accent-ink);
-  --font-heading-weight: 800;
-  --shadow-sm: var(--o-sh-sm);
-  --shadow-md: var(--o-sh-badge);
-  --shadow-lg: var(--o-sh-card);
-  --radius-md: var(--o-radius-md);
-  --radius-lg: var(--o-radius-xl);
-}
-
 /* ══════════════════════════════ Base ══════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
+/* Marges et retraits par défaut remis à zéro : chaque composant pose les
+   siens (les règles d'élément ci-dessous, plus spécifiques, l'emportent). */
+* { margin: 0; padding: 0; }
 
 body {
   margin: 0;
@@ -202,15 +176,6 @@ select option { background: var(--o-surface); color: var(--o-ink); }
 /* Icône en ligne (jeu Lucide de la maquette), à la couleur du texte. */
 .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Petite capitale espacée : intitulés de section, méta, en-têtes de colonne. */
-.kicker {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--o-accent-ink);
-}
-
 @keyframes octSpin { to { transform: rotate(360deg); } }
 @keyframes octFade { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 
@@ -242,8 +207,6 @@ select option { background: var(--o-surface); color: var(--o-ink); }
 .btn-primary:active { background: var(--o-accent-press); }
 .btn-secondary { border-color: var(--o-line); background: var(--o-surface); color: var(--o-ink); }
 .btn-secondary:hover { background: var(--o-hover); color: var(--o-ink); }
-.btn-ghost { color: var(--o-accent); }
-.btn-ghost:hover { background: var(--o-accent-soft); color: var(--o-accent); }
 /* Variante compacte, pour une action dans une barre ou un bandeau. */
 .btn-sm { min-height: 38px; padding: 0 14px; border-radius: var(--o-radius-sm); font-size: 14px; }
 .btn-sm.btn-primary { box-shadow: none; }
@@ -373,7 +336,6 @@ textarea.input { min-height: 90px; padding: 12px 14px; resize: vertical; }
   font-weight: 600;
 }
 .tag-neutral { background: var(--o-chip); color: var(--o-text); border: 1px solid var(--o-line-soft); }
-.tag-accent { background: var(--o-accent-soft); color: var(--o-accent-ink); }
 .tag-outline { border: 1px solid var(--o-accent-soft2); color: var(--o-accent-ink); }
 
 /* — Tableaux — */

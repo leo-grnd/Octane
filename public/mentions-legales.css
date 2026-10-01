@@ -1,115 +1,149 @@
 /* Page « Mentions légales et confidentialité ».
    S'appuie sur design-system.css (tokens, .table, en-tête, hero, pied de
-   page). Même langage que « Comment ça marche » : filets francs, numéros de
-   section en accent, texte limité à ~70 caractères par ligne pour la lecture. */
+   page). Même langage que « Comment ça marche » : une carte par section,
+   numéro en pastille d'accent, texte limité à ~72 caractères par ligne pour
+   la lecture. */
 
-.hero sup { font-size: 0.7em; }
+.hero sup { font-size: .7em; }
 
 /* Champ à compléter avant publication : impossible à manquer à l'écran. */
 mark.todo {
-  background: var(--color-accent);
-  color: var(--color-bg);
   padding: 0 4px;
+  border-radius: 4px;
+  background: var(--o-accent);
+  color: var(--o-on-accent);
   font-weight: 600;
 }
 
-/* ---- Sommaire ---- */
-.legal-toc {
-  margin: var(--space-8) 0 0;
-  padding-bottom: var(--space-6);
-  border-bottom: 2px solid var(--color-divider);
-}
+/* ---- Sommaire : pastilles numérotées ---- */
+.legal-toc { margin: clamp(8px, 2vw, 16px) 0 16px; }
 .legal-toc ol {
-  list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   counter-reset: toc;
 }
-.legal-toc li { counter-increment: toc; font-size: 14px; }
-.legal-toc li::before {
-  content: counter(toc, decimal-leading-zero);
-  margin-right: var(--space-2);
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  color: var(--color-accent);
+.legal-toc li { counter-increment: toc; }
+.legal-toc a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-pill);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--o-text);
+  text-decoration: none;
 }
-.legal-toc a { color: var(--color-text); text-decoration: none; }
-.legal-toc a:hover { color: var(--color-accent); }
+.legal-toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: var(--o-accent);
+}
+.legal-toc a:hover { border-color: var(--o-faint); color: var(--o-ink); }
 
-/* ---- Sections ---- */
+/* ---- Sections : une carte chacune ---- */
+.legal { display: flex; flex-direction: column; gap: 16px; }
 .legal-section {
-  padding: var(--space-8) 0;
-  border-bottom: 2px solid var(--color-divider);
-  scroll-margin-top: var(--space-4);
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+  scroll-margin-top: 16px;
 }
 .legal-section h2 {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: clamp(24px, 3.5vw, 32px);
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  font-size: clamp(22px, 3vw, 28px);
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-6);
 }
-.legal-num { color: var(--color-accent); font-size: 0.8em; }
+.legal-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--o-radius-md);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
+  font-size: 17px;
+}
 .legal-section h3 {
+  margin: 24px 0 8px;
+  font-family: var(--font-body);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--color-neutral-700);
-  margin: var(--space-6) 0 var(--space-2);
+  color: var(--o-subtle);
 }
 .legal-section p,
-.legal-list { font-size: 15px; line-height: 1.65; max-width: 72ch; color: var(--color-neutral-800); }
-.legal-section p + p { margin-top: var(--space-3); }
-.legal-section strong { color: var(--color-text); font-weight: 600; }
-.legal-section a { color: var(--color-accent); }
-.legal-section code { font-size: 0.9em; }
-.legal-list { padding-left: 1.2em; margin-top: var(--space-2); }
-.legal-list li + li { margin-top: var(--space-1); }
-.legal-note { font-size: 13px !important; color: var(--color-neutral-700) !important; margin-top: var(--space-4); }
+.legal-list { max-width: 72ch; font-size: 15px; line-height: 1.65; color: var(--o-text); }
+.legal-section p { margin: 0; }
+.legal-section p + p { margin-top: 12px; }
+.legal-section strong { font-weight: 600; color: var(--o-ink); }
+.legal-section code { font-size: .9em; }
+.legal-list { margin: 8px 0 0; padding-left: 1.2em; }
+.legal-list li + li { margin-top: 4px; }
+.legal-section .legal-note { margin-top: 16px; font-size: 13px; color: var(--o-muted); }
 
-/* Paires intitulé / valeur, en filets comme le reste du système. */
-.legal-facts { margin: var(--space-2) 0 var(--space-4); max-width: 80ch; }
+/* Paires intitulé / valeur, en liste encadrée comme la fiche détail. */
+.legal-facts {
+  max-width: 80ch;
+  margin: 8px 0 16px;
+  overflow: hidden;
+  border: 1px solid var(--o-line-soft);
+  border-radius: 14px;
+}
 .legal-facts > div {
   display: grid;
   grid-template-columns: minmax(140px, 220px) 1fr;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--color-divider);
+  gap: 16px;
+  padding: 12px 14px;
 }
-.legal-facts > div:last-child { border-bottom: 1px solid var(--color-divider); }
-.legal-facts dt {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-  padding-top: 2px;
-}
+.legal-facts > div + div { border-top: 1px solid var(--o-line-soft); }
+.legal-facts dt { padding-top: 1px; font-size: 13px; color: var(--o-muted); }
 .legal-facts dd { margin: 0; font-size: 15px; line-height: 1.55; }
-.legal-facts a { color: var(--color-accent); }
 
-/* Tableaux : défilement horizontal plutôt que débordement de page en mobile. */
-.legal-table-wrap { overflow-x: auto; margin: var(--space-3) 0 var(--space-4); }
+/* Tableaux : encadrés, et défilement horizontal plutôt que débordement de
+   page entre 560 px et la largeur du tableau. */
+.legal-table-wrap {
+  margin: 12px 0 16px;
+  overflow-x: auto;
+  border: 1px solid var(--o-line-soft);
+  border-radius: 14px;
+}
 .legal-table { min-width: 560px; font-size: 14px; }
 .legal-table th { white-space: nowrap; }
 .legal-table td { vertical-align: top; line-height: 1.5; }
-.legal-table td:first-child { font-weight: 600; width: 22%; }
-.legal-table a { color: var(--color-accent); }
+.legal-table tbody tr:last-child td { border-bottom: 0; }
+.legal-table tbody tr:hover { background: none; }
+.legal-table td:first-child { width: 22%; font-weight: 600; }
 
 /* Mobile : un tableau à défilement horizontal cache sa dernière colonne
    (licence, durée de conservation) — trop facile à manquer pour une
    information légale. Chaque ligne devient donc un bloc empilé, la troisième
    colonne précédée de son intitulé. */
 @media (max-width: 560px) {
-  .legal-facts > div { grid-template-columns: 1fr; gap: var(--space-1); }
+  .legal-facts > div { grid-template-columns: 1fr; gap: 4px; }
   .legal-table { min-width: 0; }
   .legal-table thead { display: none; }
-  .legal-table tr { display: block; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); }
+  .legal-table tr { display: block; padding: 12px 14px; }
+  .legal-table tr + tr { border-top: 1px solid var(--o-line-soft); }
   .legal-table td { display: block; width: auto !important; padding: 2px 0; border: 0; }
-  .legal-table--sources td:nth-child(3)::before { content: "Licence · "; color: var(--color-neutral-700); }
-  .legal-table--storage td:nth-child(3)::before { content: "Durée · "; color: var(--color-neutral-700); }
+  .legal-table--sources td:nth-child(3)::before { content: "Licence · "; color: var(--o-muted); }
+  .legal-table--storage td:nth-child(3)::before { content: "Durée · "; color: var(--o-muted); }
 }

@@ -821,11 +821,31 @@ function formatPrice(price) {
   return `${euros}<span class="cents">,${cents}</span> €`;
 }
 
+// Un prix non redéclaré depuis plus de STALE_DAYS jours sort du classement :
+// il reste visible, en fin de tableau, mais ne peut plus être désigné « le
+// moins cher ». Sans cette règle, le bloc gagnant de Paris (5 km) affichait au
+// 01/10/2026 un gazole à 2,200 € relevé 184 jours plus tôt, devant des prix du
+// jour à 2,250 € — typiquement une station qui ne déclare plus. 7 jours plutôt
+// que les 3 des alertes email : une station au prix inchangé peut légitimement
+// ne rien déclarer pendant quelques jours.
+const STALE_DAYS = 7;
+
+function isStalePrice(s, fuelField) {
+  const t = new Date(s[fuelField.replace('_prix', '_maj')]).getTime();
+  return !Number.isFinite(t) || Date.now() - t > STALE_DAYS * 864e5;
+}
+
+// Ordre du classement : prix actualisés d'abord, chaque groupe trié par prix.
+// Les stations périmées se retrouvent donc toujours en queue de liste.
+function compareStations(a, b) {
+  return (a._stale - b._stale) || (a.price - b.price);
+}
+
 // "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour.
 // Retourne { text, tier } pour permettre une coloration selon la fraîcheur :
 //   fresh = < 48 h (chip neutre, opacité faible)
 //   stale = 48 h–7 j (chip orange, attention douce)
-//   veryStale = > 7 j (chip rouge, donnée potentiellement obsolète)
+//   veryStale = > 7 j (chip rouge, hors classement — voir STALE_DAYS)
 function formatRelativeTime(iso) {
   if (!iso) return null;
   const then = new Date(iso).getTime();
@@ -839,7 +859,7 @@ function formatRelativeTime(iso) {
   else if (diffH < 24) text = `il y a ${Math.round(diffH)} h`;
   else if (diffD < 30) text = `il y a ${Math.round(diffD)} j`;
   else text = `il y a ${Math.round(diffD / 30)} mois`;
-  const tier = diffD > 7 ? 'veryStale' : diffD > 2 ? 'stale' : 'fresh';
+  const tier = diffD > STALE_DAYS ? 'veryStale' : diffD > 2 ? 'stale' : 'fresh';
   return { text, tier };
 }
 
@@ -969,22 +989,27 @@ function buildWinnerBlock(s, fuelField) {
 // Une ligne du tableau. La maquette ne garde que rang, station, distance, prix
 // et surcoût sur un plein ; badges, services, fraîcheur et tendance basculent
 // dans la fiche détail, qui s'ouvre au clic sur la ligne.
+// `refStation` (la moins chère actualisée) peut être null quand aucune station
+// du rayon n'a de prix récent. Une ligne périmée n'a ni rang ni surcoût : la
+// comparer au gagnant serait affirmer un écart qui n'existe peut-être plus.
 function buildStationRow(s, i, fuelField, refStation) {
   const v = stationView(s, fuelField);
-  const extra = (s.price - refStation.price) * getTankSize();
+  const extra = refStation && !s._stale ? (s.price - refStation.price) * getTankSize() : 0;
 
   const tr = document.createElement('tr');
-  tr.className = 'station-row';
+  tr.className = s._stale ? 'station-row is-stale' : 'station-row';
   tr.dataset.stationIdx = String(i);
   tr.setAttribute('tabindex', '0');
   tr.setAttribute('role', 'button');
-  tr.setAttribute('aria-label', `Voir les détails de ${v.title}, ${s.price.toFixed(3)} euros par litre`);
+  tr.setAttribute('aria-label', `Voir les détails de ${v.title}, ${s.price.toFixed(3)} euros par litre` +
+    (s._stale && v.freshness ? `, prix relevé ${v.freshness.text}` : ''));
   tr.innerHTML = `
-    <td class="col-rank">${String(i + 1).padStart(2, '0')}</td>
+    <td class="col-rank">${s._stale ? '—' : String(i + 1).padStart(2, '0')}</td>
     <td class="col-station">
       ${esc(v.title)}
       ${s._outlier ? '<span class="row-warn" title="Prix qui s’écarte fortement de la médiane locale — à vérifier sur place.">⚠</span>' : ''}
       <div class="col-station-sub">${esc(v.subtitle)}</div>
+      ${s._stale ? `<div class="col-stale">relevé ${v.freshness ? esc(v.freshness.text) : 'à une date inconnue'}</div>` : ''}
     </td>
     <td class="col-dist">${v.distKm != null ? esc(km1(v.distKm)) : '—'}${s.driveMin != null ? `<div class="col-eta">${s.driveMin} min</div>` : ''}</td>
     <td class="col-price">${s.price.toFixed(3).replace('.', ',')}</td>
@@ -993,8 +1018,17 @@ function buildStationRow(s, i, fuelField, refStation) {
   return tr;
 }
 
+// Intercalaire entre le classement et les prix périmés, dans le tableau même :
+// la frontière se lit sans quitter la liste des yeux.
+function buildStaleSeparator(count) {
+  const tr = document.createElement('tr');
+  tr.className = 'stale-sep';
+  tr.innerHTML = `<td colspan="5">Hors classement · ${count} prix non actualisé${count > 1 ? 's' : ''} depuis plus de ${STALE_DAYS} jours</td>`;
+  return tr;
+}
+
 function buildHistoryCard(s, i, total) {
-  const color = getColorForRank(i, total);
+  const color = getColorForRank(s._stale ? -1 : i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
   const badge = getBrandBadge(brandName);
@@ -1012,7 +1046,7 @@ function buildHistoryCard(s, i, total) {
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
   el.innerHTML = `
-    <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
+    <div class="rank" aria-hidden="true">${s._stale ? '—' : String(i + 1).padStart(2, '0')}</div>
     <div class="info">
       <div class="name">${badgeHtml}<span class="name-text">${esc(title)}</span></div>
       <div class="addr">${esc(subtitle)}</div>
@@ -1110,11 +1144,25 @@ function renderStations() {
     return;
   }
 
-  const refStation = stations[0];
-  $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+  // Les stations périmées sont triées en queue (compareStations) : le gagnant
+  // est donc la première station, à condition qu'elle soit actualisée.
+  const fresh = stations.filter(s => !s._stale);
+  const staleCount = total - fresh.length;
+  const refStation = fresh.length ? stations[0] : null;
 
-  if (total > 1) {
-    const rest = stations.slice(1);
+  if (refStation) {
+    $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+  } else {
+    const note = document.createElement('div');
+    note.className = 'stale-notice';
+    note.textContent = `Aucune station de ce rayon n’a déclaré de prix ${FUEL_LABELS[fuelField]} ces ` +
+      `${STALE_DAYS} derniers jours. Voici les derniers prix connus, sans classement : vérifie-les sur place.`;
+    $stationList.appendChild(note);
+  }
+
+  const rest = refStation ? stations.slice(1) : stations;
+  const offset = refStation ? 1 : 0; // index de `rest[0]` dans `stations`
+  if (rest.length) {
     const shown = rowsExpanded ? rest.length : Math.min(rest.length, ROWS_VISIBLE);
     const table = document.createElement('table');
     table.className = 'table station-table';
@@ -1132,7 +1180,12 @@ function renderStations() {
     `;
     const tbody = table.querySelector('tbody');
     rest.slice(0, shown).forEach((s, i) => {
-      tbody.appendChild(buildStationRow(s, i + 1, fuelField, refStation));
+      // L'intercalaire ne sert que s'il sépare quelque chose : quand tout est
+      // périmé, la note au-dessus du tableau le dit déjà.
+      if (s._stale && refStation && (i === 0 || !rest[i - 1]._stale)) {
+        tbody.appendChild(buildStaleSeparator(staleCount));
+      }
+      tbody.appendChild(buildStationRow(s, i + offset, fuelField, refStation));
     });
     $stationList.appendChild(table);
 
@@ -1146,7 +1199,9 @@ function renderStations() {
     }
   }
 
-  const savings = buildSavingsBanner(stations);
+  // L'écart ne se calcule qu'entre prix actualisés : un vieux prix bas ou haut
+  // gonflerait un écart qui n'existe plus à la pompe.
+  const savings = buildSavingsBanner(fresh);
   if (savings) $stationList.appendChild(savings);
 
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
@@ -1186,10 +1241,11 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
       lat,
       lon,
       distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
-      price: parseFloat(s[fuelField])
+      price: parseFloat(s[fuelField]),
+      _stale: isStalePrice(s, fuelField)
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
-    .sort((a, b) => a.price - b.price);
+    .sort(compareStations);
 
   // Détection des prix aberrants : écart > 25 % avec la médiane locale du set.
   // Au moins 5 stations pour que la médiane soit représentative, sinon on ne
@@ -1241,8 +1297,8 @@ function applyDistMapAndRender(distMap, stations, radiusKm) {
       kept.push(s);
     }
   }
-  // Tri par prix inchangé (rang n°1 = moins cher).
-  currentResults.stations = kept.sort((a, b) => a.price - b.price);
+  // Même ordre que le premier rendu : actualisées d'abord, puis par prix.
+  currentResults.stations = kept.sort(compareStations);
   renderStations();
 }
 
@@ -1884,10 +1940,12 @@ function renderMap(stations) {
 
   if (stations.length) {
     stations.forEach((s, i) => {
-      const color = getColorForRank(i, stations.length);
+      // Prix périmé : marqueur creux et sans numéro, comme sa ligne du tableau.
+      const color = getColorForRank(s._stale ? -1 : i, stations.length);
+      const fresh = formatRelativeTime(s[currentResults.fuelField.replace('_prix', '_maj')]);
       const icon = L.divIcon({
-        className: 'map-pin',
-        html: `<div class="map-pin-inner" style="background:${color}"><span>${i + 1}</span></div>`,
+        className: s._stale ? 'map-pin map-pin-stale' : 'map-pin',
+        html: `<div class="map-pin-inner" style="background:${s._stale ? 'var(--color-surface)' : color}"><span>${s._stale ? '–' : i + 1}</span></div>`,
         // Carré de 26px ancré en son centre — l'ancrage bas d'origine visait
         // la pointe de la goutte, que le système sans rayon a supprimée.
         iconSize: [26, 26],
@@ -1901,7 +1959,8 @@ function renderMap(stations) {
       marker.bindPopup(
         `<strong>${esc(name)}</strong><br>` +
         (addrLine ? `<span style="color:var(--color-neutral-600);font-size:12px">${esc(addrLine)}</span><br>` : '') +
-        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}`
+        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}` +
+        (s._stale ? `<br><span style="color:var(--color-neutral-600);font-size:12px">Hors classement · relevé ${esc(fresh ? fresh.text : 'à une date inconnue')}</span>` : '')
       );
       markersLayer.addLayer(marker);
       bounds.extend([s.lat, s.lon]);
@@ -1990,10 +2049,13 @@ function buildSheetContent(s, fuelField) {
   // 7 jours, surcoût sur un plein et alerte de prix aberrant. La maquette a
   // volontairement allégé la liste, mais aucune de ces données ne doit être
   // perdue — elles sont regroupées ici.
-  const ref = currentResults && currentResults.stations && currentResults.stations[0];
+  // Référence du surcoût : la moins chère ACTUALISÉE. Rien à comparer quand
+  // aucune ne l'est, ni quand la station ouverte a elle-même un prix périmé.
+  const first = currentResults && currentResults.stations && currentResults.stations[0];
+  const ref = first && !first._stale ? first : null;
   const distKm = s.driveKm != null ? s.driveKm : s.distance;
   const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
-  const extra = ref && ref !== s ? (s.price - ref.price) * getTankSize() : 0;
+  const extra = ref && ref !== s && !s._stale ? (s.price - ref.price) * getTankSize() : 0;
   const facts = [];
   if (distKm != null) {
     facts.push(`<div><dt>Distance</dt><dd>${esc(km1(distKm))} <span class="text-muted">${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}</span></dd></div>`);
@@ -2016,6 +2078,10 @@ function buildSheetContent(s, fuelField) {
   const outlierHtml = s._outlier
     ? `<div class="sheet-warn">⚠ Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale (${esc(s._outlier.median.toFixed(3).replace('.', ','))} €). Possible saisie erronée — à vérifier sur place.</div>`
     : '';
+  const staleFresh = s._stale ? formatRelativeTime(s[fuelField.replace('_prix', '_maj')]) : null;
+  const staleHtml = s._stale
+    ? `<div class="sheet-note">Prix ${esc(FUEL_LABELS[fuelField])} relevé ${esc(staleFresh ? staleFresh.text : 'à une date inconnue')} : la station ne l’a pas redéclaré depuis plus de ${STALE_DAYS} jours, il est donc exclu du classement. À vérifier sur place.</div>`
+    : '';
 
   // --- Services
   const amenities = getAmenities(s.services_service);
@@ -2036,6 +2102,7 @@ function buildSheetContent(s, fuelField) {
         ${fullAddr ? `<button type="button" class="btn btn-secondary sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
       </div>
     </header>
+    ${staleHtml}
     ${outlierHtml}
     ${factsHtml}
     <section class="sheet-section">

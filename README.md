@@ -52,6 +52,16 @@ Un `select` explicite limite la réponse aux champs réellement affichés : **76
 de 275 Ko**, le reste étant des blobs JSON sérialisés (`horaires`, `prix`, `rupture`) et le
 découpage administratif.
 
+### Prix périmés
+
+Le flux contient des stations qui ne déclarent plus : au 01/10/2026, « le moins cher » de Paris
+(5 km) était un gazole à 2,200 € relevé **184 jours** plus tôt, devant des prix du jour à 2,250 €.
+Un prix non redéclaré depuis plus de **7 jours** (`STALE_DAYS`) sort donc du classement : il ne
+peut plus être désigné gagnant, ne compte ni dans l'écart affiché ni dans le surcoût, et passe en
+fin de tableau sous un intercalaire « Hors classement », sans rang, avec sa date de relevé. Il
+reste visible, la station pouvant simplement n'avoir pas changé ses prix. Les alertes email sont
+plus strictes (3 jours) : elles désignent un seul gagnant, sans tableau pour nuancer.
+
 ## Développement local
 
 ```bash

@@ -186,6 +186,10 @@ avec leur tag `brand`/`operator`/`name`, et on ship le résultat dans
 `data/osm/brands.json`. Le client le charge une seule fois par session et cherche
 la marque la plus proche (≤ 150 m) en local.
 
+`brands.json` est une base dérivée d'OpenStreetMap : elle est diffusée sous **ODbL 1.0**
+(© contributeurs OpenStreetMap), comme l'indiquent la page mentions légales et l'attribution
+de la carte.
+
 Il n'y a **aucun appel Overpass depuis le navigateur**. Un ancien fallback interrogeait les
 instances publiques à chaque recherche où une enseigne manquait ; il a été retiré avant la mise
 en ligne publique, leurs politiques d'usage proscrivant ce trafic dès qu'il devient massif. Une
@@ -283,6 +287,12 @@ committer les PNG. Le script vérifie les dimensions de chaque image produite. `
 | `scripts/brand/og-image.html` | Source de `og-image.png` |
 | `scripts/render-brand.mjs` | Rend les PNG ci-dessus via Chrome/Edge headless (sans dépendance) |
 | `404.html` · `robots.txt` | Page d'erreur au design system · consignes aux moteurs |
+| `mentions-legales.html` · `.css` | Mentions légales (LCEN), confidentialité (RGPD), licences, conditions d'utilisation |
+
+> **Mentions légales — à tenir à jour.** Les champs `<mark class="todo">` (nom de l'éditeur, email de
+> contact) doivent être remplis avant la mise en ligne : ils s'affichent en rouge tant qu'ils ne le sont
+> pas. Toute nouvelle donnée collectée, nouveau stockage local ou nouveau service tiers appelé par le
+> navigateur doit y être ajouté, et la date de mise à jour en tête de page modifiée.
 | `scripts/build-brands.mjs` | Scrape OSM → `data/osm/brands.json` (Node) |
 | `scripts/build_brands.py` | Équivalent stdlib Python |
 | `scripts/send-alerts.mjs` | Envoi des alertes quotidiennes (Node, sans dépendance) |

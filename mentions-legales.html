@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<!--
+  À COMPLÉTER AVANT PUBLICATION — chaque champ est balisé <mark class="todo">,
+  surligné en rouge à l'écran tant qu'il n'est pas rempli :
+    · [Prénom NOM]          nom de l'éditeur et directeur de la publication
+    · [email de contact]    adresse à laquelle répondre aux demandes (RGPD, contenu)
+  Adresse postale et téléphone : la LCEN permet à un particulier éditant à titre
+  non professionnel de ne pas les publier, À CONDITION de les avoir communiqués
+  à l'hébergeur (renseigner nom, adresse et téléphone dans le profil du compte
+  Cloudflare). Sinon, les publier dans la section « Éditeur ».
+-->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mentions légales et confidentialité — OCTANE</title>
+  <meta name="description" content="Éditeur, hébergeur, sources et licences des données, politique de confidentialité et conditions d'utilisation d'Octane." />
+  <meta name="theme-color" content="#171615" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f3f2f2" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="canonical" href="https://leo-grnd.github.io/Octane/mentions-legales.html" />
+  <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
+  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="fonts/archivo.css" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="mentions-legales.css" />
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a class="nav-brand" href="index.html">OCTANE</a>
+      <div class="nav-links">
+        <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
+        <a class="btn btn-secondary" href="alertes.html">Alertes</a>
+        <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
+          <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <h1>Mentions légales<br /><em>et confidentialité.</em></h1>
+      <div class="hero-aside">
+        <div class="kicker">En bref</div>
+        <p>Octane n'a ni compte, ni cookie, ni publicité, et ne revend rien. Les seules données personnelles
+           qu'il conserve sont celles des alertes email, avec ton accord, jusqu'à ta désinscription.</p>
+        <div class="live">Dernière mise à jour · 1<sup>er</sup> octobre 2026</div>
+      </div>
+    </section>
+
+    <nav class="legal-toc" aria-label="Sommaire">
+      <ol>
+        <li><a href="#editeur">Éditeur</a></li>
+        <li><a href="#hebergement">Hébergement</a></li>
+        <li><a href="#service">Le service et ses limites</a></li>
+        <li><a href="#sources">Sources, licences et marques</a></li>
+        <li><a href="#confidentialite">Confidentialité</a></li>
+        <li><a href="#conditions">Conditions d'utilisation</a></li>
+      </ol>
+    </nav>
+
+    <article class="legal">
+
+      <section id="editeur" class="legal-section">
+        <h2><span class="legal-num">01</span>Éditeur</h2>
+        <p>Octane est un service gratuit d'information sur les prix des carburants, édité à titre non
+           professionnel par une personne physique, conformément à la loi n° 2004-575 du 21 juin 2004 pour la
+           confiance dans l'économie numérique (LCEN).</p>
+        <dl class="legal-facts">
+          <div><dt>Éditeur et directeur de la publication</dt><dd><mark class="todo">[Prénom NOM]</mark></dd></div>
+          <div><dt>Contact</dt><dd><mark class="todo">[email de contact]</mark></dd></div>
+        </dl>
+        <p class="legal-note">L'éditeur, particulier agissant à titre non professionnel, fait usage de la faculté
+           prévue par la LCEN de ne pas rendre publiques son adresse et son numéro de téléphone ; ces éléments
+           d'identification ont été communiqués à l'hébergeur.</p>
+      </section>
+
+      <section id="hebergement" class="legal-section">
+        <h2><span class="legal-num">02</span>Hébergement</h2>
+        <dl class="legal-facts">
+          <div><dt>Hébergeur</dt><dd>Cloudflare, Inc.</dd></div>
+          <div><dt>Adresse</dt><dd>101 Townsend Street, San Francisco, CA 94107, États-Unis</dd></div>
+          <div><dt>Téléphone</dt><dd>+1 888 993 5273</dd></div>
+          <div><dt>Site</dt><dd><a href="https://www.cloudflare.com" target="_blank" rel="noopener">cloudflare.com</a></dd></div>
+        </dl>
+      </section>
+
+      <section id="service" class="legal-section">
+        <h2><span class="legal-num">03</span>Le service et ses limites</h2>
+
+        <h3>Un service indépendant</h3>
+        <p>Octane n'est affilié ni au Ministère de l'Économie, ni à la DGCCRF, ni à aucune autre administration,
+           ni à aucune enseigne ou station-service. Il ne vend pas de carburant, ne perçoit aucune commission et
+           n'affiche aucune publicité.</p>
+
+        <h3>Comment les stations sont classées</h3>
+        <p>Les stations sont classées <strong>par prix croissant</strong>, pour le carburant et dans le rayon que
+           tu choisis, et seulement parmi les prix déclarés depuis 7 jours au plus. Un prix plus ancien reste
+           visible, en fin de liste et « hors classement », car il ne reflète peut-être plus le prix à la pompe.
+           Aucune station ne paie pour apparaître ou pour être mieux placée. La distance (à vol d'oiseau ou par
+           la route) est indiquée mais n'entre pas dans le classement. Un prix qui s'écarte fortement de la
+           médiane locale est signalé comme possible erreur de saisie.</p>
+
+        <h3>Fiabilité des prix</h3>
+        <p>Les prix sont déclarés par les gérants de stations auprès de l'administration, qui les publie en
+           données ouvertes. Octane les republie sans les modifier, avec la date de relevé de chacun. Il ne peut
+           en garantir ni l'exactitude, ni l'exhaustivité, ni l'actualité : <strong>le prix affiché à la pompe
+           fait foi</strong>. Les distances et durées de trajet sont des estimations calculées par des services
+           tiers et ne remplacent ni la signalisation ni ton propre jugement. Ne consulte pas Octane en
+           conduisant : le Code de la route interdit l'usage d'un téléphone tenu en main au volant.</p>
+
+        <h3>Disponibilité et responsabilité</h3>
+        <p>Octane est fourni gratuitement, en l'état, sans garantie de disponibilité : il dépend de services
+           publics et communautaires qui peuvent être interrompus. Dans les limites autorisées par la loi,
+           l'éditeur ne saurait être tenu responsable des décisions prises sur la foi des informations affichées
+           (choix d'une station, trajet), ni d'un dommage résultant d'une indisponibilité du service ou d'une
+           erreur dans les données sources. Les liens vers des sites tiers (Google Maps, Waze, sources de
+           données) relèvent de la responsabilité de leurs éditeurs.</p>
+      </section>
+
+      <section id="sources" class="legal-section">
+        <h2><span class="legal-num">04</span>Sources, licences et marques</h2>
+        <div class="legal-table-wrap">
+          <table class="table legal-table legal-table--sources">
+            <thead><tr><th>Donnée</th><th>Source</th><th>Licence</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Prix en temps réel</td>
+                <td>« Prix des carburants en France – Flux instantané – v2 », DGCCRF, Ministère de l'Économie —
+                    <a href="https://data.economie.gouv.fr/explore/dataset/prix-des-carburants-en-france-flux-instantane-v2/" target="_blank" rel="noopener">data.economie.gouv.fr</a>.
+                    Mise à jour en continu ; date de relevé affichée pour chaque prix.</td>
+                <td>Licence Ouverte v2.0 (Etalab)</td>
+              </tr>
+              <tr>
+                <td>Historique des prix</td>
+                <td>« Prix des carburants – J-1 – avec historique », Ministère de l'Économie, diffusé par
+                    <a href="https://public.opendatasoft.com/explore/dataset/prix-des-carburants-j-1/" target="_blank" rel="noopener">Opendatasoft</a>.
+                    Mise à jour quotidienne.</td>
+                <td>Licence Ouverte v1.0 (Etalab)</td>
+              </tr>
+              <tr>
+                <td>Adresses</td>
+                <td>Base Adresse Nationale, via le service de géocodage de la
+                    <a href="https://geoservices.ign.fr" target="_blank" rel="noopener">Géoplateforme de l'IGN</a>.</td>
+                <td>Licence Ouverte v2.0 (Etalab)</td>
+              </tr>
+              <tr>
+                <td>Fond de carte</td>
+                <td>Plan IGN v2 © IGN, Géoplateforme.</td>
+                <td>Licence Ouverte v2.0 (Etalab)</td>
+              </tr>
+              <tr>
+                <td>Enseignes des stations</td>
+                <td>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>.
+                    La base dérivée <code>data/osm/brands.json</code> est elle-même diffusée sous ODbL.</td>
+                <td>ODbL 1.0</td>
+              </tr>
+              <tr>
+                <td>Distances par la route</td>
+                <td>Valhalla (FOSSGIS e.V.) et OSRM (serveur de démonstration du projet), sur données
+                    OpenStreetMap.</td>
+                <td>ODbL 1.0 (données)</td>
+              </tr>
+              <tr>
+                <td>Logiciels et police</td>
+                <td>Leaflet, Leaflet.markercluster, police Archivo ; licences jointes aux fichiers.</td>
+                <td>BSD 2-Clause, MIT, SIL OFL 1.1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Les noms, marques et couleurs des enseignes citées appartiennent à leurs titulaires respectifs. Ils
+           servent uniquement à identifier les stations ; Octane n'est lié à aucune d'elles.</p>
+        <p>Les textes, la mise en page, le logo et le code d'Octane sont protégés par le droit d'auteur ; leur
+           reproduction substantielle nécessite l'accord de l'éditeur. Pour réutiliser les données, passe
+           directement par leurs sources officielles ci-dessus, dans le respect de leurs licences.</p>
+      </section>
+
+      <section id="confidentialite" class="legal-section">
+        <h2><span class="legal-num">05</span>Confidentialité</h2>
+        <p>Cette politique décrit les traitements de données personnelles liés à Octane, conformément au
+           règlement général sur la protection des données (RGPD) et à la loi Informatique et Libertés.
+           Le <strong>responsable de traitement</strong> est l'éditeur, joignable à
+           l'adresse <mark class="todo">[email de contact]</mark>.</p>
+
+        <h3>La recherche de stations</h3>
+        <p>La recherche s'exécute <strong>dans ton navigateur</strong> : l'adresse saisie, ta position, le
+           carburant et le rayon ne passent par aucun serveur d'Octane et ne sont pas conservés par l'éditeur.
+           Ton navigateur interroge directement les services suivants, qui reçoivent, comme pour toute requête
+           web, ton adresse IP :</p>
+        <ul class="legal-list">
+          <li>la <strong>Géoplateforme de l'IGN</strong> (France), qui reçoit le texte de l'adresse saisie ;</li>
+          <li>le portail de données du <strong>Ministère de l'Économie</strong>, opéré par Opendatasoft (France),
+              qui reçoit les coordonnées du point de recherche et le rayon ;</li>
+          <li><strong>Opendatasoft</strong> (France), qui reçoit l'identifiant des stations dont tu consultes
+              l'historique ;</li>
+          <li>en mode « en voiture » seulement, les serveurs de routage <strong>FOSSGIS</strong> (Allemagne) et
+              <strong>OSRM</strong> (Suisse), qui reçoivent les coordonnées du point de départ et des stations.</li>
+        </ul>
+
+        <h3>La géolocalisation</h3>
+        <p>Ta position n'est demandée que si tu cliques sur « Utiliser ma position actuelle », et seulement
+           après ton autorisation dans le navigateur. Elle sert à la recherche décrite ci-dessus.</p>
+
+        <h3>Le stockage dans ton navigateur</h3>
+        <p>Octane n'utilise <strong>aucun cookie</strong>. Il enregistre dans ton navigateur (stockage local et
+           cache hors ligne) des données qui n'en sortent pas et servent uniquement au service que tu demandes :
+           elles sont strictement nécessaires et ne requièrent pas de consentement (article 82 de la loi
+           Informatique et Libertés). C'est pourquoi aucun bandeau ne s'affiche.</p>
+        <div class="legal-table-wrap">
+          <table class="table legal-table legal-table--storage">
+            <thead><tr><th>Donnée</th><th>Usage</th><th>Durée</th></tr></thead>
+            <tbody>
+              <tr><td>Thème, mode de distance, taille du réservoir</td><td>Retrouver tes réglages</td><td>Jusqu'à effacement</td></tr>
+              <tr><td>Dernière recherche</td><td>Proposer de la reprendre en un clic</td><td>24 heures</td></tr>
+              <tr><td>5 dernières recherches</td><td>Les suggérer dans le champ d'adresse</td><td>Jusqu'à effacement</td></tr>
+              <tr><td>Adresses géocodées, historiques de prix</td><td>Éviter de les redemander</td><td>24 heures</td></tr>
+              <tr><td>Distances par la route (avec ta position arrondie à ~100 m)</td><td>Éviter de les recalculer</td><td>30 jours</td></tr>
+              <tr><td>Prix d'une recherche</td><td>Affichage instantané au retour sur la page</td><td>5 minutes, effacé à la fermeture de l'onglet</td></tr>
+              <tr><td>Brouillon du formulaire d'alerte, email compris</td><td>Ne pas avoir à tout ressaisir</td><td>Jusqu'à effacement</td></tr>
+              <tr><td>Fichiers du site (cache hors ligne)</td><td>Fonctionner sans connexion</td><td>Jusqu'à la version suivante</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Tu peux tout effacer à tout moment depuis les réglages de ton navigateur (« Effacer les données du
+           site »).</p>
+
+        <h3>La mesure d'audience</h3>
+        <p>Octane mesure sa fréquentation avec Cloudflare Web Analytics, un outil <strong>sans cookie</strong>
+           et sans identifiant persistant, conçu pour ne pas suivre les visiteurs d'un site à l'autre. Il ne
+           produit que des statistiques agrégées (pages vues, pays, type de navigateur, site d'origine). Cette
+           mesure, limitée au fonctionnement et à l'amélioration du site, est exemptée de consentement.</p>
+
+        <h3>Les alertes email</h3>
+        <dl class="legal-facts">
+          <div><dt>Données</dt><dd>Adresse email, carburant, zone (France entière, ou point, rayon et libellé
+            du lieu), heure d'envoi, dates d'inscription, de confirmation et de dernier envoi, empreinte de
+            l'adresse IP d'inscription (hachée avec une clé secrète, l'adresse elle-même n'est pas conservée).</dd></div>
+          <div><dt>Finalités</dt><dd>T'envoyer chaque jour l'alerte demandée ; limiter les inscriptions
+            abusives.</dd></div>
+          <div><dt>Base légale</dt><dd>Ton consentement, confirmé par un lien envoyé par email, pour l'alerte ;
+            l'intérêt légitime de l'éditeur à prévenir les abus, pour l'empreinte de l'adresse IP.</dd></div>
+          <div><dt>Durée</dt><dd>Jusqu'à ta désinscription, qui supprime l'abonnement. Une inscription non
+            confirmée est supprimée sous 48 heures, une inscription en liste d'attente sous 6 mois. L'empreinte
+            de l'adresse IP est effacée au bout de 7 jours.</dd></div>
+          <div><dt>Destinataires</dt><dd>L'éditeur et ses sous-traitants : Cloudflare, Inc. (hébergement du
+            service et de la base des abonnements) et Brevo — Sendinblue SAS, 17 rue Salneuve, 75017 Paris
+            (envoi des emails). Aucune donnée n'est vendue, louée ni utilisée à des fins publicitaires.</dd></div>
+        </dl>
+        <p>Chaque email contient un lien de désinscription. L'inscription aux alertes est réservée aux personnes
+           âgées d'au moins 15 ans.</p>
+
+        <h3>Les échanges par email</h3>
+        <p>Si tu écris à l'éditeur, ton message et ton adresse sont conservés le temps de traiter ta demande, et
+           au plus un an après le dernier échange.</p>
+
+        <h3>Hébergement et transferts hors de l'Union européenne</h3>
+        <p>Comme tout hébergeur, Cloudflare traite des données techniques de connexion (adresse IP, navigateur)
+           pour délivrer le site et le protéger des attaques. Cloudflare, Inc. est une société américaine,
+           certifiée au <em>Data Privacy Framework</em> UE–États-Unis depuis le 28 septembre 2023 : les transferts
+           de données vers ses serveurs reposent sur la décision d'adéquation de la Commission européenne du
+           10 juillet 2023. Les autres services cités sont établis dans l'Union européenne, à l'exception du
+           serveur de routage OSRM, situé en Suisse, pays reconnu par la Commission européenne comme offrant un
+           niveau de protection adéquat.</p>
+
+        <h3>Sécurité</h3>
+        <p>Le site est servi exclusivement en HTTPS. Les liens de confirmation et de désinscription reposent sur
+           des jetons aléatoires dont seule une empreinte est conservée. Aucune décision automatisée ni aucun
+           profilage n'est fondé sur tes données.</p>
+
+        <h3>Tes droits</h3>
+        <p>Tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation et d'opposition, d'un
+           droit à la portabilité de tes données, du droit de retirer ton consentement à tout moment, et du droit
+           de définir des directives sur le sort de tes données après ton décès. Pour les exercer, écris à
+           <mark class="todo">[email de contact]</mark> : une réponse t'est apportée sous un mois. Si tu estimes,
+           après avoir contacté l'éditeur, que tes droits ne sont pas respectés, tu peux adresser une réclamation à
+           la CNIL — 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07 —
+           <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/plaintes</a>.</p>
+      </section>
+
+      <section id="conditions" class="legal-section">
+        <h2><span class="legal-num">06</span>Conditions d'utilisation</h2>
+        <p>L'utilisation d'Octane est gratuite, sans inscription, et vaut acceptation des présentes conditions.
+           Les alertes email sont un service gratuit et sans engagement, ouvert dans la limite des places
+           disponibles ; au-delà, les inscriptions sont placées en liste d'attente. L'éditeur peut faire évoluer,
+           suspendre ou arrêter tout ou partie du service, en prévenant les abonnés aux alertes lorsque c'est
+           possible.</p>
+        <p>Ces mentions et conditions peuvent être mises à jour ; la date en tête de page fait foi. Elles sont
+           régies par le droit français. En cas de litige, une solution amiable sera recherchée avant toute
+           action ; à défaut, les tribunaux français seront compétents dans les conditions du droit commun.</p>
+      </section>
+
+    </article>
+
+    <footer>
+      <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
+      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html#confidentialite">Confidentialité</a></div>
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    var icon = document.getElementById('themeIcon');
+    // Convention alignée sur app.js et alertes.js : le clair est le défaut,
+    // seul le sombre porte l'attribut.
+    function apply(t) {
+      if (t === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); icon.textContent = '☀'; }
+      else { document.documentElement.removeAttribute('data-theme'); icon.textContent = '☾'; }
+    }
+    var saved = null;
+    try { saved = localStorage.getItem('octane-theme'); } catch (e) {}
+    apply(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('octane-theme', next); } catch (e) {}
+      apply(next);
+    });
+  })();
+  </script>
+</body>
+</html>

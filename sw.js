@@ -2,7 +2,7 @@
 // sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v45';
+const VERSION = 'octane-v46';
 const SHELL = [
   './',
   './index.html',
@@ -21,6 +21,8 @@ const SHELL = [
   './alertes.html',
   './alertes.css',
   './alertes.js',
+  './mentions-legales.html',
+  './mentions-legales.css',
   './favicon.svg',
   './apple-touch-icon.png',
   './icons/icon-192.png',

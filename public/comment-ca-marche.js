@@ -1,7 +1,7 @@
 // Animations de la page « Comment ça marche » : apparition des étapes au
 // défilement et compteurs des chiffres clés. Extrait d'un script en ligne, que
-// la Content-Security-Policy n'autorise plus. Le thème est géré par
-// theme-toggle.js.
+// la Content-Security-Policy n'autorise plus. Le thème et le menu sont gérés
+// par site.js.
 (function () {
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 

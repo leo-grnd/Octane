@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comment ça marche — OCTANE</title>
     <meta name="description" content="Comprendre OCTANE : comment trouver la station-service la moins chère autour de soi — carburants suivis, rayon, distance à vol d'oiseau ou par la route, et d'où viennent les données.">
-    <meta name="theme-color" content="#171615" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#f3f2f2" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f7f8" media="(prefers-color-scheme: light)">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.webmanifest">
@@ -29,26 +29,42 @@
     <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="fonts/archivo.css">
     <link rel="stylesheet" href="design-system.css" />
-  <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="comment-ca-marche.css">
 </head>
 <body>
-    <div class="container">
-        <nav class="nav">
-            <a class="nav-brand" href="./">OCTANE</a>
-            <div class="nav-links">
-                <a class="btn btn-secondary" href="./">Retour à l'outil</a>
-                <a class="btn btn-secondary" href="alertes">Alertes</a>
-                <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
-                    <span id="themeIcon" aria-hidden="true">☾</span>
+    <div class="backdrop" aria-hidden="true"></div>
+    <div class="page">
+        <header>
+            <nav class="site-nav" aria-label="Navigation principale">
+                <a class="brand" href="./" aria-label="Octane — accueil">
+                    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
+                    <span class="brand-word" aria-hidden="true">CTANE</span>
+                </a>
+                <div class="nav-links" id="navMenu">
+                    <a class="nav-link" href="alertes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes</a>
+                    <a class="nav-link" href="comment-ca-marche" aria-current="page"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Comment ça marche</a>
+                    <a class="nav-link" href="https://leo-grnd.github.io/hub/"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Tous les outils</a>
+                </div>
+                <span class="nav-sep" aria-hidden="true"></span>
+                <button id="themeToggle" class="icon-btn theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
+                    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                 </button>
-            </div>
-        </nav>
+                <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navMenu">
+                    <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
+                    <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </nav>
+        </header>
 
+        <main>
         <section class="hero">
             <h1>Le bon plein,<br /><em>au bon prix.</em></h1>
-            <div class="hero-aside">
-                <div class="kicker">Comment ça marche</div>
+            <div class="hero-card">
+                <div class="hero-card-head">
+                    <span class="icon-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+                    <span class="hero-kicker">Comment ça marche</span>
+                </div>
                 <p>OCTANE compare en direct les prix officiels des stations-service françaises et te montre, autour de
                    toi, où faire le plein le moins cher — par prix <strong>et</strong> par distance. Gratuit, sans pub,
                    sans compte.</p>
@@ -202,14 +218,56 @@
                de l'outil ne transmet rien.</p>
             <a class="btn btn-primary cta-final" href="./">Trouver mon carburant</a>
         </section>
-
-        <footer>
-          <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
-          <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
-        </footer>
+        </main>
     </div>
 
-    <script src="theme-toggle.js" defer></script>
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <a class="brand" href="./" aria-label="Octane — accueil">
+                    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
+                    <span class="brand-word" aria-hidden="true">CTANE</span>
+                </a>
+                <p>Comparateur en temps réel des prix du carburant en France.</p>
+            </div>
+            <div class="footer-col">
+                <h2 class="footer-title">Sources officielles</h2>
+                <div class="source">
+                    <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></svg></span>
+                    <span class="source-text"><span class="source-name">Ministère de l’Économie</span><a class="source-sub" href="https://data.economie.gouv.fr" target="_blank" rel="noopener">Prix · data.economie.gouv.fr</a></span>
+                </div>
+                <div class="source">
+                    <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></span>
+                    <span class="source-text"><span class="source-name">Géoplateforme IGN</span><span class="source-sub">Géocodage · Plan IGN</span></span>
+                </div>
+                <div class="source">
+                    <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+                    <span class="source-text"><span class="source-name">Base Adresse Nationale</span><a class="source-sub" href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a></span>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h2 class="footer-title">Données ouvertes</h2>
+                <div class="source">
+                    <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span>
+                    <span class="source-text"><span class="source-name">OpenStreetMap</span><a class="source-sub" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">Enseignes · ODbL 1.0</a></span>
+                </div>
+                <div class="source">
+                    <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span>
+                    <span class="source-text"><span class="source-name">Valhalla · OSRM</span><span class="source-sub">Distances en voiture</span></span>
+                </div>
+            </div>
+            <div class="footer-col footer-legal">
+                <h2 class="footer-title">Légal</h2>
+                <a class="footer-link" href="mentions-legales">Mentions légales</a>
+                <a class="footer-link" href="mentions-legales#confidentialite">Confidentialité</a>
+            </div>
+        </div>
+        <div class="footer-bar">
+            <div><span>octane-carburant.fr</span><span>Service indépendant, non affilié à l’administration</span></div>
+        </div>
+    </footer>
+
+    <script src="site.js" defer></script>
     <script src="comment-ca-marche.js" defer></script>
 </body>
 </html>

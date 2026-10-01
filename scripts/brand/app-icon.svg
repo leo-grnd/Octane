@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Source des icônes d'application (PNG générés par scripts/render-brand.mjs :
+       apple-touch-icon 180, icônes PWA 192 et 512, aussi « maskable »).
+       Fond blanc plein jusqu'aux bords : iOS remplit de noir un coin
+       transparent, et Android découpe lui-même la forme de l'icône. La jauge
+       du logo tient dans la zone sûre des icônes maskable (cercle de 80 %) :
+       rayon extérieur 14,2 × 1,55 = 22 sur 32. Pas de double tiret dans ce
+       commentaire : XML l'interdit. -->
+  <rect width="64" height="64" fill="#ffffff"/>
+  <g transform="translate(32 32) scale(1.55) translate(-16 -16)">
+    <circle cx="16" cy="16" r="12" fill="none" stroke="#ec3013" stroke-width="4.4" stroke-dasharray="60 15.4"/>
+    <path d="M16 16 23.5 9" stroke="#18181b" stroke-width="3.6" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="2.6" fill="#18181b"/>
+  </g>
+</svg>

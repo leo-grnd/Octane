@@ -312,17 +312,19 @@ function stationLine(s, a, brandsData) {
   return { name, addr, dist, lat, lon, price: Number(s[a.fuel]), maj: s[majField(a.fuel)] };
 }
 
-// Palette de l'email : reprise des tokens du design system, mais en valeurs
-// littérales. Les clients mail ne résolvent ni les variables CSS ni color-mix,
-// et beaucoup suppriment purement et simplement la balise <style>.
+// Palette de l'email : reprise des tokens clairs du design system v3
+// (--o-bg, --o-surface, --o-ink, --o-muted, --o-line, --o-accent,
+// --o-on-accent), mais en valeurs littérales. Les clients mail ne résolvent ni
+// les variables CSS ni color-mix, et beaucoup suppriment purement et
+// simplement la balise <style>.
 const MAIL = {
-  bg: '#f3f2f2',
-  surface: '#eae9e9',
-  text: '#201e1d',
-  muted: '#605d5d',
-  divider: '#c3c0c0',
+  bg: '#f7f7f8',
+  surface: '#ffffff',
+  text: '#18181b',
+  muted: '#52525b',
+  divider: '#e4e4e7',
   accent: '#ec3013',
-  onAccent: '#f3f2f2'
+  onAccent: '#ffffff'
 };
 // Archivo en premier pour les clients qui chargent les polices distantes
 // (Apple Mail, Thunderbird) ; Arial couvre les autres sans décaler la mise en page.
@@ -405,7 +407,7 @@ function buildEmail(a, { rows, total }, previous, brandsData) {
             ${esc(w.addr)}${w.dist ? `<br>à ${esc(w.dist)} de ${esc(a.label)}` : ''}
           </div>
           ${w.lat != null ? `<div style="margin-top:18px">
-            <a href="${esc(mapsUrl(w.lat, w.lon))}" style="display:inline-block;background:${MAIL.accent};color:${MAIL.onAccent};font:800 13px ${MAIL_FONT};text-decoration:none;padding:12px 20px">Itinéraire</a>
+            <a href="${esc(mapsUrl(w.lat, w.lon))}" style="display:inline-block;background:${MAIL.accent};color:${MAIL.onAccent};font:800 13px ${MAIL_FONT};text-decoration:none;padding:12px 20px;border-radius:12px">Itinéraire</a>
           </div>` : ''}
         </td></tr>
 

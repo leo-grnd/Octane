@@ -1,234 +1,875 @@
-/* Styles propres à Octane, posés sur design-system.css. Couleurs, typographie,
-   espacements et ombres viennent exclusivement de ses tokens (--color-*,
-   --font-*, --space-*, --shadow-*) : le thème sombre y est défini une fois,
-   rien n'est à dupliquer ici. Exceptions assumées, hors système : le voile
-   de la fiche détail, les couleurs d'enseigne des badges (app.js), et les
-   teintes sémantiques des tendances (rouge/vert) et de la fraîcheur
-   (orange/rouge) — l'accent étant lui-même rouge, une hausse de prix à sa
-   couleur ne se distinguerait plus de la marque. */
+/* Styles de l'outil (page d'accueil), posés sur design-system.css. Couleurs,
+   typographie, rayons et ombres viennent exclusivement de ses tokens --o-* :
+   le thème sombre y est défini une fois, rien n'est à dupliquer ici.
+   Exceptions assumées, hors système : le voile de la fiche détail, l'ombre
+   des épingles de la carte (reprise telle quelle de la maquette) et les
+   couleurs d'enseigne des badges (app.js). */
 
-html, body {
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* La grille de fond et le halo orange ont été retirés : Modernist est un
-   système plat, qui tire sa structure de filets francs et d'échelles
-   typographiques, pas d'une texture d'arrière-plan. */
-
-.container {
-  position: relative;
-  z-index: 1;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-}
-
-/* Banner offline — fixé en haut, discret, apparaît si la connexion chute */
+/* Bandeau hors ligne : collé en haut de l'écran tant que la connexion manque. */
 .offline-banner {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--color-accent-700);
-  color: var(--color-neutral-100);
+  padding: 10px var(--space-4);
+  background: var(--o-ink);
+  color: var(--o-bg);
   text-align: center;
-  padding: var(--space-2) var(--space-4);
   font-size: 13px;
-  box-shadow: var(--shadow-sm);
+  font-weight: 500;
 }
-.offline-banner.hidden { display: none; }
-
-/* ═══════════════════ En-tête ═══════════════════
-   Composant .nav du design system. Les liens sont des .btn-secondary, comme
-   dans la maquette : dans un système sans rayon, un lien encadré se lit comme
-   une cible cliquable là où un lien souligné se perdrait dans le filet. */
-.nav {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding-left: 0;
-  padding-right: 0;
-}
-.nav-brand { font-size: 20px; letter-spacing: -0.02em; }
-a.nav-brand { text-decoration: none; color: inherit; }
-.nav-links { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
-.nav-links .btn { min-height: 34px; font-size: 13px; white-space: nowrap; justify-content: flex-start; }
-
-/* ═══════════════════ Hero ═══════════════════ */
-.hero {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-8);
-  padding: var(--space-8) 0 var(--space-6);
-  border-bottom: 2px solid var(--color-divider);
-  margin-bottom: 0;
-}
-.hero h1 {
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  margin: 0;
-  text-wrap: pretty;
-}
-/* L'italique serif d'origine n'a plus de support typographique : l'emphase
-   passe par la couleur d'accent, seul registre expressif du système. */
-.hero h1 em { font-style: normal; color: var(--color-accent); }
-
-.hero-aside {
-  align-self: end;
-  border-top: 2px solid var(--color-divider);
-  padding-top: var(--space-3);
-  max-width: 42ch;
-}
-.hero-aside p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--color-neutral-800);
-}
-.kicker {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-accent-700);
-  margin-bottom: var(--space-2);
-}
-.live {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: var(--space-4);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-neutral-600);
-}
-.live .pulse {
-  width: 7px; height: 7px; flex: none;
-  border-radius: 50%;
-  background: var(--color-accent);
-  animation: pulse 2s infinite;
-}
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 /* ═══════════════════ Formulaire de recherche ═══════════════════
-   Plus de panneau encadré ni d'équerres d'angle : la maquette sépare les
-   sections par de simples filets de 2px. */
+   Carte blanche posée sur le fond de carte. Partagée avec la page Alertes,
+   qui n'en reprend que la carte : sa grille est dans alertes.css. */
 .search-panel {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid var(--color-divider);
-  padding: var(--space-6) 0;
-  margin-bottom: 0;
   position: relative;
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 1px solid var(--o-line);
+  border-radius: clamp(18px, 2vw, 22px);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
 }
-.form-grid {
+
+/* Trois dispositions, celles de la maquette : une ligne sur ordinateur,
+   champs sur deux lignes sur tablette, une colonne (rayon et réservoir
+   côte à côte) sur téléphone. Le bouton reste en dernier dans le DOM, après
+   les options qu'il prend en compte. */
+.search-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "addr addr" "fuel fuel" "rad tank" "opts opts" "cta cta";
+  gap: 14px;
   align-items: end;
 }
-.form-grid .btn { min-height: 38px; justify-content: flex-start; }
-.field-address { grid-column: span 2; min-width: 0; }
-.field-distance-mode { grid-column: span 2; min-width: 0; }
-.field { position: relative; min-width: 0; }
+@media (min-width: 640px) {
+  .search-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: "addr addr addr" "fuel rad tank" "opts opts opts" "cta cta cta";
+  }
+}
+@media (min-width: 1024px) {
+  .search-grid {
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, .75fr) minmax(0, .85fr) 168px;
+    grid-template-areas: "addr fuel rad tank cta" "opts opts opts opts opts";
+  }
+}
+.search-grid .field-address { grid-area: addr; }
+.search-grid .field-fuel { grid-area: fuel; }
+.search-grid .field-radius { grid-area: rad; }
+.search-grid .field-tank { grid-area: tank; }
+.search-grid .search-opts { grid-area: opts; }
+.search-grid .search-cta { grid-area: cta; }
 
-@media (max-width: 560px) {
-  .field-address, .field-distance-mode { grid-column: auto; }
-  .form-grid .btn { width: 100%; }
-  /* La marque garde sa ligne : sans ça le `margin-right:auto` du composant
-     comprime les liens et le bouton de thème passe hors cadre. */
-  .nav { flex-wrap: wrap; gap: var(--space-3); }
-  .nav-brand { margin-right: 0; width: 100%; }
-  .nav-links { width: 100%; }
-}
-
-/* Le sélecteur natif n'expose pas sa flèche au style : on la redessine. */
-select.input {
-  appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23605d5d' stroke-width='1.5' fill='none'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  padding-right: 2rem;
-}
-:root[data-theme="dark"] select.input {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23aeaaaa' stroke-width='1.5' fill='none'/></svg>");
-}
-select.input option { background: var(--color-surface); color: var(--color-text); }
-
-/* Autocomplétion BAN */
-.suggestions {
-  position: absolute;
-  top: 100%; left: 0; right: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-divider);
-  border-top: none;
-  list-style: none;
-  margin: 0; padding: 0;
-  z-index: 20;
-  max-height: 280px;
-  overflow-y: auto;
-  box-shadow: var(--shadow-md);
-}
-.suggestions li {
-  padding: var(--space-2) var(--space-3);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text);
-  border-left: 2px solid transparent;
-}
-.suggestions li .sg-ctx {
-  display: block;
-  font-size: 11px;
-  color: var(--color-neutral-600);
-  margin-top: 2px;
-}
-.suggestions li:hover,
-.suggestions li[aria-selected="true"] {
-  background: color-mix(in srgb, var(--color-text) 6%, transparent);
-  border-left-color: var(--color-accent);
-}
-
-.status {
+/* Champ composé : icône ou unité dans le même cadre que la saisie. */
+.field-box {
+  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-md);
+  background: var(--o-field);
+  color: var(--o-faint);
+}
+.field-box:hover { border-color: var(--o-faint); }
+/* La maquette n'a pas d'état de focus : sans lui, impossible de savoir au
+   clavier quel champ est actif. */
+.field-box:focus-within { border-color: var(--o-accent); box-shadow: 0 0 0 3px var(--o-accent-soft2); }
+.field-box input,
+.field-box select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--o-ink);
+  font: inherit;
+  font-size: 16px; /* 16 px minimum : en dessous, iOS zoome au focus */
+}
+.field-box select {
+  appearance: none;
+  margin: 0 -14px;
+  padding: 0 36px 0 14px;
+  cursor: pointer;
+}
+.field-icon,
+.field-chevron { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.field-icon { width: 18px; height: 18px; }
+.field-chevron { position: absolute; right: 12px; width: 16px; height: 16px; color: var(--o-subtle); pointer-events: none; }
+.field-unit { font-size: 14px; color: var(--o-subtle); }
+
+/* — Bouton Chercher : libellé à gauche, loupe (ou roue) à droite — */
+.search-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 52px;
+  padding: 0 18px 0 20px;
+  border: 0;
+  border-radius: var(--o-radius-md);
+  background: var(--o-accent);
+  color: var(--o-on-accent);
+  box-shadow: var(--o-sh-cta);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+.search-cta:hover { background: var(--o-accent-hover); }
+.search-cta:active { background: var(--o-accent-press); }
+.cta-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cta-spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 2.4px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: octSpin .8s linear infinite;
+}
+.cta-busy,
+.cta-spinner,
+.search-cta[aria-busy="true"] .cta-idle,
+.search-cta[aria-busy="true"] .cta-icon { display: none; }
+.search-cta[aria-busy="true"] .cta-busy,
+.search-cta[aria-busy="true"] .cta-spinner { display: inline-block; }
+.search-cta[aria-busy="true"] { cursor: progress; }
+
+/* — Options : géolocalisation et mode de distance — */
+.search-opts {
+  display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-divider);
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--o-line-soft);
+}
+.geo-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 5px 16px 5px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--o-radius-pill);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.geo-btn:hover { background: var(--o-accent-soft); border-color: var(--o-accent-soft2); }
+.geo-btn:disabled { cursor: progress; }
+.geo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--o-radius-pill);
+  background: var(--o-accent-soft);
+  color: var(--o-accent);
+  transition: background .2s;
+}
+.geo-btn.is-done .geo-icon { background: var(--o-accent); color: var(--o-on-accent); }
+.geo-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.geo-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.geo-label { font-size: 15px; font-weight: 600; color: var(--o-ink); }
+.geo-sub { font-size: 13px; color: var(--o-subtle); overflow-wrap: anywhere; }
+
+.distance-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.distance-mode-label { font-size: 13px; font-weight: 500; color: var(--o-muted); }
+.distance-mode .seg { width: 320px; }
+.distance-mode .icon-car { width: 16px; height: 16px; stroke-width: 2; }
+@media (max-width: 639.98px) {
+  .distance-mode,
+  .distance-mode .seg { width: 100%; }
+}
+
+/* — Autocomplétion (adresses de la Géoplateforme, recherches récentes) — */
+.suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+  list-style: none;
+}
+.suggestions li {
+  padding: 10px 12px;
+  border-radius: var(--o-radius-sm);
+  font-size: 15px;
+  color: var(--o-ink);
+  cursor: pointer;
+}
+.suggestions li .sg-ctx { display: block; margin-top: 1px; font-size: 12.5px; color: var(--o-subtle); }
+.suggestions li:hover,
+.suggestions li[aria-selected="true"] { background: var(--o-hover); }
+.suggestions .sg-history {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+  cursor: default;
+}
+.suggestions .sg-history:hover { background: none; }
+/* Horloge dessinée par un masque : elle prend la couleur du thème. */
+.suggestions li.sg-hist-item { display: flex; align-items: center; gap: 10px; }
+.suggestions li.sg-hist-item::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background: var(--o-faint);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/></svg>") center / contain no-repeat;
+}
+
+/* — Barre d'état (chargement, erreurs avec action de rattrapage) — */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: var(--space-4);
+  padding: 14px 18px;
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-sm);
   font-size: 14px;
-  color: var(--color-neutral-800);
-  margin: var(--space-4) 0;
+  color: var(--o-muted);
 }
 .status.error {
-  border-left-color: var(--color-accent);
-  color: var(--color-text);
+  border-color: var(--o-accent-soft2);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
 }
-/* Le CTA de rattrapage est un vrai bouton du système : c'est une action, pas
-   une décoration de la barre. */
-.status-cta { min-height: 34px; }
+.status .status-cta { margin-left: auto; }
 
-/* État vide affiché directement dans la liste des stations */
-.empty-state {
+/* Roue de la barre d'état. */
+.loader {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--o-line);
+  border-top-color: var(--o-accent);
+  border-radius: 50%;
+  animation: octSpin .8s linear infinite;
+}
+
+/* ═══════════════════ Résultats ═══════════════════
+   Ordre de la maquette : méta et onglets, bloc « Le moins cher », écart, puis
+   le panneau de l'onglet actif (liste, carte ou historique). Le bloc gagnant
+   et l'écart restent en place quel que soit l'onglet. */
+.results {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  color: var(--color-text);
+  gap: 16px;
+  margin-top: clamp(28px, 4vw, 48px);
+  scroll-margin-top: 16px;
+}
+.results-top { display: flex; flex-direction: column; gap: 16px; }
+.results-top:empty,
+.station-list:empty { display: none; }
+
+.results-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.results-heading { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Ligne de méta de la maquette : « GAZOLE · AVIGNON · 5 KM · 24 STATIONS ».
+   Reste un <h2> pour la structure du document, mais s'affiche comme une
+   légende — le titre de la page, c'est le prix du bloc gagnant. */
+.results-meta {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--o-muted);
+}
+.results-count { font-size: 12px; color: var(--o-subtle); }
+.results-count:empty { display: none; }
+/* Pendant le chargement, la maquette ne montre que le squelette. */
+.results.is-loading .view-toggle { visibility: hidden; }
+
+/* — Onglets Liste / Carte / Historique — */
+.view-toggle {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--o-line-soft);
+  border-radius: var(--o-radius-md);
+  background: var(--o-chip);
+}
+.view-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--o-subtle);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.view-btn:hover { color: var(--o-ink); }
+.view-btn.active { background: var(--o-thumb); box-shadow: var(--o-sh-thumb); color: var(--o-ink); }
+.view-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — Cartes de résultats — */
+.winner,
+.list-card,
+.notice {
+  border: 1px solid var(--o-line);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
 }
 
-/* ============ Bottom sheet "détails station" ============ */
-/* Desktop : panneau centré (modal). Mobile : feuille qui glisse depuis le bas.
-   Animation purement CSS via une classe .hidden + transitions. */
+/* ═══════════════════ Bloc « Le moins cher » ═══════════════════
+   Le prix est l'information qu'on vient chercher : il est posé à l'échelle
+   qu'elle mérite, tout le reste la commente. */
+.winner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  align-items: end;
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: var(--o-radius-xl);
+}
+.winner-main { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.winner-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--o-radius-pill);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.winner-tag .ic { width: 14px; height: 14px; stroke-width: 2.4; }
+.winner-price {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(64px, 13vw, 112px);
+  line-height: .86;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  color: var(--o-ink);
+  white-space: nowrap;
+}
+.winner-unit {
+  margin-left: .35em;
+  font-size: .24em;
+  font-weight: 700;
+  letter-spacing: .02em;
+  vertical-align: .95em;
+  color: var(--o-subtle);
+}
+.winner-trend { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; }
+.winner-trend .ic { stroke-width: 2.2; }
+
+.winner-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.winner-title { display: flex; align-items: center; gap: 12px; }
+.winner-title .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
+.winner-name { margin: 0; font-size: clamp(20px, 2.4vw, 26px); line-height: 1.15; letter-spacing: -0.02em; }
+.winner-addr { font-size: 14px; color: var(--o-subtle); }
+.winner-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 28px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--o-subtle);
+}
+.winner-num { font-family: var(--font-heading); font-weight: 800; font-size: 22px; color: var(--o-ink); }
+.winner-fresh { display: inline-flex; align-items: center; gap: 6px; }
+.winner-fresh .ic { width: 14px; height: 14px; }
+.winner-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
+  font-size: 13px;
+}
+.winner-warn .ic { margin-top: 1px; }
+.winner-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.winner-actions .btn { flex: 1 1 auto; justify-content: flex-start; white-space: nowrap; }
+.winner-actions .btn-primary { padding: 0 20px 0 18px; }
+
+/* ═══════════════════ Écart dans le rayon ═══════════════════
+   Traitement le plus fort de la page : c'est l'argument qui justifie l'outil. */
+.savings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(22px, 3.4vw, 36px) clamp(20px, 3vw, 32px);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-accent);
+  color: var(--o-on-accent);
+  box-shadow: var(--o-sh-cta);
+}
+.savings-kicker { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
+.savings-line {
+  max-width: 20ch;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(28px, 4.6vw, 48px);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* — Note : aucune station, ou aucun prix récent dans le rayon — */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  padding: 18px 20px;
+  border-radius: var(--o-radius-lg);
+  font-size: 15px;
+  color: var(--o-text);
+}
+.notice > .ic { width: 20px; height: 20px; color: var(--o-subtle); }
+.notice p { flex: 1 1 260px; margin: 0; }
+
+/* ═══════════════════ Tableau des autres stations ═══════════════════
+   Un vrai <table>, mais chaque ligne est une grille : mêmes colonnes que la
+   maquette (44 · station · 100 · 90 · 120 px, gouttière 16 px), et la même
+   ligne se replie en deux étages sur téléphone sans second balisage. */
+.list-card { border-radius: 20px; overflow: hidden; }
+.station-table,
+.station-table thead,
+.station-table tbody { display: block; width: 100%; border-collapse: collapse; }
+.station-table tr {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 100px 90px 120px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 24px;
+}
+.station-table th,
+.station-table td { display: block; padding: 0; border: 0; text-align: left; }
+.station-table thead tr {
+  border-bottom: 1px solid var(--o-line);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+}
+.station-table thead th { font-weight: inherit; }
+.station-table tbody tr { border-bottom: 1px solid var(--o-line-soft); }
+.station-table tbody tr:last-child { border-bottom: 0; }
+.station-table .col-dist,
+.station-table .col-price,
+.station-table .col-extra { text-align: right; }
+
+.station-row { color: var(--o-ink); cursor: pointer; }
+.station-row:hover { background: var(--o-hover); }
+.station-row:focus-visible { outline: 2px solid var(--o-accent); outline-offset: -2px; }
+.station-table td.col-rank { font-family: var(--font-heading); font-weight: 800; font-size: 15px; color: var(--o-faint); }
+
+/* Pastille, nom et adresse : grille nommée, pour que le téléphone n'ait qu'à
+   redistribuer les zones. */
+.station-id {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "badge name" "badge sub";
+  align-items: center;
+  column-gap: 12px;
+}
+.station-id .brand-badge { grid-area: badge; min-width: 28px; height: 28px; padding: 0 5px; border-radius: 7px; font-size: 10px; }
+.station-name { grid-area: name; min-width: 0; font-size: 15px; font-weight: 600; }
+.station-sub { grid-area: sub; min-width: 0; font-size: 12.5px; color: var(--o-subtle); }
+.station-sub-phone { display: none; }
+.row-warn { display: inline-flex; margin-left: 6px; vertical-align: -2px; color: var(--o-accent); cursor: help; }
+.row-warn .ic { width: 14px; height: 14px; }
+
+.station-table td.col-dist { font-size: 14px; white-space: nowrap; }
+.col-eta { display: block; font-size: 12px; color: var(--o-subtle); }
+.station-table td.col-price {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.station-table td.col-extra { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--o-subtle); }
+
+/* Prix périmés (plus de STALE_DAYS jours, voir app.js) : hors classement, en
+   queue de tableau, en ton atténué, avec la date du relevé en orange. */
+.station-row.is-stale { color: var(--o-subtle); }
+.station-row.is-stale td.col-rank { color: inherit; }
+.station-stale { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
+.station-table tr.stale-sep { display: block; padding: 20px 24px 10px; border-bottom: 0; }
+.stale-sep td {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+}
+.stale-sep .ic { width: 14px; height: 14px; }
+
+.list-more { padding: 16px 24px; border-top: 1px solid var(--o-line-soft); text-align: center; }
+
+/* Sous 760 px, la colonne « Sur un plein » saute (elle reste dans la fiche). */
+@media (max-width: 759.98px) {
+  .station-table tr { grid-template-columns: 40px minmax(0, 1fr) 90px 80px; }
+  .station-table .col-extra { display: none; }
+}
+/* Téléphone : rang · (pastille + nom / distance, trajet, ville) · (prix / surcoût). */
+@media (max-width: 639.98px) {
+  .station-table thead { display: none; }
+  .station-table tr {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-areas: "rank id price" "rank id extra";
+    gap: 2px 12px;
+    padding: 14px 16px;
+  }
+  .station-table td.col-rank { grid-area: rank; font-size: 14px; }
+  .station-table td.col-station { grid-area: id; }
+  .station-table td.col-dist { display: none; }
+  .station-table td.col-price { grid-area: price; align-self: end; }
+  .station-table td.col-extra { display: block; grid-area: extra; align-self: start; font-size: 12px; }
+  .station-row.is-stale td.col-extra { display: none; }
+  .station-row.is-stale td.col-price { grid-row: 1 / 3; align-self: center; }
+  .station-id { grid-template-areas: "badge name" "sub sub"; gap: 2px 8px; }
+  .station-id .brand-badge { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 6px; font-size: 9px; }
+  .station-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .station-sub-wide { display: none; }
+  .station-sub-phone { display: block; }
+  .station-table tr.stale-sep { padding: 18px 16px 8px; }
+  .list-more { padding: 14px 16px; }
+}
+
+/* ═══════════════════ Squelette de chargement ═══════════════════ */
+.sk {
+  border-radius: 6px;
+  background: var(--o-chip);
+  animation: octFade 1.4s ease-in-out infinite;
+}
+.sk-meta { display: block; width: 260px; max-width: 70%; height: 14px; }
+.winner-skeleton .winner-info { gap: 12px; }
+.sk-tag { width: 120px; height: 24px; border-radius: var(--o-radius-pill); }
+.sk-price { width: 280px; max-width: 100%; height: 86px; border-radius: var(--o-radius-md); }
+.sk-name { width: 70%; height: 22px; }
+.sk-addr { width: 90%; height: 14px; }
+.sk-btn { width: 50%; height: 44px; margin-top: 10px; border-radius: var(--o-radius-md); }
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}
+
+/* ═══════════════════ Tendance et fraîcheur ═══════════════════
+   Ces classes sont composées dynamiquement (`trend-${sign}`,
+   `freshness-${tier}`), d'où leur absence de toute recherche littérale dans
+   app.js. Elles habillent le bloc gagnant et la fiche détail. Teintes
+   sémantiques du design system (--o-up, --o-down, --o-stale) : une hausse
+   signalée par l'accent de la marque serait illisible. */
+.trend-up { color: var(--o-up); }
+.trend-down { color: var(--o-down); }
+.trend-flat { color: var(--o-subtle); }
+
+.freshness-fresh { color: var(--o-subtle); }
+.freshness-stale { color: var(--o-stale); }
+.freshness-veryStale { color: var(--o-up); }
+
+/* ═══════════════════ Badge d'enseigne ═══════════════════
+   Les couleurs viennent des marques elles-mêmes (Total, Shell…), pas du
+   système : c'est leur identité, la neutraliser rendrait le repère inutile.
+   Enseigne inconnue ou prix périmé : pastille neutre. Taille de base (22 px),
+   agrandie par le bloc gagnant (34) et le tableau (28). */
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: .02em;
+}
+.brand-badge-neutral { background: var(--o-chip); color: var(--o-subtle); }
+
+/* ═══════════════════ Bandeau « reprendre la dernière recherche » ═══════════
+   Posé au-dessus du hero, vitré comme sa carte. */
+.resume-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  margin-top: 4px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--o-line);
+  border-radius: 16px;
+  background: var(--o-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--o-sh-badge);
+}
+.resume-text { flex: 1 1 240px; margin: 0; font-size: 14px; color: var(--o-muted); }
+.resume-text strong { font-weight: 600; color: var(--o-ink); }
+.resume-actions { display: flex; gap: 8px; margin-left: auto; }
+
+/* ═══════════════════ Indication de chargement des enseignes ═══════════════ */
+.osm-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--o-subtle);
+}
+.loader-sm {
+  display: inline-block;
+  width: 10px; height: 10px; flex: none;
+  border: 2px solid var(--o-line);
+  border-top-color: var(--o-accent);
+  border-radius: 50%;
+  animation: octSpin .8s linear infinite;
+}
+
+/* ═══════════════════ Carte ═══════════════════
+   Plan IGN en gris (token --o-tile-filter, inversé en thème sombre) et
+   épingles de la maquette : la moins chère en accent avec son prix, les
+   autres à leur rang, un point d'encre pour la position de départ. */
+.station-map {
+  position: relative;
+  z-index: 0;          /* contient les z-index de Leaflet (jusqu'à 1000) */
+  isolation: isolate;
+  height: 500px;
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: 20px;
+  background: var(--o-chip);
+  box-shadow: var(--o-sh-card);
+}
+.station-map.leaflet-container { background: var(--o-chip); font: inherit; }
+.station-map .leaflet-tile-pane { filter: var(--o-tile-filter); }
+@media (max-width: 639.98px) {
+  .station-map { height: 400px; }
+}
+
+/* Épingle : étiquette et pointe en losange. Leaflet pose l'élément sur la
+   coordonnée ; la translation y amène le bas de la pointe. */
+.map-pin { background: none; border: 0; }
+.pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -100%);
+}
+.pin-label {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-surface);
+  color: var(--o-ink);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px -4px rgba(24, 24, 27, .4);
+}
+.pin::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--o-surface);
+  transform: rotate(45deg);
+}
+.pin-best .pin-label { height: 36px; padding: 0 12px; background: var(--o-accent); color: var(--o-on-accent); font-size: 14px; }
+.pin-best::after { background: var(--o-accent); }
+.pin-stale .pin-label { background: var(--o-chip); color: var(--o-subtle); box-shadow: none; }
+.pin-stale::after { background: var(--o-chip); }
+.map-pin:focus-visible { outline: 0; }
+.map-pin:focus-visible .pin-label { outline: 2px solid var(--o-accent); outline-offset: 2px; }
+
+/* Position de départ. */
+.map-me { background: none; border: 0; }
+.map-me span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--o-surface);
+  border-radius: 50%;
+  background: var(--o-ink);
+  box-shadow: 0 0 0 6px rgba(24, 24, 27, .12);
+}
+
+/* Regroupements (Leaflet.markercluster) : pastille d'encre au nombre de
+   stations, dessinée par app.js (iconCreateFunction). */
+.map-cluster { background: none; border: 0; }
+.map-cluster span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--o-surface);
+  border-radius: 50%;
+  background: var(--o-ink);
+  color: var(--o-bg);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 6px 16px -4px rgba(24, 24, 27, .4);
+}
+
+/* Contrôles, attribution et bulles de Leaflet, réaccordés au design system. */
+.station-map .leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-sm);
+  box-shadow: var(--o-sh-sm);
+}
+.station-map .leaflet-bar a {
+  width: 34px;
+  height: 34px;
+  border-bottom-color: var(--o-line-soft);
+  background: var(--o-surface);
+  color: var(--o-ink);
+  font: 600 18px/34px var(--font-body);
+}
+.station-map .leaflet-bar a:hover { background: var(--o-chip); color: var(--o-ink); }
+.station-map .leaflet-bar a.leaflet-disabled { background: var(--o-surface); color: var(--o-faint); }
+.station-map .leaflet-control-attribution {
+  margin: 0 8px 8px 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--o-glass);
+  color: var(--o-subtle);
+  font-size: 11px;
+}
+.station-map .leaflet-control-attribution a { color: var(--o-subtle); }
+.station-map .leaflet-popup-content-wrapper {
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  color: var(--o-ink);
+  box-shadow: var(--o-sh-card);
+}
+.station-map .leaflet-popup-tip { background: var(--o-surface); box-shadow: none; }
+.station-map .leaflet-popup-content { margin: 14px 16px; font-family: var(--font-body); font-size: 13px; line-height: 1.45; }
+.station-map a.leaflet-popup-close-button { top: 6px; right: 6px; color: var(--o-subtle); }
+.pop { display: flex; flex-direction: column; gap: 4px; }
+.pop-head { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+.pop-name { font-family: var(--font-heading); font-weight: 800; font-size: 15px; line-height: 1.2; }
+.pop-addr { font-size: 12px; color: var(--o-subtle); }
+.pop-facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 4px; color: var(--o-muted); }
+.pop-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--o-ink); }
+.pop-stale { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
+.pop .btn { align-self: flex-start; margin-top: 8px; }
+
+/* ═══════════════════ Onglet Historique ═══════════════════
+   Même carte que la liste : une ligne par station, rang, identité, courbe. */
+.history-list {
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: 20px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+}
+.history-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(240px, 1.2fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--o-line-soft);
+}
+.history-card:last-child { border-bottom: 0; }
+.history-card .rank { font-family: var(--font-heading); font-weight: 800; font-size: 15px; color: var(--rank-color, var(--o-faint)); }
+.history-card .info { min-width: 0; }
+.history-card .name { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; }
+.history-card .name .brand-badge { min-width: 28px; height: 28px; padding: 0 5px; border-radius: 7px; font-size: 10px; }
+.history-card .addr { margin-top: 2px; padding-left: 40px; font-size: 12.5px; color: var(--o-subtle); }
+.name-text { min-width: 0; overflow-wrap: anywhere; }
+
+.hist-body { min-width: 0; }
+.hist-empty { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--o-subtle); }
+.sparkline { display: block; width: 100%; max-width: 260px; height: 60px; color: var(--o-accent); }
+.hist-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--o-subtle);
+}
+.hist-stats strong { font-weight: 600; color: var(--o-ink); }
+.hist-trend { width: 100%; }
+.hist-trend.up { color: var(--o-up); }
+.hist-trend.down { color: var(--o-down); }
+.hist-trend.flat { color: var(--o-subtle); }
+.hist-note { display: flex; align-items: center; gap: 10px; padding: 18px 24px; font-size: 14px; color: var(--o-text); }
+.hist-note .ic { width: 18px; height: 18px; color: var(--o-subtle); }
+
+@media (max-width: 639.98px) {
+  .history-card { grid-template-columns: 30px minmax(0, 1fr); gap: 8px 12px; padding: 14px 16px; }
+  .history-card .rank { font-size: 14px; }
+  .history-card .name { gap: 8px; }
+  .history-card .name .brand-badge { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 6px; font-size: 9px; }
+  .history-card .name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-card .addr { padding-left: 30px; }
+  .history-card .hist-body { grid-column: 1 / -1; }
+  .sparkline { max-width: 100%; }
+}
+
+/* ═══════════════════ Fiche détail d'une station ═══════════════════
+   Ordinateur : panneau centré. Téléphone : feuille qui monte du bas de
+   l'écran. Le voile est la seule couleur hors tokens : un noir translucide,
+   comme celui d'une ombre portée. */
 .station-sheet {
   position: fixed;
   inset: 0;
@@ -236,779 +877,136 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: auto;
 }
-.station-sheet.hidden { display: none; }
 .sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(20, 18, 16, 0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 15, 17, .45);
   -webkit-backdrop-filter: blur(4px);
-  animation: sheetFade 0.18s ease-out;
+  backdrop-filter: blur(4px);
+  animation: sheetFade .18s ease-out;
 }
-:root[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, 0.55); }
+:root[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, .6); }
 @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sheetSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .sheet-panel {
   position: relative;
-  width: min(540px, calc(100% - 2rem));
+  width: min(560px, calc(100% - 32px));
   max-height: 85vh;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 2px solid var(--color-divider);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-lg);
-  animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 24px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+  animation: sheetSlideUp .22s cubic-bezier(.16, 1, .3, 1);
   outline: none;
 }
-.sheet-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.8rem;
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  color: var(--color-neutral-700);
-  cursor: pointer;
-  line-height: 1;
-  padding: 0.4rem 0.6rem;
-  transition: color 0.15s;
-}
-.sheet-close:hover { color: var(--color-accent); }
+.sheet-close { position: absolute; top: 16px; right: 16px; }
+body.sheet-open { overflow: hidden; }
 
-.sheet-header { margin-bottom: 1.2rem; }
-.sheet-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-right: 2rem;
-}
-.sheet-title-row h2 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.15rem;
-  color: var(--color-text);
-  margin: 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-.sheet-addr {
-  font-size: 0.8rem;
-  color: var(--color-neutral-700);
-  margin-top: 0.45rem;
-}
-.sheet-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-.sheet-section { margin-top: 1.3rem; }
+.sheet-header { display: flex; flex-direction: column; gap: 6px; }
+.sheet-title-row { display: flex; align-items: center; gap: 12px; margin-right: 48px; }
+.sheet-title-row .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
+.sheet-title-row h2 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+.sheet-addr { font-size: 14px; color: var(--o-subtle); }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sheet-actions .btn { flex: 1 1 auto; }
+
+.sheet-section { margin-top: 22px; }
 .sheet-section h3 {
+  margin: 0 0 10px;
   font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--color-neutral-700);
-  margin: 0 0 0.6rem;
-  font-weight: 500;
+  color: var(--o-subtle);
 }
-.sheet-section h3 + .table { margin-top: var(--space-2); }
-.sheet-prices tr.current { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-.sheet-prices tr.current th { color: var(--color-accent); }
-.sheet-price {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 0.95rem;
-  letter-spacing: -0.02em;
+
+/* Repères du trajet et prix par carburant : listes à filets, encadrées. */
+.sheet-facts,
+.sheet-prices {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--o-line-soft);
+  border-radius: 14px;
 }
-.sheet-fresh {
-  display: inline-block;
-  margin-left: 0.4rem;
-  font-family: var(--font-body);
-  font-size: 0.6rem;
-  color: var(--color-neutral-700);
-  letter-spacing: 0.03em;
-}
-.sheet-fresh-stale { color: #c2410c; }
-.sheet-fresh-veryStale { color: var(--color-accent-700); }
-.sheet-rupture { color: var(--color-accent-700); font-size: 12px; }
-:root[data-theme="dark"] .sheet-fresh-stale { color: #fb923c; }
-.sheet-unavailable { color: var(--color-neutral-700); font-size: 0.75rem; font-style: italic; }
+.sheet-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 14px; }
+.sheet-facts > div + div { border-top: 1px solid var(--o-line-soft); }
+.sheet-facts dt { flex: none; font-size: 13px; color: var(--o-muted); }
+.sheet-facts dd { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 6px; margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+.sheet-facts dd .text-muted { font-weight: 400; }
+
+.sheet-prices { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.sheet-prices th,
+.sheet-prices td { padding: 10px 14px; border-bottom: 1px solid var(--o-line-soft); text-align: left; }
+.sheet-prices tr:last-child th,
+.sheet-prices tr:last-child td { border-bottom: 0; }
+.sheet-prices th { width: 40%; font-weight: 500; color: var(--o-muted); }
+.sheet-prices tr.current { background: var(--o-accent-soft); }
+.sheet-prices tr.current th { font-weight: 700; color: var(--o-accent-ink); }
+.sheet-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+.sheet-fresh { margin-left: 8px; font-size: 12px; color: var(--o-subtle); }
+.sheet-fresh-stale { color: var(--o-stale); }
+.sheet-fresh-veryStale { color: var(--o-up); }
+.sheet-rupture { font-size: 13px; color: var(--o-accent-ink); }
+.sheet-unavailable { font-size: 13px; color: var(--o-faint); }
 
 .sheet-services {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.5rem 1rem;
-  font-size: 0.8rem;
-  color: var(--color-text);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .sheet-services li {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-chip);
+  font-size: 13px;
+  color: var(--o-text);
 }
-.amenity-big { font-size: 1rem; line-height: 1; opacity: 0.85; }
+.amenity-big { font-size: 16px; line-height: 1; }
 
-body.sheet-open { overflow: hidden; }
-
-/* La carte station doit indiquer visuellement qu'elle est cliquable */
-.station:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+/* Réserves : prix aberrant (accent) ou prix ancien (neutre). */
+.sheet-warn,
+.sheet-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--o-radius-md);
+  font-size: 13px;
+  line-height: 1.5;
 }
+.sheet-warn p,
+.sheet-note p { margin: 0; }
+.sheet-warn .ic,
+.sheet-note .ic { margin-top: 2px; }
+.sheet-warn { background: var(--o-accent-soft); color: var(--o-accent-ink); }
+.sheet-note { background: var(--o-chip); color: var(--o-text); }
 
-/* Mobile : sheet en feuille bas qui prend toute la largeur */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
   .station-sheet { align-items: flex-end; }
   .sheet-panel {
     width: 100%;
-    max-width: 100%;
     max-height: 90vh;
-    border-radius: 12px 12px 0 0;
-    padding: 1.2rem 1.1rem 1.5rem;
+    padding: 20px 16px 24px;
+    border-bottom: 0;
+    border-radius: var(--o-radius-xl) var(--o-radius-xl) 0 0;
   }
+  .sheet-close { top: 12px; right: 12px; }
   @keyframes sheetSlideUp {
     from { transform: translateY(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
-  .sheet-services { grid-template-columns: 1fr 1fr; gap: 0.4rem 0.7rem; font-size: 0.75rem; }
-  .sheet-title-row h2 { font-size: 1rem; }
+  .sheet-title-row h2 { font-size: 19px; }
+  .sheet-services { grid-template-columns: 1fr 1fr; }
 }
-
-.loader {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--color-divider);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.6rem;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4) 0 var(--space-2);
-}
-/* Ligne de méta de la maquette : « GAZOLE · AVIGNON · 5 KM · 24 STATIONS ».
-   Reste un <h2> pour la structure du document, mais s'affiche comme une
-   légende — le titre de la page, c'est le prix du bloc gagnant. */
-.results-meta {
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-}
-.results-count {
-  font-size: 12px;
-  color: var(--color-neutral-700);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.station-list { display: block; }
-
-/* ═══════════════════ Bloc « Le moins cher » ═══════════════════
-   Le prix est l'information qu'on vient chercher : il est posé à l'échelle
-   qu'elle mérite, tout le reste la commente. */
-.winner {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-6);
-  align-items: end;
-  padding: var(--space-6) 0;
-  border-top: 2px solid var(--color-divider);
-  border-bottom: 2px solid var(--color-divider);
-}
-.winner-price {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: clamp(56px, 9vw, 104px);
-  line-height: 0.86;
-  letter-spacing: -0.045em;
-  font-variant-numeric: tabular-nums;
-}
-.winner-unit {
-  font-size: 0.28em;
-  letter-spacing: 0.06em;
-  margin-left: 0.35em;
-  vertical-align: 0.9em;
-}
-.winner-trend { margin-top: var(--space-3); font-size: 13px; }
-.winner-name {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 24px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-.winner-addr { font-size: 14px; color: var(--color-neutral-700); margin-top: var(--space-1); }
-.winner-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  margin-top: var(--space-4);
-  font-size: 14px;
-  align-items: baseline;
-}
-.winner-num {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 22px;
-}
-.winner-fresh { align-self: end; }
-.winner-warn {
-  margin-top: var(--space-3);
-  font-size: 13px;
-  color: var(--color-accent-700);
-}
-.winner-actions { display: flex; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
-.winner-actions .btn { min-height: 40px; justify-content: flex-start; white-space: nowrap; }
-
-/* ═══════════════════ Tableau des autres stations ═══════════════════ */
-.station-table { margin-top: var(--space-6); }
-.station-table .col-rank {
-  width: 48px;
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-}
-.station-table th.col-dist,
-.station-table th.col-price,
-.station-table th.col-extra,
-.station-table td.col-dist,
-.station-table td.col-price,
-.station-table td.col-extra { text-align: right; white-space: nowrap; }
-.station-table td.col-price {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-}
-.station-table td.col-extra { color: var(--color-neutral-700); }
-.col-station-sub { font-size: 12px; color: var(--color-neutral-700); }
-.col-eta { font-size: 12px; color: var(--color-neutral-700); }
-.row-warn { color: var(--color-accent); margin-left: 4px; cursor: help; }
-.station-row { cursor: pointer; }
-.station-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.more-btn { margin-top: var(--space-4); min-height: 38px; justify-content: flex-start; }
-
-/* Prix périmés (plus de STALE_DAYS jours, voir app.js) : hors classement, en
-   queue de tableau, en ton atténué. neutral-700 et non 600 pour garder un
-   contraste lisible (≥ 4,5:1) sur le fond. */
-.stale-sep td {
-  padding-top: var(--space-6);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-}
-.station-row.is-stale td,
-.station-row.is-stale td.col-price { color: var(--color-neutral-700); }
-.col-stale {
-  margin-top: 2px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-}
-.stale-notice {
-  padding: var(--space-4);
-  font-size: 14px;
-  line-height: 1.5;
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-neutral-500);
-}
-
-/* ═══════════════════ Écart dans le rayon ═══════════════════
-   Traitement le plus fort de la page : c'est l'argument qui justifie l'outil. */
-.savings {
-  margin-top: var(--space-8);
-  background: var(--color-accent);
-  color: var(--color-bg);
-  padding: var(--space-8) var(--space-6);
-}
-.savings-kicker {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.85;
-}
-.savings-line {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: clamp(30px, 5vw, 52px);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  margin-top: var(--space-3);
-  max-width: 20ch;
-}
-
-/* ═══════════════════ Squelettes ═══════════════════ */
-.winner-skeleton .sk-line, .station-table .sk-line {
-  background: linear-gradient(90deg,
-    var(--color-neutral-200) 0%, var(--color-neutral-300) 50%, var(--color-neutral-200) 100%);
-  background-size: 200% 100%;
-  animation: skeletonShimmer 1.2s ease-in-out infinite;
-}
-@keyframes skeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-kicker { width: 120px; height: 12px; }
-.sk-bigprice { width: 260px; max-width: 100%; height: 72px; margin-top: var(--space-3); }
-.sk-line-name { width: 60%; height: 20px; }
-.sk-line-addr { width: 85%; height: 12px; margin-top: var(--space-2); }
-.sk-line-km { width: 40%; height: 16px; margin-top: var(--space-4); }
-.sk-line-row { width: 100%; height: 18px; }
-@media (prefers-reduced-motion: reduce) {
-  .winner-skeleton .sk-line, .station-table .sk-line { animation: none; }
-}
-
-
-
-/* ============ RESPONSIVE ============ */
-
-/* Tablette (≤ 900px) */
-@media (max-width: 900px) {
-  .container { padding: 1.5rem 1.2rem 3rem; }
-  .hero { margin-bottom: 2rem; }
-  .search-panel { padding: 1.5rem; }
-}
-
-/* Mobile (≤ 640px) */
-@media (max-width: 640px) {
-  .container { padding: 1.2rem 1rem 2.5rem; }
-
-  /* Hero plus compacte */
-  .hero h1 { font-size: clamp(2rem, 9vw, 3rem); }
-  .hero p { font-size: 0.85rem; }
-
-  /* Formulaire : 16px sur les champs, sans quoi iOS zoome au focus. */
-  .input { font-size: 16px; }
-  select.input { padding-right: 2rem; }
-
-  /* Status */
-  .status { padding: 1rem 1.1rem; font-size: 0.8rem; }
-
-  /* Results header */
-  .results-header { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
-  .results-header h2 { font-size: 1.05rem; }
-
-  /* Bloc gagnant : le prix reprend la main sur la colonne */
-  .winner { gap: var(--space-4); padding: var(--space-4) 0; }
-  .winner-facts { gap: var(--space-4); }
-
-  /* Tableau : la colonne « Sur un plein » saute, c'est la moins essentielle
-     et la seule qu'on retrouve telle quelle dans la fiche détail. */
-  .station-table th.col-extra, .station-table td.col-extra { display: none; }
-  .station-table th, .station-table td { padding: var(--space-2) 6px; }
-  .col-station-sub { font-size: 11px; }
-
-  /* History cards : rank + (name + sparkline) */
-  .history-card {
-    grid-template-columns: auto 1fr;
-    padding: 0.85rem 1rem;
-    gap: 0.2rem 0.7rem;
-  }
-  .history-card .rank { font-size: 1.05rem; }
-  .history-card .info .name {
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .history-card .info .addr { font-size: 0.7rem; }
-  .history-card .hist-body { font-size: 0.7rem; padding-top: 0.3rem; }
-  .history-card .hist-body .sparkline { max-width: 100%; }
-  .hist-stats { gap: 0.25rem 0.7rem; font-size: 0.7rem; }
-
-  /* Footer */
-  footer {
-    margin-top: 2.5rem;
-    font-size: 0.6rem;
-    line-height: 1.8;
-  }
-}
-
-/* Très petits écrans (≤ 380px) */
-@media (max-width: 380px) {
-  .hero h1 { font-size: 1.85rem; }
-  .winner-price { font-size: clamp(44px, 13vw, 56px); }
-}
-
-footer {
-  margin-top: var(--space-8);
-  padding-top: var(--space-4);
-  border-top: 2px solid var(--color-divider);
-  font-size: 12px;
-  color: var(--color-neutral-700);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-footer a {
-  color: var(--color-accent);
-  text-decoration: none;
-}
-footer a:hover { text-decoration: underline; }
-/* Seconde ligne : statut du service et liens légaux, présents sur toutes les
-   pages (obligation LCEN d'un accès facile aux mentions légales). */
-.footer-legal { margin-top: var(--space-2); }
-
-.hidden { display: none; }
-
-/* ============ A11Y ============ */
-.sr-only {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-  white-space: nowrap;
-  border: 0;
-}
-
-*:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* Le design system pose déjà le focus visible sur .input ; on n'ajoute rien. */
-
-/* Historique dans le dropdown */
-.suggestions .sg-history {
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--color-neutral-700);
-  padding: 0.4rem 0.9rem 0.2rem;
-  border-bottom: 1px solid var(--color-divider);
-  margin-bottom: 0.2rem;
-}
-.suggestions li.sg-hist-item::before {
-  content: '⏱ ';
-  color: var(--color-neutral-700);
-  margin-right: 0.3rem;
-}
-
-/* ============ VUE LISTE / CARTE ============ */
-.results-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-/* Reprend l'apparence de .seg du design system. Les onglets étant des <button>
-   avec role=tab et non des radios, `.seg-opt:has(input:checked)` ne peut pas
-   s'appliquer : on réplique les états sur .active. */
-.view-toggle {
-  display: inline-flex;
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-.view-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  padding: 7px 12px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  cursor: pointer;
-}
-.view-btn + .view-btn { border-left: 1px solid var(--color-divider); }
-.view-btn:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.view-btn.active { background: var(--color-accent); color: var(--color-bg); }
-.view-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-
-/* ============ CARTE LEAFLET ============ */
-.station-map {
-  height: 540px;
-  border: 2px solid var(--color-divider);
-  background: var(--color-surface);
-  margin-bottom: var(--space-4);
-}
-/* Plan IGN désaturé : le fond reste dans la rampe neutre du design system et
-   seuls les marqueurs portent la couleur d'accent. En sombre, on inverse la
-   luminance du même fond gris plutôt que de charger une seconde couche. */
-.station-map .leaflet-tile-pane {
-  filter: grayscale(1) contrast(0.92) brightness(1.03);
-}
-:root[data-theme="dark"] .station-map .leaflet-tile-pane {
-  filter: grayscale(1) invert(0.88) contrast(0.9) brightness(0.95);
-}
-.leaflet-popup-content {
-  font-family: var(--font-body);
-  font-size: 13px;
-  margin: var(--space-2) var(--space-3);
-}
-.leaflet-popup-content strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); letter-spacing: -0.02em; }
-.map-pin {
-  background: none;
-  border: none;
-}
-/* Carré franc plutôt que la goutte arrondie d'origine : le système pose
-   --radius-* à 0, une épingle en demi-cercle y jurerait. */
-.map-pin-inner {
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--color-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 11px;
-  color: var(--color-bg);
-}
-.map-pin-stale .map-pin-inner {
-  color: var(--color-neutral-700);
-  border-color: var(--color-neutral-500);
-  box-shadow: none;
-}
-
-@media (max-width: 640px) {
-  .station-map { height: 420px; }
-  .results-actions { flex-direction: column-reverse; align-items: flex-start; gap: 0.5rem; }
-  .view-toggle { align-self: flex-end; }
-}
-
-
-/* ═══════════════════ Fiche détail : repères déplacés du tableau ═══════════ */
-.sheet-facts { display: grid; gap: var(--space-3); }
-.sheet-facts > div { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; }
-.sheet-facts dt {
-  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color-neutral-600); flex: none;
-}
-.sheet-facts dd { margin: 0; font-size: 14px; text-align: right; }
-.sheet-warn {
-  margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  font-size: 13px;
-  color: var(--color-accent-800);
-  background: var(--color-accent-100);
-  border-left: 3px solid var(--color-accent);
-}
-/* Variante neutre : un prix ancien n'est pas une anomalie, juste une réserve. */
-.sheet-note {
-  margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  font-size: 13px;
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-neutral-500);
-}
-.sheet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.sheet-actions .btn { min-height: 38px; justify-content: flex-start; }
-
-/* ═══════════════════ Tendance et fraîcheur ═══════════════════
-   Ces classes sont composées dynamiquement (`trend-${sign}`,
-   `freshness-${tier}`), d'où leur absence de toute recherche littérale dans
-   app.js. Elles habillent le bloc gagnant et la fiche détail.
-   Vert et rouge sont les deux seules couleurs hors charte admises : une hausse
-   de prix signalée par l'accent de la marque serait illisible. */
-.trend-up { color: #b91c1c; }
-.trend-down { color: #15803d; }
-.trend-flat { color: var(--color-neutral-600); }
-:root[data-theme="dark"] .trend-up { color: #ef4444; }
-:root[data-theme="dark"] .trend-down { color: #4ade80; }
-
-.freshness-fresh { color: var(--color-neutral-600); }
-.freshness-stale { color: #c2410c; }
-.freshness-veryStale { color: #b91c1c; }
-:root[data-theme="dark"] .freshness-stale { color: #fb923c; }
-:root[data-theme="dark"] .freshness-veryStale { color: #ef4444; }
-
-/* ═══════════════════ Onglet Historique ═══════════════════
-   Une ligne par station : rang, identité, courbe. Les filets remplacent les
-   encadrés, comme partout ailleurs. */
-.history-list { display: block; }
-.history-card {
-  display: grid;
-  grid-template-columns: 48px 1fr minmax(240px, 1.2fr);
-  gap: var(--space-4);
-  align-items: center;
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--color-divider);
-}
-.history-card .rank {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 16px;
-  color: var(--color-neutral-600);
-}
-.history-card .info { min-width: 0; }
-.history-card .name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 15px;
-}
-.history-card .addr { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
-.name-text { min-width: 0; word-break: break-word; }
-
-.hist-body { min-width: 0; }
-.hist-empty {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 12px;
-  color: var(--color-neutral-600);
-}
-.sparkline {
-  width: 100%;
-  max-width: 260px;
-  height: 60px;
-  color: var(--color-accent);
-  display: block;
-}
-.hist-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  margin-top: var(--space-1);
-  font-size: 11px;
-  color: var(--color-neutral-700);
-}
-.hist-stats strong { color: var(--color-text); font-weight: 600; }
-.hist-trend { width: 100%; }
-.hist-trend.flat { color: var(--color-neutral-600); }
-
-/* ═══════════════════ Badge d'enseigne ═══════════════════
-   Les couleurs viennent des marques elles-mêmes (Total, Shell…), pas du
-   système : c'est leur identité, la neutraliser rendrait le repère inutile. */
-.brand-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
-  flex: none;
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 10px;
-  letter-spacing: 0.02em;
-}
-
-/* ═══════════════════ Bandeau « reprendre la dernière recherche » ═══════════ */
-.resume-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  margin-top: var(--space-4);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-accent);
-  font-size: 14px;
-}
-.resume-text { display: flex; align-items: center; gap: var(--space-2); }
-.resume-dot { color: var(--color-accent); }
-.resume-actions { display: flex; gap: var(--space-2); }
-.resume-btn {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 13px;
-  padding: 7px 14px;
-  border: 1px solid var(--color-divider);
-  background: transparent;
-  color: var(--color-text);
-  cursor: pointer;
-}
-.resume-go { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
-.resume-go:hover { background: var(--color-accent-600); border-color: var(--color-accent-600); }
-.resume-dismiss:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-
-/* ═══════════════════ Indication de chargement des enseignes ═══════════════ */
-.osm-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  font-size: 12px;
-  color: var(--color-neutral-600);
-}
-.osm-hint.hidden { display: none; }
-.loader-sm {
-  display: inline-block;
-  width: 10px; height: 10px; flex: none;
-  border: 2px solid var(--color-divider);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@media (max-width: 640px) {
-  .history-card { grid-template-columns: 40px 1fr; }
-  .history-card .hist-body { grid-column: 1 / -1; }
-}
-
-/* ═══════════════════ Leaflet : habillage des composants tiers ═══════════════
-   MarkerCluster et les contrôles de zoom arrivent avec leur propre feuille
-   (vert d'eau, coins arrondis, ombres douces) qui jure avec un système plat
-   sans rayon. On les réaccorde plutôt que de les laisser dépareillés. */
-.marker-cluster,
-.marker-cluster div {
-  background: var(--color-accent) !important;
-  border-radius: 0 !important;
-  color: var(--color-bg);
-}
-.marker-cluster {
-  border: 2px solid var(--color-text) !important;
-  box-shadow: var(--shadow-sm);
-}
-.marker-cluster div {
-  width: 100%; height: 100%;
-  margin: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.marker-cluster span {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 12px;
-  line-height: 1;
-}
-
-.leaflet-bar,
-.leaflet-bar a {
-  border-radius: 0 !important;
-  border-color: var(--color-divider) !important;
-}
-.leaflet-bar a {
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-}
-.leaflet-bar a:hover { background: var(--color-neutral-200); color: var(--color-accent); }
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-radius: 0;
-  box-shadow: var(--shadow-md);
-}
-.leaflet-container a.leaflet-popup-close-button { color: var(--color-neutral-600); }
-.leaflet-control-attribution {
-  background: color-mix(in srgb, var(--color-surface) 85%, transparent) !important;
-  color: var(--color-neutral-700);
-  font-size: 10px;
-}
-.leaflet-control-attribution a { color: var(--color-accent); }

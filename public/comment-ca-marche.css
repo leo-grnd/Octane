@@ -1,169 +1,166 @@
 /* comment-ca-marche.css — page « Comment ça marche ».
-   S'appuie sur design-system.css pour les tokens et les composants, et sur
-   style.css pour la nav, le hero et le footer, partagés avec l'outil. */
+   S'appuie sur design-system.css pour les tokens, les composants (.card,
+   .tag, .btn), l'en-tête, le hero et le pied de page, partagés avec l'outil.
+   Même langage que l'accueil : des cartes blanches sur le fond zinc. */
 
-.hero strong { color: var(--color-text); font-weight: 600; }
+.hero strong { color: var(--o-ink); font-weight: 600; }
 
-/* ---- Bandeau chiffres clés ----
-   Une grille de filets plutôt que quatre cartes posées : dans un système sans
-   rayon ni ombre, la séparation se fait par le trait. */
+/* ---- Chiffres clés : quatre cartes ---- */
 .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    margin: var(--space-8) 0;
-    border-top: 2px solid var(--color-divider);
-    border-bottom: 2px solid var(--color-divider);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: clamp(8px, 2vw, 16px) 0 clamp(28px, 4vw, 48px);
 }
 .stat {
-    padding: var(--space-6) var(--space-4);
-    text-align: left;
+  padding: 20px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-lg);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-badge);
 }
-.stat + .stat { border-left: 1px solid var(--color-divider); }
 .stat-num {
-    font-family: var(--font-heading);
-    font-weight: var(--font-heading-weight);
-    font-size: clamp(32px, 5vw, 52px);
-    line-height: 1;
-    color: var(--color-accent);
-    letter-spacing: -0.04em;
-    font-variant-numeric: tabular-nums;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--o-accent);
 }
-.stat-num .unit { font-size: 0.4em; color: var(--color-neutral-700); margin-left: 0.15em; letter-spacing: 0; }
+.stat-num .unit { margin-left: .15em; font-size: .4em; letter-spacing: 0; color: var(--o-subtle); }
 .stat-lbl {
-    margin-top: var(--space-2);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--color-neutral-700);
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-muted);
 }
 
-/* ---- Intro flux ---- */
+/* ---- Intro du parcours ---- */
 .flow-intro {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--color-neutral-700);
-    margin-bottom: var(--space-6);
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--o-muted);
 }
-.flow-intro .arrow { display: inline-block; color: var(--color-accent); animation: bob 1.8s ease-in-out infinite; }
-@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.flow-intro .arrow { display: inline-block; color: var(--o-accent); animation: bob 1.8s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
-/* ---- Étapes ---- */
-.pipeline { list-style: none; display: flex; flex-direction: column; }
-.step { padding: var(--space-8) 0; border-top: 2px solid var(--color-divider); }
-.step-head { display: flex; align-items: baseline; gap: var(--space-4); margin-bottom: var(--space-6); }
+/* ---- Étapes : une carte chacune ---- */
+.pipeline { display: flex; flex-direction: column; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.step {
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+}
+.step-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+/* Numéro d'étape dans une pastille d'accent, comme l'icône du hero. */
 .step-num {
-    font-family: var(--font-heading);
-    font-weight: var(--font-heading-weight);
-    font-size: clamp(28px, 5vw, 40px);
-    color: var(--color-accent);
-    line-height: 0.9;
-    letter-spacing: -0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--o-radius-md);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
 }
-.step-head h2 {
-    font-family: var(--font-heading);
-    font-weight: var(--font-heading-weight);
-    font-size: clamp(24px, 3.5vw, 32px);
-    letter-spacing: -0.02em;
-    margin: 0;
-}
-.step-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--space-8); align-items: start; }
-.step-text p { color: var(--color-neutral-800); font-size: 15px; line-height: 1.6; margin-bottom: var(--space-3); }
+.step-head h2 { margin: 0; font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.02em; }
+.step-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; align-items: start; }
+.step-text p { margin-bottom: 12px; font-size: 15px; line-height: 1.6; color: var(--o-text); }
 .step-text p:last-child { margin-bottom: 0; }
-.step-text strong { color: var(--color-text); font-weight: 600; }
-/* L'italique n'a plus de support typographique : l'emphase passe par l'accent. */
-.step-text em { color: var(--color-accent-700); font-style: normal; font-weight: 600; }
-.step-text .btn { margin-top: var(--space-2); min-height: 38px; justify-content: flex-start; }
+.step-text strong { font-weight: 600; color: var(--o-ink); }
+.step-text em { font-style: normal; font-weight: 600; color: var(--o-accent-ink); }
+.step-text .btn { margin-top: 8px; }
 
 code {
-    font-family: var(--font-body);
-    font-size: 0.9em;
-    background: var(--color-surface);
-    border: 1px solid var(--color-divider);
-    padding: 0.05em 0.4em;
-    color: var(--color-accent-700);
-    white-space: nowrap;
+  padding: .1em .4em;
+  border-radius: 6px;
+  background: var(--o-chip);
+  color: var(--o-accent-ink);
+  font-family: var(--font-body);
+  font-size: .9em;
+  white-space: nowrap;
 }
 
 /* ---- Visuels ---- */
 .step-visual { min-width: 0; }
-.vchips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-/* .tag du système, agrandi : ces puces sont des exemples à lire, pas des
+.vchips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* .tag du système, agrandi : ces pastilles sont des exemples à lire, pas des
    étiquettes de métadonnée. */
-.vchip { font-size: 13px; padding: 7px 12px; }
+.vchip { min-height: 34px; padding: 0 14px; font-size: 13px; }
 
-/* Classement de prix (visuel propre à la page) */
-.rank { display: flex; flex-direction: column; }
-.rank-row {
-    display: flex; align-items: center; gap: var(--space-3);
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--color-divider);
-    font-size: 14px;
+/* Listes encadrées (classement, modes de distance), comme dans la fiche
+   détail de l'outil. */
+.rank,
+.dmodes {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--o-line-soft);
+  border-radius: 14px;
 }
-.rank-row:first-child { border-top: 1px solid var(--color-divider); }
-.rank-medal { font-size: 16px; }
-.rank-name { color: var(--color-text); }
-.rank-price {
-    margin-left: auto;
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    font-variant-numeric: tabular-nums;
-}
-.rank-row.best .rank-price { color: var(--color-accent); }
-
-/* Bascule des deux modes de distance */
-.dmodes { display: flex; flex-direction: column; }
+.rank-row,
 .dmode {
-    display: flex; align-items: baseline; gap: var(--space-2);
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--color-divider);
-    font-size: 14px;
-    color: var(--color-neutral-700);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
 }
-.dmode:first-child { border-top: 1px solid var(--color-divider); }
+.rank-row + .rank-row,
+.dmode + .dmode { border-top: 1px solid var(--o-line-soft); }
+.rank-medal { font-size: 16px; }
+.rank-name { color: var(--o-ink); }
+.rank-price {
+  margin-left: auto;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.rank-row.best { background: var(--o-accent-soft); }
+.rank-row.best .rank-price { color: var(--o-accent-ink); }
+.dmode { color: var(--o-muted); }
 .dmode b {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    color: var(--color-text); font-size: 13px;
-    text-transform: uppercase; letter-spacing: 0.05em;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--o-ink);
 }
 
-.badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* ---- Outro ---- */
-.outro {
-    padding: var(--space-8) 0 0;
-    border-top: 2px solid var(--color-divider);
-    margin-top: var(--space-4);
-}
-.outro h2 {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-    font-size: clamp(28px, 4vw, 44px);
-    letter-spacing: -0.03em;
-    margin-bottom: var(--space-3);
-}
-.outro h2 em { font-style: normal; color: var(--color-accent); }
-.outro p { color: var(--color-neutral-800); font-size: 15px; line-height: 1.6; max-width: 62ch; margin: 0 0 var(--space-4); }
-.outro-note { font-size: 13px; color: var(--color-neutral-700); }
-.cta-final { min-height: 44px; justify-content: flex-start; }
+/* ---- Encadré final (.card du système) ---- */
+.outro { margin-top: 16px; gap: 0; }
+.outro h2 { margin-bottom: 12px; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.03em; }
+.outro h2 em { font-style: normal; color: var(--o-accent); }
+.outro p { max-width: 62ch; margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: var(--o-text); }
+.outro .outro-note { font-size: 13px; color: var(--o-muted); }
+.cta-final { align-self: flex-start; }
 
-/* ---- Reveal ---- */
-.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+/* ---- Apparition au défilement ---- */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity .55s ease, transform .55s ease; }
 .reveal.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; transition: none; }
-    .flow-intro .arrow { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .flow-intro .arrow { animation: none; }
 }
 
 /* ---- Responsive ---- */
 @media (max-width: 760px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    /* En deux colonnes, le filet vertical doit repartir sur chaque rangée. */
-    .stat + .stat { border-left: none; }
-    .stat:nth-child(even) { border-left: 1px solid var(--color-divider); }
-    .stat:nth-child(n + 3) { border-top: 1px solid var(--color-divider); }
-    .step-body { grid-template-columns: 1fr; gap: var(--space-6); }
-    .step { padding: var(--space-6) 0; }
-}
-@media (max-width: 420px) {
-    .stats { grid-template-columns: 1fr 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step-body { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 }

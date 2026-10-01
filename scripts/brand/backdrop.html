@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  Source de public/backdrop.webp, le fond de carte décoratif du haut des pages
+  (classe .backdrop de design-system.css). Rendu par scripts/render-brand.mjs.
+
+  Assemble les tuiles Plan IGN du cadrage de la maquette Claude Design
+  « Accueil v3 » (zoom 13, autour de Paris) dans un canvas, les passe en
+  niveaux de gris, puis écrit l'image WebP en data: URL dans #out, que le
+  script de rendu vient lire. La maquette pose 7 × 4 tuiles (1792 px), mais
+  son masque radial efface tout au-delà de 1405 px : on s'arrête à 1408 px.
+  Le contraste et l'inversion du thème sombre restent appliqués en CSS
+  (token --o-map-filter), d'où une image neutre. Qualité basse assumée :
+  l'image s'affiche à 17-20 % d'opacité.
+
+  Plan IGN : © IGN, Licence Ouverte Etalab 2.0 — crédité dans le pied de page.
+-->
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<canvas id="map" width="1408" height="1024"></canvas>
+<pre id="out"></pre>
+<script>
+  const Z = 13, COL0 = 4146, ROW0 = 2816, COLS = 6, ROWS = 4, SIZE = 256;
+  const QUALITY = 0.3;
+  const tile = (row, col) => 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png' +
+    `&TILEMATRIXSET=PM_0_19&TILEMATRIX=${Z}&TILEROW=${row}&TILECOL=${col}`;
+
+  const out = document.getElementById('out');
+  const ctx = document.getElementById('map').getContext('2d');
+  ctx.filter = 'grayscale(1)';
+
+  // crossOrigin : la Géoplateforme répond « Access-Control-Allow-Origin: * »,
+  // le canvas reste donc exportable.
+  const load = (row, col) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve({ img, row, col });
+    img.onerror = () => reject(new Error(`tuile ${row}/${col}`));
+    img.src = tile(row, col);
+  });
+
+  const jobs = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) jobs.push(load(ROW0 + r, COL0 + c));
+  Promise.all(jobs).then(tiles => {
+    for (const t of tiles) ctx.drawImage(t.img, (t.col - COL0) * SIZE, (t.row - ROW0) * SIZE);
+    out.textContent = ctx.canvas.toDataURL('image/webp', QUALITY);
+  }).catch(err => { out.textContent = 'ERREUR ' + err.message; });
+</script>
+</body>
+</html>

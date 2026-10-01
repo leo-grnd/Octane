@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <!-- Source de og-image.png (1200 × 630), l'aperçu affiché quand un lien Octane
-     est partagé. Rendu par scripts/render-brand.mjs. Reprend le hero de la page
-     d'accueil avec les valeurs du design system en dur : la page est rendue
-     hors du site, sans design-system.css. Aucun prix fictif : un aperçu qui
-     affiche un tarif serait faux dès le lendemain. -->
+     est partagé. Rendu par scripts/render-brand.mjs. Reprend l'accueil v3 :
+     fond zinc et fond de carte estompé, logo jauge, titre à points rouges.
+     Valeurs des tokens en dur (clair) : la page est rendue hors du site, sans
+     design-system.css. Aucun prix fictif : un aperçu qui afficherait un tarif
+     serait faux dès le lendemain. -->
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
@@ -12,64 +13,77 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 1200px; height: 630px; overflow: hidden; }
     body {
-      background: #f3f2f2;
-      color: #201e1d;
-      font-family: "Archivo", system-ui, sans-serif;
-      padding: 52px 72px 60px;
+      position: relative;
       display: grid;
       grid-template-rows: auto 1fr;
+      padding: 56px 72px 64px;
+      background: #f7f7f8;
+      color: #18181b;
+      font-family: "Archivo", system-ui, sans-serif;
     }
-    .bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 22px;
-      border-bottom: 2px solid rgba(32, 30, 29, 0.4);
+    /* Même calque que .backdrop du site (design-system.css). */
+    .backdrop {
+      position: absolute;
+      left: -260px;
+      top: -90px;
+      width: 1792px;
+      height: 1024px;
+      background: url("../../public/backdrop.webp") 0 0 / 1408px 1024px no-repeat;
+      filter: grayscale(1) contrast(1.15);
+      opacity: .17;
+      -webkit-mask-image: radial-gradient(ellipse 62% 60% at 30% 50%, #000 25%, transparent 78%);
+      mask-image: radial-gradient(ellipse 62% 60% at 30% 50%, #000 25%, transparent 78%);
     }
-    .brand { display: flex; align-items: center; gap: 16px; font-weight: 800; font-size: 34px; letter-spacing: -0.02em; }
-    .mark { width: 40px; height: 40px; display: block; }
-    .bar-meta { font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; color: #605d5d; }
-    .main {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 48px;
-      align-items: end;
-    }
-    /* 104 px : la plus grande taille où « Le moins cher. » (697 px mesurés)
-       tient sur une ligne à côté de la colonne de droite. */
+    .bar, .main { position: relative; }
+    .bar { display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 2px; }
+    .mark { width: 50px; height: 50px; }
+    .word { font-weight: 800; font-size: 44px; letter-spacing: -0.02em; line-height: 1; }
+    .domain { margin-bottom: 8px; font-size: 22px; font-weight: 600; color: #52525b; }
+    .main { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
+    /* 112 px : la taille du titre de l'accueil sur ordinateur (76 px) agrandie
+       pour une vignette, et « Le moins cher. » tient encore sur une ligne. */
     h1 {
       font-weight: 800;
-      font-size: 104px;
-      line-height: 0.98;
+      font-size: 112px;
+      line-height: .97;
       letter-spacing: -0.035em;
       white-space: nowrap;
     }
-    h1 em { font-style: normal; color: #ec3013; }
-    .aside { border-top: 2px solid rgba(32, 30, 29, 0.4); padding-top: 16px; margin-bottom: 10px; }
-    .kicker { font-size: 16px; letter-spacing: 0.14em; text-transform: uppercase; color: #ae1800; margin-bottom: 10px; }
-    .aside p { font-size: 21px; line-height: 1.4; color: #444141; }
-    .live { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ec3013; }
+    h1 em, h1 .dot { font-style: normal; color: #ec3013; }
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border: 1px solid #e4e4e7;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(24, 24, 27, .04), 0 10px 30px -12px rgba(24, 24, 27, .18);
+      font-size: 18px;
+      font-weight: 600;
+      color: #3f3f46;
+      white-space: nowrap;
+    }
+    .pill .dot { width: 9px; height: 9px; border-radius: 50%; background: #ec3013; }
   </style>
 </head>
 <body>
+  <div class="backdrop"></div>
   <div class="bar">
     <div class="brand">
-      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" fill="#ec3013"/>
-        <circle cx="32" cy="32" r="15.5" fill="none" stroke="#f3f2f2" stroke-width="9"/>
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="12" fill="none" stroke="#ec3013" stroke-width="4.4" stroke-dasharray="60 15.4"/>
+        <path d="M16 16 23.5 9" stroke="#18181b" stroke-width="3.6" stroke-linecap="round"/>
+        <circle cx="16" cy="16" r="2.6" fill="#18181b"/>
       </svg>
-      OCTANE
+      <span class="word">CTANE</span>
     </div>
-    <div class="bar-meta">Prix des carburants · France</div>
+    <div class="pill"><span class="dot"></span>Prix officiels · Gratuit · Sans compte</div>
   </div>
   <div class="main">
-    <h1>Le plein.<br /><em>Le moins cher.</em><br />Autour de toi.</h1>
-    <div class="aside">
-      <div class="kicker">Source officielle</div>
-      <p>Prix relevés en continu par le Ministère de l’Économie. Une recherche, un classement, un itinéraire.</p>
-      <div class="live"><span class="dot"></span>Gratuit · Sans compte</div>
-    </div>
+    <h1>Le plein<span class="dot">.</span><br /><em>Le moins cher.</em><br />Autour de toi<span class="dot">.</span></h1>
+    <div class="domain">octane-carburant.fr</div>
   </div>
 </body>
 </html>

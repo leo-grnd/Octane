@@ -6,27 +6,7 @@
 // esc(), les libellés carburants, la préférence commune du géocodeur. Toute
 // correction sur l'un doit être reportée sur l'autre.
 
-// ===== Thème (même contrat que index.html : clé localStorage octane-theme) =====
-(function initTheme() {
-  const icon = document.getElementById('themeIcon');
-  const apply = (t) => {
-    if (t === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      icon.textContent = '☀';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      icon.textContent = '☾';
-    }
-  };
-  let saved = null;
-  try { saved = localStorage.getItem('octane-theme'); } catch {}
-  apply(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('octane-theme', next); } catch {}
-    apply(next);
-  });
-})();
+// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
 
 // ===== Constantes partagées avec le job d'envoi =====
 // Le filtre de fraîcheur est le cœur de la fiabilité de l'alerte : sans lui, le
@@ -112,7 +92,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 // Aligné sur l'outil : le système n'a qu'un accent, on distingue seulement la
 // station la moins chère du reste plutôt qu'un dégradé vert → rouge.
-const RANK_COLORS = ['var(--color-accent)', 'var(--color-neutral-500)', 'var(--color-neutral-500)'];
+const RANK_COLORS = ['var(--o-accent)', 'var(--o-faint)', 'var(--o-faint)'];
 
 function formatRelativeTime(iso) {
   if (!iso) return null;
@@ -327,7 +307,7 @@ function renderPreview(cfg, { results, total }) {
       <div>
         <div class="alert-name">${esc(s.ville || 'Station')}${dist ? ` <span class="alert-maj">à ${esc(dist)}</span>` : ''}</div>
         <div class="alert-addr">${esc(addr)}</div>
-        ${maps ? `<div class="alert-links"><a href="${esc(maps)}" target="_blank" rel="noopener">Itinéraire ↗</a></div>` : ''}
+        ${maps ? `<div class="alert-links"><a href="${esc(maps)}" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Itinéraire</a></div>` : ''}
       </div>
       <div class="alert-price">
         ${price.toFixed(3).replace('.', ',')}
@@ -450,7 +430,9 @@ async function handleSubmit(e) {
     }
   }
 
+  // aria-busy : le bouton passe en « Recherche… » avec sa roue (style.css).
   $previewBtn.disabled = true;
+  $previewBtn.setAttribute('aria-busy', 'true');
   try {
     showStatus('Interrogation des prix en temps réel...');
     const data = await fetchCheapest(cfg);
@@ -465,6 +447,7 @@ async function handleSubmit(e) {
     showStatus(friendlyError(err, 'prix'), true);
   } finally {
     $previewBtn.disabled = false;
+    $previewBtn.setAttribute('aria-busy', 'false');
   }
 }
 $form.addEventListener('submit', handleSubmit);

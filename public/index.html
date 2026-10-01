@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OCTANE — Trouve ton carburant le moins cher</title>
   <meta name="description" content="Comparateur en temps réel des prix du carburant en France. Trouve la station la moins chère autour de toi grâce aux données officielles du Ministère de l'Économie." />
-  <meta name="theme-color" content="#171615" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#f3f2f2" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f7f7f8" media="(prefers-color-scheme: light)" />
   <meta name="author" content="Octane" />
   <meta name="keywords" content="prix carburant, essence, gazole, SP95, SP98, E85, comparateur, station service, France, data.gouv" />
 
@@ -59,92 +59,127 @@
   <div id="offlineBanner" class="offline-banner hidden" role="status" aria-live="polite">
     <span aria-hidden="true">⚠</span> Hors ligne — résultats potentiellement périmés
   </div>
-  <div class="container">
-    <nav class="nav">
-      <span class="nav-brand">OCTANE</span>
-      <div class="nav-links">
-        <a class="btn btn-secondary" href="alertes">Alertes</a>
-        <a class="btn btn-secondary" href="comment-ca-marche">Comment ça marche</a>
-        <a class="btn btn-secondary" href="https://leo-grnd.github.io/hub/">Tous les outils</a>
-        <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
-          <span id="themeIcon" aria-hidden="true">☾</span>
-        </button>
-      </div>
-    </nav>
-
-    <section class="hero">
-      <h1>Le plein.<br /><em>Le moins cher.</em><br />Autour de toi.</h1>
-      <div class="hero-aside">
-        <div class="kicker">Source officielle</div>
-        <p>Prix relevés en continu par le Ministère de l'Économie. Une recherche, un classement, un itinéraire.</p>
-        <div class="live">
-          <span class="pulse" aria-hidden="true"></span>Data.gouv · Live
-          <span id="timestamp" aria-hidden="true"></span>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="page">
+    <header>
+      <nav class="site-nav" aria-label="Navigation principale">
+        <a class="brand" href="./" aria-label="Octane — accueil" aria-current="page">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
+          <span class="brand-word" aria-hidden="true">CTANE</span>
+        </a>
+        <div class="nav-links" id="navMenu">
+          <a class="nav-link" href="alertes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes</a>
+          <a class="nav-link" href="comment-ca-marche"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Comment ça marche</a>
+          <a class="nav-link" href="https://leo-grnd.github.io/hub/"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Tous les outils</a>
         </div>
-      </div>
+        <span class="nav-sep" aria-hidden="true"></span>
+        <button id="themeToggle" class="icon-btn theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        </button>
+        <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navMenu">
+          <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
+          <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+    <!-- Pas de carte à droite du titre sur l'accueil : la colonne reste vide. -->
+    <section class="hero">
+      <h1>Le plein<span class="dot">.</span><br /><em>Le moins cher.</em><br />Autour de toi<span class="dot">.</span></h1>
     </section>
 
-    <section class="search-panel">
-      <div class="form-grid">
+    <section class="search-panel" aria-label="Recherche">
+      <div class="search-grid">
         <div class="field field-address">
           <label for="address">Adresse ou ville</label>
-          <input id="address" class="input" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          <div class="field-box">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          </div>
           <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
         </div>
-        <div class="field">
+        <div class="field field-fuel">
           <label for="fuel">Carburant</label>
-          <select id="fuel" class="input">
-            <option value="e10_prix">SP95-E10</option>
-            <option value="sp95_prix">SP95</option>
-            <option value="sp98_prix">SP98</option>
-            <option value="gazole_prix" selected>Gazole</option>
-            <option value="e85_prix">E85</option>
-            <option value="gplc_prix">GPLc</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="radius">Rayon (km)</label>
-          <input id="radius" class="input" type="number" min="1" max="50" value="5" />
-        </div>
-        <button id="searchBtn" class="btn btn-primary" aria-label="Lancer la recherche">Chercher</button>
-        <div class="field field-tank">
-          <label for="tank">Mon réservoir (L)</label>
-          <input id="tank" class="input" type="number" min="1" max="200" value="60" inputmode="numeric" />
-        </div>
-        <div class="field field-distance-mode">
-          <label id="distanceModeLabel">Mode de distance</label>
-          <!-- Contrôle segmenté du design system : la case doit être imbriquée
-               dans le label, `.seg-opt:has(input:checked)` s'appuyant dessus. -->
-          <div class="seg" role="radiogroup" aria-labelledby="distanceModeLabel">
-            <label class="seg-opt" title="Distance en ligne droite entre deux points">
-              <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />à vol d'oiseau
-            </label>
-            <label class="seg-opt" title="Distance par la route (routage Valhalla / OSRM)">
-              <input type="radio" id="modeDrive" name="distanceMode" value="drive" />en voiture
-            </label>
+          <div class="field-box">
+            <select id="fuel">
+              <option value="e10_prix">SP95-E10</option>
+              <option value="sp95_prix">SP95</option>
+              <option value="sp98_prix">SP98</option>
+              <option value="gazole_prix" selected>Gazole</option>
+              <option value="e85_prix">E85</option>
+              <option value="gplc_prix">GPLc</option>
+            </select>
+            <svg class="field-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </div>
         </div>
+        <div class="field field-radius">
+          <label for="radius">Rayon<span class="sr-only"> en kilomètres</span></label>
+          <div class="field-box">
+            <input id="radius" type="number" min="1" max="50" value="5" inputmode="numeric" />
+            <span class="field-unit" aria-hidden="true">km</span>
+          </div>
+        </div>
+        <div class="field field-tank">
+          <label for="tank">Mon réservoir<span class="sr-only"> en litres</span></label>
+          <div class="field-box">
+            <input id="tank" type="number" min="1" max="200" value="60" inputmode="numeric" />
+            <span class="field-unit" aria-hidden="true">L</span>
+          </div>
+        </div>
+        <div class="search-opts">
+          <button id="geolocBtn" class="geo-btn" type="button">
+            <span class="geo-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3"/><path d="M19 12h3"/><path d="M12 2v3"/><path d="M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="geo-text">
+              <span class="geo-label">Utiliser ma position actuelle</span>
+              <span class="geo-sub">Remplit l’adresse automatiquement</span>
+            </span>
+          </button>
+          <div class="distance-mode">
+            <span id="distanceModeLabel" class="distance-mode-label">Mode de distance</span>
+            <!-- Sélecteur à deux options du design system : la case doit être
+                 imbriquée dans le label, le curseur s'appuyant sur `:has`. -->
+            <div class="seg" role="radiogroup" aria-labelledby="distanceModeLabel">
+              <label class="seg-opt" title="Distance en ligne droite entre deux points">
+                <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>À vol d'oiseau
+              </label>
+              <label class="seg-opt" title="Distance par la route (routage Valhalla / OSRM)">
+                <input type="radio" id="modeDrive" name="distanceMode" value="drive" />
+                <svg class="icon-car" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>En voiture
+              </label>
+            </div>
+          </div>
+        </div>
+        <button id="searchBtn" class="search-cta" type="button" aria-label="Lancer la recherche">
+          <span class="cta-idle">Chercher</span><span class="cta-busy" aria-hidden="true">Recherche…</span>
+          <svg class="cta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="cta-spinner" aria-hidden="true"></span>
+        </button>
       </div>
-      <button id="geolocBtn" class="btn btn-ghost" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
     </section>
 
     <div id="status" class="status hidden" role="status" aria-live="polite"></div>
 
-    <section id="results" class="hidden" aria-label="Résultats de la recherche">
+    <section id="results" class="results hidden" aria-label="Résultats de la recherche">
       <div class="results-header">
-        <h2 id="resultsTitle" class="results-meta">Résultats</h2>
-        <div class="results-actions">
+        <div class="results-heading">
+          <h2 id="resultsTitle" class="results-meta">Résultats</h2>
           <div id="resultsCount" class="results-count" aria-live="polite"></div>
-          <div class="view-toggle" role="tablist" aria-label="Mode d'affichage">
-            <button id="viewList" class="view-btn active" role="tab" aria-selected="true" aria-controls="stationList">☰ Liste</button>
-            <button id="viewMap" class="view-btn" role="tab" aria-selected="false" aria-controls="stationMap">⌖ Carte</button>
-            <button id="viewHistory" class="view-btn" role="tab" aria-selected="false" aria-controls="historyList">☷ Historique</button>
-          </div>
+        </div>
+        <div class="view-toggle" role="tablist" aria-label="Mode d'affichage">
+          <button id="viewList" class="view-btn active" type="button" role="tab" aria-selected="true" aria-controls="stationList"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>Liste</button>
+          <button id="viewMap" class="view-btn" type="button" role="tab" aria-selected="false" aria-controls="stationMap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>Carte</button>
+          <button id="viewHistory" class="view-btn" type="button" role="tab" aria-selected="false" aria-controls="historyList"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>Historique</button>
         </div>
       </div>
       <div id="osmHint" class="osm-hint hidden" aria-live="polite">
         <span class="loader-sm" aria-hidden="true"></span>Identification des enseignes en cours…
       </div>
+      <!-- Bloc « Le moins cher » et écart : visibles quel que soit l'onglet,
+           qui ne remplace que le panneau du dessous (liste, carte, historique). -->
+      <div id="resultsTop" class="results-top" aria-live="polite"></div>
       <div id="stationList" class="station-list" aria-live="polite" aria-busy="false"></div>
       <div id="stationMap" class="station-map hidden" role="tabpanel" aria-label="Carte des stations"></div>
       <div id="historyList" class="history-list hidden" role="tabpanel" aria-label="Historique des prix"></div>
@@ -153,17 +188,61 @@
     <aside id="stationSheet" class="station-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
       <div class="sheet-backdrop" data-close="1"></div>
       <div class="sheet-panel" tabindex="-1">
-        <button type="button" class="sheet-close" data-close="1" aria-label="Fermer">×</button>
+        <button type="button" class="icon-btn icon-btn-sm sheet-close" data-close="1" aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         <div class="sheet-content"><!-- rempli dynamiquement par openStationSheet --></div>
       </div>
     </aside>
 
-    <footer>
-      <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
-      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
-    </footer>
+    </main>
   </div>
 
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <a class="brand" href="./" aria-label="Octane — accueil">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
+          <span class="brand-word" aria-hidden="true">CTANE</span>
+        </a>
+        <p>Comparateur en temps réel des prix du carburant en France.</p>
+      </div>
+      <div class="footer-col">
+        <h2 class="footer-title">Sources officielles</h2>
+        <div class="source">
+          <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></svg></span>
+          <span class="source-text"><span class="source-name">Ministère de l’Économie</span><a class="source-sub" href="https://data.economie.gouv.fr" target="_blank" rel="noopener">Prix · data.economie.gouv.fr</a></span>
+        </div>
+        <div class="source">
+          <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></span>
+          <span class="source-text"><span class="source-name">Géoplateforme IGN</span><span class="source-sub">Géocodage · Plan IGN</span></span>
+        </div>
+        <div class="source">
+          <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="source-text"><span class="source-name">Base Adresse Nationale</span><a class="source-sub" href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a></span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h2 class="footer-title">Données ouvertes</h2>
+        <div class="source">
+          <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span>
+          <span class="source-text"><span class="source-name">OpenStreetMap</span><a class="source-sub" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">Enseignes · ODbL 1.0</a></span>
+        </div>
+        <div class="source">
+          <span class="source-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span>
+          <span class="source-text"><span class="source-name">Valhalla · OSRM</span><span class="source-sub">Distances en voiture</span></span>
+        </div>
+      </div>
+      <div class="footer-col footer-legal">
+        <h2 class="footer-title">Légal</h2>
+        <a class="footer-link" href="mentions-legales">Mentions légales</a>
+        <a class="footer-link" href="mentions-legales#confidentialite">Confidentialité</a>
+      </div>
+    </div>
+    <div class="footer-bar">
+      <div><span>octane-carburant.fr</span><span>Service indépendant, non affilié à l’administration</span></div>
+    </div>
+  </footer>
+
+  <script src="site.js" defer></script>
   <script src="vendor/leaflet/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
   <script src="vendor/leaflet.markercluster/leaflet.markercluster.js" defer></script>
   <script src="app.js" defer></script>

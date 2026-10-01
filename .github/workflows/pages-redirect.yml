@@ -1,0 +1,52 @@
+name: Redirect GitHub Pages
+
+# Octane est servi par Cloudflare sur octane-carburant.fr. L'ancienne adresse,
+# leo-grnd.github.io/Octane/, ne publie plus le site : elle publie des pages de
+# redirection qui rouvrent la même page et la même recherche sur le nouveau
+# domaine, et un service worker qui désinstalle celui de l'ancien site.
+# Contenu généré par scripts/build-pages-redirect.mjs.
+#
+# Prérequis (une fois) : Settings → Pages → Build and deployment → Source =
+# « GitHub Actions ». Sans cela, GitHub Pages continue de publier la branche
+# main telle quelle — et, le site vivant désormais dans public/, il affiche
+# le README.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages-redirect.yml'
+      - 'scripts/build-pages-redirect.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Générer les pages de redirection
+        run: node scripts/build-pages-redirect.mjs _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publier sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

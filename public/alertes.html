@@ -8,14 +8,28 @@
   <meta name="theme-color" content="#171615" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#f3f2f2" media="(prefers-color-scheme: light)" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="canonical" href="https://octane-carburant.fr/alertes" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://octane-carburant.fr/alertes" />
+  <meta property="og:title" content="Alerte quotidienne — OCTANE" />
+  <meta property="og:description" content="Chaque matin, la station la moins chère de ta zone pour ton carburant, par email. Données officielles du Ministère de l'Économie." />
+  <meta property="og:image" content="https://octane-carburant.fr/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Octane — Le plein. Le moins cher. Autour de toi. Prix officiels des carburants en France." />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:site_name" content="Octane" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://octane-carburant.fr/og-image.png" />
   <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
-  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script src="theme-init.js"></script>
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
   <link rel="preconnect" href="https://data.geopf.fr" />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="fonts/archivo.css" />
   <link rel="stylesheet" href="design-system.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="alertes.css" />
@@ -23,10 +37,10 @@
 <body>
   <div class="container">
     <nav class="nav">
-      <a class="nav-brand" href="index.html">OCTANE</a>
+      <a class="nav-brand" href="./">OCTANE</a>
       <div class="nav-links">
-        <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
-        <a class="btn btn-secondary" href="comment-ca-marche.html">Comment ça marche</a>
+        <a class="btn btn-secondary" href="./">Retour à l'outil</a>
+        <a class="btn btn-secondary" href="comment-ca-marche">Comment ça marche</a>
         <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
           <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
@@ -125,7 +139,8 @@
     </section>
 
     <footer>
-      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN
+      <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
+      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
     </footer>
   </div>
 

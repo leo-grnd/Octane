@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!-- Source de og-image.png (1200 × 630), l'aperçu affiché quand un lien Octane
+     est partagé. Rendu par scripts/render-brand.mjs. Reprend le hero de la page
+     d'accueil avec les valeurs du design system en dur : la page est rendue
+     hors du site, sans design-system.css. Aucun prix fictif : un aperçu qui
+     affiche un tarif serait faux dès le lendemain. -->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <link href="../../public/fonts/archivo.css" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; }
+    body {
+      background: #f3f2f2;
+      color: #201e1d;
+      font-family: "Archivo", system-ui, sans-serif;
+      padding: 52px 72px 60px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 22px;
+      border-bottom: 2px solid rgba(32, 30, 29, 0.4);
+    }
+    .brand { display: flex; align-items: center; gap: 16px; font-weight: 800; font-size: 34px; letter-spacing: -0.02em; }
+    .mark { width: 40px; height: 40px; display: block; }
+    .bar-meta { font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; color: #605d5d; }
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 48px;
+      align-items: end;
+    }
+    /* 104 px : la plus grande taille où « Le moins cher. » (697 px mesurés)
+       tient sur une ligne à côté de la colonne de droite. */
+    h1 {
+      font-weight: 800;
+      font-size: 104px;
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      white-space: nowrap;
+    }
+    h1 em { font-style: normal; color: #ec3013; }
+    .aside { border-top: 2px solid rgba(32, 30, 29, 0.4); padding-top: 16px; margin-bottom: 10px; }
+    .kicker { font-size: 16px; letter-spacing: 0.14em; text-transform: uppercase; color: #ae1800; margin-bottom: 10px; }
+    .aside p { font-size: 21px; line-height: 1.4; color: #444141; }
+    .live { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #ec3013; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" fill="#ec3013"/>
+        <circle cx="32" cy="32" r="15.5" fill="none" stroke="#f3f2f2" stroke-width="9"/>
+      </svg>
+      OCTANE
+    </div>
+    <div class="bar-meta">Prix des carburants · France</div>
+  </div>
+  <div class="main">
+    <h1>Le plein.<br /><em>Le moins cher.</em><br />Autour de toi.</h1>
+    <div class="aside">
+      <div class="kicker">Source officielle</div>
+      <p>Prix relevés en continu par le Ministère de l’Économie. Une recherche, un classement, un itinéraire.</p>
+      <div class="live"><span class="dot"></span>Gratuit · Sans compte</div>
+    </div>
+  </div>
+</body>
+</html>

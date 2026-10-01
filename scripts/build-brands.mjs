@@ -6,7 +6,7 @@
 //
 // Usage :
 //   node scripts/build-brands.mjs
-//   node scripts/build-brands.mjs --out=data/osm/brands.json
+//   node scripts/build-brands.mjs --out=public/data/osm/brands.json
 //
 // Sortie :
 //   { generated, source, brands: ["Total", ...], stations: [[lat, lon, brandIdx], ...] }
@@ -24,7 +24,7 @@ const arg = (name, fallback) => {
   const raw = process.argv.find(a => a.startsWith(`--${name}=`));
   return raw ? raw.slice(name.length + 3) : fallback;
 };
-const OUT_PATH = resolve(ROOT, arg('out', 'data/osm/brands.json'));
+const OUT_PATH = resolve(ROOT, arg('out', 'public/data/osm/brands.json'));
 
 // Requête Overpass : toutes les stations essence en France (métropole + DOM via ISO3166-1).
 // `out center tags` donne lat/lon (même pour les ways) + tags.

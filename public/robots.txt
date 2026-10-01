@@ -1,0 +1,5 @@
+# Octane — tout le site est public et indexable.
+User-agent: *
+Allow: /
+
+Sitemap: https://octane-carburant.fr/sitemap.xml

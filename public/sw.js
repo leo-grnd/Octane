@@ -1,21 +1,35 @@
 // Octane service worker — network-first pour le shell (déploiements visibles
-// sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
+// sans unregister manuel), stale-while-revalidate pour les ressources tierces, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v43';
+const VERSION = 'octane-v47';
+// URL canoniques, sans « .html » : Cloudflare redirige /page.html vers /page,
+// et une réponse redirigée mise en cache ne peut pas servir une navigation.
 const SHELL = [
   './',
-  './index.html',
+  './theme-init.js',
+  './fonts/archivo.css',
+  './fonts/archivo-latin.woff2',
+  './vendor/leaflet/leaflet.css',
+  './vendor/leaflet/leaflet.js',
+  './vendor/leaflet.markercluster/MarkerCluster.css',
+  './vendor/leaflet.markercluster/MarkerCluster.Default.css',
+  './vendor/leaflet.markercluster/leaflet.markercluster.js',
   './design-system.css',
   './style.css',
   './app.js',
-  './comment-ca-marche.html',
+  './comment-ca-marche',
   './comment-ca-marche.css',
-  './alertes.html',
+  './comment-ca-marche.js',
+  './theme-toggle.js',
+  './alertes',
   './alertes.css',
   './alertes.js',
+  './mentions-legales',
+  './mentions-legales.css',
   './favicon.svg',
-  './og-image.svg',
+  './apple-touch-icon.png',
+  './icons/icon-192.png',
   './manifest.webmanifest'
 ];
 
@@ -38,16 +52,21 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // Ne jamais cacher les appels data / géocodage / tuiles / routage — on laisse passer.
+  // Ne jamais cacher les appels data / géocodage / tuiles / routage / mesure
+  // d’audience — on laisse passer.
   const bypass = [
     'data.economie.gouv.fr',
     'public.opendatasoft.com',
     'data.geopf.fr',
     'router.project-osrm.org',
     'routing.openstreetmap.de',
-    'valhalla1.openstreetmap.de'
+    'valhalla1.openstreetmap.de',
+    'cloudflareinsights.com'
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
+
+  // API du Worker : réponses personnelles ou éphémères, jamais mises en cache.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
 
   // Données précalculées (marques OSM) : toujours frais côté réseau,
   // fallback cache si offline. Évite de servir un 404 figé après redeploy.
@@ -79,7 +98,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // CDN externes (fonts, leaflet) : stale-while-revalidate
+  // Autres ressources tierces : stale-while-revalidate. Polices et Leaflet sont
+  // désormais servis par le site (fonts/, vendor/) et passent par la branche
+  // même origine ci-dessus ; plus aucun CDN n'est appelé au chargement.
   e.respondWith(
     caches.open(VERSION).then(cache =>
       cache.match(req).then(cached => {

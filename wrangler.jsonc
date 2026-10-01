@@ -1,0 +1,30 @@
+// Configuration Cloudflare d'Octane : un Worker + les fichiers statiques de
+// public/. Déployée par Workers Builds à chaque push (main = production, autres
+// branches = URL d'aperçu). En local : `npx wrangler dev`.
+{
+  "name": "octane",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-15",
+
+  "assets": {
+    // Seul ce dossier est publié : sources, scripts, README, configuration et
+    // état des alertes restent hors de portée, sans liste d'exclusion à tenir.
+    "directory": "./public",
+    "binding": "ASSETS",
+    // Une adresse inconnue sert 404.html avec un vrai code 404.
+    "not_found_handling": "404-page",
+    // Seules les routes d'API réveillent le Worker. Les pages et fichiers sont
+    // servis directement par Cloudflare : gratuits et illimités, ils ne
+    // consomment pas le quota de 100 000 invocations par jour de l'offre
+    // gratuite — c'est ce qui permet d'encaisser un pic de trafic.
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Domaine de production, rattaché (DNS + certificat) au premier déploiement
+  // de la branche main.
+  "routes": [
+    { "pattern": "octane-carburant.fr", "custom_domain": true }
+  ],
+
+  "observability": { "enabled": true }
+}

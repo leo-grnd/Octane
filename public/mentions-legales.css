@@ -1,0 +1,115 @@
+/* Page « Mentions légales et confidentialité ».
+   S'appuie sur design-system.css (tokens, .table) et sur style.css (nav, hero,
+   footer). Même langage que « Comment ça marche » : filets francs, numéros de
+   section en accent, texte limité à ~70 caractères par ligne pour la lecture. */
+
+.hero sup { font-size: 0.7em; }
+
+/* Champ à compléter avant publication : impossible à manquer à l'écran. */
+mark.todo {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+/* ---- Sommaire ---- */
+.legal-toc {
+  margin: var(--space-8) 0 0;
+  padding-bottom: var(--space-6);
+  border-bottom: 2px solid var(--color-divider);
+}
+.legal-toc ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  counter-reset: toc;
+}
+.legal-toc li { counter-increment: toc; font-size: 14px; }
+.legal-toc li::before {
+  content: counter(toc, decimal-leading-zero);
+  margin-right: var(--space-2);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  color: var(--color-accent);
+}
+.legal-toc a { color: var(--color-text); text-decoration: none; }
+.legal-toc a:hover { color: var(--color-accent); }
+
+/* ---- Sections ---- */
+.legal-section {
+  padding: var(--space-8) 0;
+  border-bottom: 2px solid var(--color-divider);
+  scroll-margin-top: var(--space-4);
+}
+.legal-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: clamp(24px, 3.5vw, 32px);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-6);
+}
+.legal-num { color: var(--color-accent); font-size: 0.8em; }
+.legal-section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+  margin: var(--space-6) 0 var(--space-2);
+}
+.legal-section p,
+.legal-list { font-size: 15px; line-height: 1.65; max-width: 72ch; color: var(--color-neutral-800); }
+.legal-section p + p { margin-top: var(--space-3); }
+.legal-section strong { color: var(--color-text); font-weight: 600; }
+.legal-section a { color: var(--color-accent); }
+.legal-section code { font-size: 0.9em; }
+.legal-list { padding-left: 1.2em; margin-top: var(--space-2); }
+.legal-list li + li { margin-top: var(--space-1); }
+.legal-note { font-size: 13px !important; color: var(--color-neutral-700) !important; margin-top: var(--space-4); }
+
+/* Paires intitulé / valeur, en filets comme le reste du système. */
+.legal-facts { margin: var(--space-2) 0 var(--space-4); max-width: 80ch; }
+.legal-facts > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-divider);
+}
+.legal-facts > div:last-child { border-bottom: 1px solid var(--color-divider); }
+.legal-facts dt {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+  padding-top: 2px;
+}
+.legal-facts dd { margin: 0; font-size: 15px; line-height: 1.55; }
+.legal-facts a { color: var(--color-accent); }
+
+/* Tableaux : défilement horizontal plutôt que débordement de page en mobile. */
+.legal-table-wrap { overflow-x: auto; margin: var(--space-3) 0 var(--space-4); }
+.legal-table { min-width: 560px; font-size: 14px; }
+.legal-table th { white-space: nowrap; }
+.legal-table td { vertical-align: top; line-height: 1.5; }
+.legal-table td:first-child { font-weight: 600; width: 22%; }
+.legal-table a { color: var(--color-accent); }
+
+/* Mobile : un tableau à défilement horizontal cache sa dernière colonne
+   (licence, durée de conservation) — trop facile à manquer pour une
+   information légale. Chaque ligne devient donc un bloc empilé, la troisième
+   colonne précédée de son intitulé. */
+@media (max-width: 560px) {
+  .legal-facts > div { grid-template-columns: 1fr; gap: var(--space-1); }
+  .legal-table { min-width: 0; }
+  .legal-table thead { display: none; }
+  .legal-table tr { display: block; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-divider); }
+  .legal-table td { display: block; width: auto !important; padding: 2px 0; border: 0; }
+  .legal-table--sources td:nth-child(3)::before { content: "Licence · "; color: var(--color-neutral-700); }
+  .legal-table--storage td:nth-child(3)::before { content: "Durée · "; color: var(--color-neutral-700); }
+}

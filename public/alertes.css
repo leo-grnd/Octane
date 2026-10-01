@@ -4,8 +4,6 @@
    statut, l'autocomplétion et le footer. On ne définit ici que la grille du
    formulaire et les deux blocs propres à la page : aperçu et configuration. */
 
-a.nav-brand { text-decoration: none; color: inherit; }
-
 /* Grille propre à la page : .form-grid de l'outil embarque des règles
    spécifiques à l'écran de recherche qui n'ont pas de sens ici. */
 .alert-grid {

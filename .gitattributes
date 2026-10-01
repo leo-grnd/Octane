@@ -1,0 +1,5 @@
+# Fichiers tiers copiés tels quels : aucune conversion de fin de ligne.
+# leaflet.css est publié en CRLF ; normalisé en LF par Git, il ne correspond
+# plus à son empreinte SRI (attribut integrity) et le navigateur le bloque.
+public/vendor/** -text
+public/fonts/** -text

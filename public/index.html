@@ -11,20 +11,26 @@
   <meta name="keywords" content="prix carburant, essence, gazole, SP95, SP98, E85, comparateur, station service, France, data.gouv" />
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <link rel="apple-touch-icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="canonical" href="/" />
+  <!-- URL absolues obligatoires pour canonical et og:* (un aperçu de partage en
+       chemin relatif est ignoré). Elles pointent vers l'hébergement actuel et
+       basculeront sur le domaine définitif avec la mise en ligne Cloudflare. -->
+  <link rel="canonical" href="https://octane-carburant.fr/" />
   <!-- Applique le thème enregistré avant le premier rendu (évite le flash) :
        app.js, chargé en defer, n'intervient qu'après le premier affichage. -->
-  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <script src="theme-init.js"></script>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://octane-carburant.fr/" />
   <meta property="og:title" content="OCTANE — Trouve ton carburant le moins cher" />
   <meta property="og:description" content="Comparateur en temps réel des prix du carburant en France. Données officielles du Ministère de l'Économie." />
-  <meta property="og:image" content="og-image.svg" />
+  <meta property="og:image" content="https://octane-carburant.fr/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Octane — Le plein. Le moins cher. Autour de toi. Prix officiels des carburants en France." />
   <meta property="og:locale" content="fr_FR" />
   <meta property="og:site_name" content="Octane" />
 
@@ -32,19 +38,20 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="OCTANE — Le plein, le moins cher" />
   <meta name="twitter:description" content="Comparateur en temps réel des prix du carburant en France." />
-  <meta name="twitter:image" content="og-image.svg" />
+  <meta name="twitter:image" content="https://octane-carburant.fr/og-image.png" />
+  <meta name="twitter:image:alt" content="Octane — Le plein. Le moins cher. Autour de toi. Prix officiels des carburants en France." />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
   <link rel="preconnect" href="https://data.geopf.fr" />
   <link rel="preconnect" href="https://valhalla1.openstreetmap.de" />
   <link rel="preconnect" href="https://router.project-osrm.org" />
-  <link rel="preconnect" href="https://unpkg.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
+  <!-- Police et Leaflet servis par le site (fonts/, vendor/) : ni Google ni
+       unpkg. Le sous-ensemble latin est préchargé, il sert sur toutes les pages. -->
+  <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="fonts/archivo.css" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" />
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.css" />
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="design-system.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -56,8 +63,8 @@
     <nav class="nav">
       <span class="nav-brand">OCTANE</span>
       <div class="nav-links">
-        <a class="btn btn-secondary" href="alertes.html">Alertes</a>
-        <a class="btn btn-secondary" href="comment-ca-marche.html">Comment ça marche</a>
+        <a class="btn btn-secondary" href="alertes">Alertes</a>
+        <a class="btn btn-secondary" href="comment-ca-marche">Comment ça marche</a>
         <a class="btn btn-secondary" href="https://leo-grnd.github.io/hub/">Tous les outils</a>
         <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
           <span id="themeIcon" aria-hidden="true">☾</span>
@@ -152,12 +159,13 @@
     </aside>
 
     <footer>
-      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN
+      <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
+      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
     </footer>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin="" defer></script>
+  <script src="vendor/leaflet/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
+  <script src="vendor/leaflet.markercluster/leaflet.markercluster.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

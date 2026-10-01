@@ -6,7 +6,7 @@ Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
 - **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
 - **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
-- **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
+- **Enseignes** · Base pré-calculée (`public/data/osm/brands.json`, issue d'OSM)
 - **Routage** · Valhalla (primaire, `valhalla1.openstreetmap.de`) + OSRM (fallback), pour le mode
   « en voiture ». Les deux tournent en parallèle et leurs distances sont fusionnées.
 - **Fond de carte** · Plan IGN v2 (WMTS Géoplateforme, sans clé), désaturé en CSS. Les serveurs de
@@ -66,16 +66,45 @@ plus strictes (3 jours) : elles désignent un seul gagnant, sans tableau pour nu
 ## Développement local
 
 ```bash
-# N'importe quel serveur statique fait l'affaire
-python3 -m http.server 8080
-# puis http://localhost:8080
+npx wrangler dev
+# puis http://localhost:8787
 ```
 
-Ou ouvrir directement `index.html` dans un navigateur.
+`wrangler dev` reproduit Cloudflare à l'identique : URL sans `.html`, page 404, en-têtes de
+`_headers` (dont la CSP) et routes `/api/*` du Worker. Un simple `python3 -m http.server -d public`
+sert encore les fichiers, mais les liens internes, écrits sans extension (`/alertes`), y renvoient
+une 404.
 
 ## Déploiement
 
-Hébergé en live sur **GitHub Pages** depuis la branche `main`.
+Hébergé sur **Cloudflare** (Workers + fichiers statiques, offre gratuite), à l'adresse
+**https://octane-carburant.fr**. Le déploiement suit le dépôt via Workers Builds : chaque push sur
+`main` part en production, chaque autre branche reçoit une URL d'aperçu.
+
+| Fichier | Rôle |
+|--|--|
+| `wrangler.jsonc` | Worker, dossier publié (`public/`), domaine |
+| `public/_headers` | En-têtes HTTP : CSP, HSTS, anti-iframe, permissions, CORS de la police |
+| `worker/index.js` | Code exécuté pour `/api/*` uniquement |
+| `public/sitemap.xml` · `robots.txt` | Indexation par les moteurs |
+
+Quelques règles qui en découlent :
+
+- **Seules les routes `/api/*` invoquent le Worker** (`run_worker_first`). Pages et fichiers sont
+  servis directement, sans limite ni coût : un pic de trafic ne consomme pas le quota gratuit de
+  100 000 invocations par jour.
+- **Liens internes sans `.html`** : Cloudflare redirige `/alertes.html` vers `/alertes`. Les anciens
+  liens partagés continuent donc de fonctionner, mais le code, les URL canoniques et le
+  `sitemap.xml` utilisent la forme courte pour éviter une redirection à chaque clic.
+- **Aucun script en ligne** dans les pages : la CSP de `_headers` les bloquerait. Le thème est posé
+  par `theme-init.js` (chargé de façon bloquante dans le `<head>`), la bascule par
+  `theme-toggle.js`, `app.js` ou `alertes.js`.
+- **Seul `public/` est publié.** Sources, scripts, configuration et état des alertes vivent hors de
+  ce dossier : ils ne peuvent pas fuiter par oubli. Le site y est aussi rangé parce que
+  `wrangler dev` surveille le dossier publié et écrit son propre état dans `.wrangler/` : servi depuis
+  la racine, il se rechargeait sans fin.
+- **Tout nouveau service tiers** appelé par le navigateur doit être ajouté à la CSP de `_headers`
+  et décrit dans `mentions-legales.html`.
 
 ## Historique des prix (sparklines)
 
@@ -146,7 +175,7 @@ Trois secrets dans *Settings → Secrets and variables → Actions* :
 | `BREVO_SENDER` | adresse expéditrice validée chez Brevo |
 | `OCTANE_ALERTS` | tableau JSON des abonnements |
 
-Deux *variables* optionnelles : `SITE_URL` (défaut `https://leo-grnd.github.io/Octane/`) et
+Deux *variables* optionnelles : `SITE_URL` (défaut `https://octane-carburant.fr/`) et
 `BREVO_SENDER_NAME` (défaut `Octane`).
 
 Format d'`OCTANE_ALERTS` :
@@ -183,8 +212,12 @@ défaut : le cron ne démarrera qu'une fois poussé sur `main`.
 Pour éviter d'appeler Overpass au runtime (latence + dépendance à des miroirs pas
 toujours dispo), on scrape **une fois** toutes les stations `amenity=fuel` de France
 avec leur tag `brand`/`operator`/`name`, et on ship le résultat dans
-`data/osm/brands.json`. Le client le charge une seule fois par session et cherche
+`public/data/osm/brands.json`. Le client le charge une seule fois par session et cherche
 la marque la plus proche (≤ 150 m) en local.
+
+`brands.json` est une base dérivée d'OpenStreetMap : elle est diffusée sous **ODbL 1.0**
+(© contributeurs OpenStreetMap), comme l'indiquent la page mentions légales et l'attribution
+de la carte.
 
 Il n'y a **aucun appel Overpass depuis le navigateur**. Un ancien fallback interrogeait les
 instances publiques à chaque recherche où une enseigne manquait ; il a été retiré avant la mise
@@ -213,9 +246,10 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
 
 - **`design-system.css` est la copie conforme de l'export**, chargée avant `style.css` sur les
   trois pages. Elle porte les tokens (`--color-*`, `--font-*`, `--space-*`, `--shadow-*`) et les
-  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On ne la retouche
-  pas : une nouvelle version de l'export doit pouvoir l'écraser telle quelle. La seule addition
-  est le bloc « Thème sombre », en fin de fichier.
+  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On la retouche le
+  moins possible, pour qu'une nouvelle version de l'export puisse l'écraser. Deux écarts
+  seulement, à refaire après un nouvel export : l'`@import` Google Fonts de la ligne 2 est retiré
+  (voir « Ressources tierces »), et le bloc « Thème sombre » est ajouté en fin de fichier.
 - **`style.css` et les feuilles de page n'emploient que ces tokens.** Exceptions assumées, listées
   en tête de `style.css` : couleurs d'enseigne des badges, rouge/vert des tendances de prix,
   orange/rouge de la fraîcheur. L'accent étant lui-même rouge, une hausse à sa couleur ne se
@@ -231,25 +265,76 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
 - **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
   `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
 
+### Ressources tierces servies par le site
+
+Aucune ressource n'est chargée depuis un CDN : police et cartographie sont copiées dans le dépôt.
+Pas d'adresse IP de visiteur transmise à Google (la jurisprudence européenne a jugé ce transfert
+contraire au RGPD), pas de panne d'unpkg qui casserait la carte, et la condition d'une politique
+de sécurité de contenu (CSP) stricte.
+
+| Ressource | Emplacement | Version | Licence |
+|--|--|--|--|
+| Archivo (police variable 400-800, latin + latin étendu) | `public/fonts/` | Google Fonts v25 | SIL OFL 1.1 |
+| Leaflet | `public/vendor/leaflet/` | 1.9.4 | BSD-2 |
+| Leaflet.markercluster | `public/vendor/leaflet.markercluster/` | 1.5.3 | MIT |
+
+Les fichiers Leaflet gardent leur attribut `integrity` (SRI), identique à celui de la version
+officielle sur unpkg. Pour monter de version : retélécharger les fichiers `dist/` dans le dossier
+correspondant, mettre à jour le hash SRI et le tableau ci-dessus, puis bumper le SW.
+
+### Icônes et aperçu de partage
+
+`public/favicon.svg` (carré accent, anneau clair) est la source unique des icônes ; `og-image.png`
+reprend le hero de l'accueil. Les réseaux sociaux n'affichent pas d'aperçu SVG et iOS ignore une
+`apple-touch-icon` SVG, d'où des PNG, générés par le navigateur déjà installé :
+
+```bash
+node scripts/render-brand.mjs
+```
+
+À relancer après toute retouche de `public/favicon.svg` ou de `scripts/brand/og-image.html`, puis
+committer les PNG. Le script vérifie les dimensions de chaque image produite. `og:image` et
+`canonical` exigent des URL absolues, sur `https://octane-carburant.fr/` : à mettre à jour avec le
+`sitemap.xml` si le domaine change un jour.
+
 ## Fichiers
+
+**Publié — `public/`** (tout ce dossier, et lui seul, est servi par Cloudflare) :
 
 | Fichier | Rôle |
 |--|--|
-| `index.html` | Structure + SEO |
-| `design-system.css` | Design system Modernist (export Claude Design, intouché) + thème sombre |
-| `style.css` | Styles propres à l'outil, sur les tokens du design system |
-| `app.js` | Géocodage + appels API + rendu + cache + historique runtime |
-| `comment-ca-marche.html` · `.css` | Page d'explication |
+| `index.html` · `app.js` · `style.css` | L'outil : géocodage, appels API, rendu, cache, historique |
 | `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |
-| `sw.js` + `manifest.webmanifest` | Service worker et manifest PWA |
-| `favicon.svg` · `og-image.svg` | Icône + preview sociale |
-| `scripts/build-brands.mjs` | Scrape OSM → `data/osm/brands.json` (Node) |
-| `scripts/build_brands.py` | Équivalent stdlib Python |
+| `comment-ca-marche.html` · `.css` · `.js` | Page d'explication et ses animations |
+| `mentions-legales.html` · `.css` | Mentions légales (LCEN), confidentialité (RGPD), licences, conditions d'utilisation |
+| `404.html` | Page d'erreur au design system |
+| `design-system.css` | Design system Modernist (export Claude Design) + thème sombre |
+| `theme-init.js` · `theme-toggle.js` | Thème avant le premier rendu · bascule des pages de contenu |
+| `sw.js` · `manifest.webmanifest` | Service worker et manifest PWA |
+| `fonts/` · `vendor/` | Archivo · Leaflet et markercluster, avec leurs licences |
+| `favicon.svg` | Icône, et source de toutes les icônes PNG |
+| `apple-touch-icon.png` · `icons/` | Icônes iOS (180) et PWA (192, 512, aussi « maskable ») — générées |
+| `og-image.png` | Aperçu de partage 1200 × 630 (réseaux sociaux, messageries) — généré |
+| `data/osm/brands.json` | Base des marques OSM (générée chaque mois par la CI, diffusée sous ODbL) |
+| `_headers` | En-têtes HTTP (CSP, HSTS…) — lu par Cloudflare, jamais servi lui-même |
+| `sitemap.xml` · `robots.txt` | Indexation par les moteurs |
+
+**Non publié** :
+
+| Fichier | Rôle |
+|--|--|
+| `wrangler.jsonc` · `worker/` | Configuration Cloudflare · code des routes `/api/*` |
+| `scripts/render-brand.mjs` · `scripts/brand/` | Rendu des PNG via Chrome/Edge headless (sans dépendance) |
+| `scripts/build-brands.mjs` · `build_brands.py` | Scrape OSM → `public/data/osm/brands.json` (Node ou Python stdlib) |
 | `scripts/send-alerts.mjs` | Envoi des alertes quotidiennes (Node, sans dépendance) |
-| `data/osm/brands.json` | Base des marques OSM (généré, commit) |
 | `data/alerts/state.json` | Prix de la veille + anti-doublon (empreintes, écrit par la CI) |
 | `.github/workflows/build-brands.yml` | Cron mensuel GHA (marques) |
 | `.github/workflows/daily-alerts.yml` | Cron horaire GHA (alertes) |
+
+> **Mentions légales — à tenir à jour.** Le champ `<mark class="todo">` (nom de l'éditeur) doit être
+> rempli avant la mise en ligne : il s'affiche en rouge tant qu'il ne l'est pas. Toute nouvelle donnée
+> collectée, nouveau stockage local ou nouveau service tiers appelé par le navigateur doit y être
+> ajouté, et la date de mise à jour en tête de page modifiée.
 
 > `sw.js` met en cache le *shell* de l'app : **bumper `VERSION` à chaque release**, sinon les
 > navigateurs déjà venus servent l'ancienne version. Tout nouveau fichier de shell doit aussi

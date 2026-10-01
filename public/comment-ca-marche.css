@@ -2,7 +2,6 @@
    S'appuie sur design-system.css pour les tokens et les composants, et sur
    style.css pour la nav, le hero et le footer, partagés avec l'outil. */
 
-a.nav-brand { text-decoration: none; color: inherit; }
 .hero strong { color: var(--color-text); font-weight: 600; }
 
 /* ---- Bandeau chiffres clés ----

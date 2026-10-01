@@ -10,12 +10,12 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="canonical" href="https://leo-grnd.github.io/Octane/comment-ca-marche.html">
+    <link rel="canonical" href="https://octane-carburant.fr/comment-ca-marche">
     <meta property="og:type" content="article">
-    <meta property="og:url" content="https://leo-grnd.github.io/Octane/comment-ca-marche.html">
+    <meta property="og:url" content="https://octane-carburant.fr/comment-ca-marche">
     <meta property="og:title" content="Comment ça marche — OCTANE">
     <meta property="og:description" content="Comment Octane trouve la station la moins chère autour de toi : carburants suivis, rayon, distance à vol d'oiseau ou par la route, et d'où viennent les données.">
-    <meta property="og:image" content="https://leo-grnd.github.io/Octane/og-image.png">
+    <meta property="og:image" content="https://octane-carburant.fr/og-image.png">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -23,9 +23,9 @@
     <meta property="og:locale" content="fr_FR">
     <meta property="og:site_name" content="Octane">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://leo-grnd.github.io/Octane/og-image.png">
+    <meta name="twitter:image" content="https://octane-carburant.fr/og-image.png">
     <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
-    <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <script src="theme-init.js"></script>
     <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="fonts/archivo.css">
     <link rel="stylesheet" href="design-system.css" />
@@ -35,10 +35,10 @@
 <body>
     <div class="container">
         <nav class="nav">
-            <a class="nav-brand" href="index.html">OCTANE</a>
+            <a class="nav-brand" href="./">OCTANE</a>
             <div class="nav-links">
-                <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
-                <a class="btn btn-secondary" href="alertes.html">Alertes</a>
+                <a class="btn btn-secondary" href="./">Retour à l'outil</a>
+                <a class="btn btn-secondary" href="alertes">Alertes</a>
                 <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
                     <span id="themeIcon" aria-hidden="true">☾</span>
                 </button>
@@ -150,8 +150,10 @@
                            (<code>data.economie.gouv.fr</code>), mis à jour en continu. Le géocodage des adresses
                            s'appuie sur la Base Adresse Nationale, servie par la Géoplateforme de l'IGN, le routage
                            sur OSRM/Valhalla, les enseignes sur OpenStreetMap.</p>
-                        <p>Tout tourne <strong>dans ton navigateur</strong> : aucune clé, aucun compte, aucun traceur.
-                           Le site fonctionne même hors-ligne grâce au cache.</p>
+                        <p>Tout tourne <strong>dans ton navigateur</strong> : aucune clé, aucun compte, aucun cookie.
+                           Seule une mesure d'audience anonyme compte les visites, sans te suivre
+                           (<a href="mentions-legales#confidentialite">détails</a>). Le site fonctionne même hors-ligne
+                           grâce au cache.</p>
                     </div>
                     <div class="step-visual">
                         <div class="badges">
@@ -159,7 +161,7 @@
                             <span class="tag tag-outline">Sans clé API</span>
                             <span class="tag tag-outline">100% navigateur</span>
                             <span class="tag tag-outline">Hors-ligne (cache)</span>
-                            <span class="tag tag-outline">Aucun traceur</span>
+                            <span class="tag tag-outline">Aucun cookie</span>
                         </div>
                     </div>
                 </div>
@@ -177,7 +179,7 @@
                            carburant le moins cher du pays. Seules les stations ayant déclaré un
                            prix depuis moins de trois jours sont retenues&nbsp;: sans ce filtre, le
                            classement national est trusté par des stations qui ne déclarent plus.</p>
-                        <p><a class="btn btn-primary" href="alertes.html">Composer mon alerte</a></p>
+                        <p><a class="btn btn-primary" href="alertes">Composer mon alerte</a></p>
                     </div>
                     <div class="step-visual">
                         <div class="vchips">
@@ -198,64 +200,16 @@
             <p class="outro-note">Seule exception : si tu demandes l'alerte quotidienne, ton adresse email est
                conservée pour te l'envoyer — un email planifié ne peut pas partir d'une page statique. Le reste
                de l'outil ne transmet rien.</p>
-            <a class="btn btn-primary cta-final" href="index.html">Trouver mon carburant</a>
+            <a class="btn btn-primary cta-final" href="./">Trouver mon carburant</a>
         </section>
 
         <footer>
           <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
-          <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html#confidentialite">Confidentialité</a></div>
+          <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
         </footer>
     </div>
 
-    <script>
-    (function () {
-        var icon = document.getElementById('themeIcon');
-        // Convention alignée sur app.js et alertes.js : le clair est le défaut,
-        // seul le sombre porte l'attribut.
-        function apply(t) {
-            if (t === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); icon.textContent = '☀'; }
-            else { document.documentElement.removeAttribute('data-theme'); icon.textContent = '☾'; }
-        }
-        apply(localStorage.getItem('octane-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-        document.getElementById('themeToggle').addEventListener('click', function () {
-            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('octane-theme', next); apply(next);
-        });
-
-        var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        var reveals = document.querySelectorAll('.reveal');
-        if (reduce || !('IntersectionObserver' in window)) {
-            reveals.forEach(function (el) { el.classList.add('in'); });
-        } else {
-            var io = new IntersectionObserver(function (entries) {
-                entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-            }, { threshold: 0.18 });
-            reveals.forEach(function (el) { io.observe(el); });
-        }
-
-        var nums = document.querySelectorAll('.stat-num[data-count]');
-        function countUp(el) {
-            var target = parseInt(el.getAttribute('data-count'), 10);
-            if (reduce) { el.textContent = target.toLocaleString('fr-FR'); return; }
-            var start = null, dur = 1100;
-            function tick(ts) {
-                if (start === null) start = ts;
-                var p = Math.min(1, (ts - start) / dur);
-                var eased = 1 - Math.pow(1 - p, 3);
-                el.textContent = Math.round(target * eased).toLocaleString('fr-FR');
-                if (p < 1) requestAnimationFrame(tick);
-            }
-            requestAnimationFrame(tick);
-        }
-        if (!('IntersectionObserver' in window)) {
-            nums.forEach(countUp);
-        } else {
-            var io2 = new IntersectionObserver(function (entries) {
-                entries.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); io2.unobserve(e.target); } });
-            }, { threshold: 0.6 });
-            nums.forEach(function (el) { io2.observe(el); });
-        }
-    })();
-    </script>
+    <script src="theme-toggle.js" defer></script>
+    <script src="comment-ca-marche.js" defer></script>
 </body>
 </html>

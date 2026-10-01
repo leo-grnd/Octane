@@ -1,11 +1,13 @@
 // Octane service worker — network-first pour le shell (déploiements visibles
-// sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
+// sans unregister manuel), stale-while-revalidate pour les ressources tierces, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v46';
+const VERSION = 'octane-v47';
+// URL canoniques, sans « .html » : Cloudflare redirige /page.html vers /page,
+// et une réponse redirigée mise en cache ne peut pas servir une navigation.
 const SHELL = [
   './',
-  './index.html',
+  './theme-init.js',
   './fonts/archivo.css',
   './fonts/archivo-latin.woff2',
   './vendor/leaflet/leaflet.css',
@@ -16,12 +18,14 @@ const SHELL = [
   './design-system.css',
   './style.css',
   './app.js',
-  './comment-ca-marche.html',
+  './comment-ca-marche',
   './comment-ca-marche.css',
-  './alertes.html',
+  './comment-ca-marche.js',
+  './theme-toggle.js',
+  './alertes',
   './alertes.css',
   './alertes.js',
-  './mentions-legales.html',
+  './mentions-legales',
   './mentions-legales.css',
   './favicon.svg',
   './apple-touch-icon.png',
@@ -48,16 +52,21 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // Ne jamais cacher les appels data / géocodage / tuiles / routage — on laisse passer.
+  // Ne jamais cacher les appels data / géocodage / tuiles / routage / mesure
+  // d’audience — on laisse passer.
   const bypass = [
     'data.economie.gouv.fr',
     'public.opendatasoft.com',
     'data.geopf.fr',
     'router.project-osrm.org',
     'routing.openstreetmap.de',
-    'valhalla1.openstreetmap.de'
+    'valhalla1.openstreetmap.de',
+    'cloudflareinsights.com'
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
+
+  // API du Worker : réponses personnelles ou éphémères, jamais mises en cache.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
 
   // Données précalculées (marques OSM) : toujours frais côté réseau,
   // fallback cache si offline. Évite de servir un 404 figé après redeploy.

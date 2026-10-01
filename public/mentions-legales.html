@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <!--
-  À COMPLÉTER AVANT PUBLICATION — chaque champ est balisé <mark class="todo">,
-  surligné en rouge à l'écran tant qu'il n'est pas rempli :
-    · [Prénom NOM]          nom de l'éditeur et directeur de la publication
-    · [email de contact]    adresse à laquelle répondre aux demandes (RGPD, contenu)
+  À COMPLÉTER AVANT PUBLICATION — le champ balisé <mark class="todo"> est
+  surligné en rouge à l’écran tant qu’il n’est pas rempli :
+    · [Prénom NOM]          nom de l’éditeur et directeur de la publication
   Adresse postale et téléphone : la LCEN permet à un particulier éditant à titre
   non professionnel de ne pas les publier, À CONDITION de les avoir communiqués
   à l'hébergeur (renseigner nom, adresse et téléphone dans le profil du compte
@@ -20,9 +19,9 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="canonical" href="https://leo-grnd.github.io/Octane/mentions-legales.html" />
+  <link rel="canonical" href="https://octane-carburant.fr/mentions-legales" />
   <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
-  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <script src="theme-init.js"></script>
   <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="fonts/archivo.css" />
   <link rel="stylesheet" href="design-system.css" />
@@ -32,10 +31,10 @@
 <body>
   <div class="container">
     <nav class="nav">
-      <a class="nav-brand" href="index.html">OCTANE</a>
+      <a class="nav-brand" href="./">OCTANE</a>
       <div class="nav-links">
-        <a class="btn btn-secondary" href="index.html">Retour à l'outil</a>
-        <a class="btn btn-secondary" href="alertes.html">Alertes</a>
+        <a class="btn btn-secondary" href="./">Retour à l'outil</a>
+        <a class="btn btn-secondary" href="alertes">Alertes</a>
         <button id="themeToggle" class="btn btn-secondary btn-icon" aria-label="Changer de thème" title="Changer de thème">
           <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
@@ -72,7 +71,7 @@
            confiance dans l'économie numérique (LCEN).</p>
         <dl class="legal-facts">
           <div><dt>Éditeur et directeur de la publication</dt><dd><mark class="todo">[Prénom NOM]</mark></dd></div>
-          <div><dt>Contact</dt><dd><mark class="todo">[email de contact]</mark></dd></div>
+          <div><dt>Contact</dt><dd><a href="mailto:contact@octane-carburant.fr">contact@octane-carburant.fr</a></dd></div>
         </dl>
         <p class="legal-note">L'éditeur, particulier agissant à titre non professionnel, fait usage de la faculté
            prévue par la LCEN de ne pas rendre publiques son adresse et son numéro de téléphone ; ces éléments
@@ -185,7 +184,7 @@
         <p>Cette politique décrit les traitements de données personnelles liés à Octane, conformément au
            règlement général sur la protection des données (RGPD) et à la loi Informatique et Libertés.
            Le <strong>responsable de traitement</strong> est l'éditeur, joignable à
-           l'adresse <mark class="todo">[email de contact]</mark>.</p>
+           l'adresse <a href="mailto:contact@octane-carburant.fr">contact@octane-carburant.fr</a>.</p>
 
         <h3>La recherche de stations</h3>
         <p>La recherche s'exécute <strong>dans ton navigateur</strong> : l'adresse saisie, ta position, le
@@ -276,7 +275,7 @@
         <p>Tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation et d'opposition, d'un
            droit à la portabilité de tes données, du droit de retirer ton consentement à tout moment, et du droit
            de définir des directives sur le sort de tes données après ton décès. Pour les exercer, écris à
-           <mark class="todo">[email de contact]</mark> : une réponse t'est apportée sous un mois. Si tu estimes,
+           <a href="mailto:contact@octane-carburant.fr">contact@octane-carburant.fr</a> : une réponse t'est apportée sous un mois. Si tu estimes,
            après avoir contacté l'éditeur, que tes droits ne sont pas respectés, tu peux adresser une réclamation à
            la CNIL — 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07 —
            <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/plaintes</a>.</p>
@@ -298,28 +297,10 @@
 
     <footer>
       <div>Prix · Ministère de l’Économie, <a href="https://data.economie.gouv.fr" target="_blank" rel="noopener">data.economie.gouv.fr</a> — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN</div>
-      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html#confidentialite">Confidentialité</a></div>
+      <div class="footer-legal">Service indépendant, non affilié à l’administration · <a href="mentions-legales">Mentions légales</a> · <a href="mentions-legales#confidentialite">Confidentialité</a></div>
     </footer>
   </div>
 
-  <script>
-  (function () {
-    var icon = document.getElementById('themeIcon');
-    // Convention alignée sur app.js et alertes.js : le clair est le défaut,
-    // seul le sombre porte l'attribut.
-    function apply(t) {
-      if (t === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); icon.textContent = '☀'; }
-      else { document.documentElement.removeAttribute('data-theme'); icon.textContent = '☾'; }
-    }
-    var saved = null;
-    try { saved = localStorage.getItem('octane-theme'); } catch (e) {}
-    apply(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-    document.getElementById('themeToggle').addEventListener('click', function () {
-      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem('octane-theme', next); } catch (e) {}
-      apply(next);
-    });
-  })();
-  </script>
+  <script src="theme-toggle.js" defer></script>
 </body>
 </html>

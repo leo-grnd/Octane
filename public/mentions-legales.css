@@ -3,7 +3,6 @@
    footer). Même langage que « Comment ça marche » : filets francs, numéros de
    section en accent, texte limité à ~70 caractères par ligne pour la lecture. */
 
-a.nav-brand { text-decoration: none; color: inherit; }
 .hero sup { font-size: 0.7em; }
 
 /* Champ à compléter avant publication : impossible à manquer à l'écran. */

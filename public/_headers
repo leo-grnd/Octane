@@ -1,0 +1,33 @@
+# En-têtes HTTP des fichiers statiques servis par Cloudflare.
+#
+# Content-Security-Policy : liste blanche exacte des origines que le site
+# contacte. Toute nouvelle API, police ou script tiers doit y être ajouté
+# (et décrit dans mentions-legales.html), sinon le navigateur le bloquera.
+#   script-src  : aucun script en ligne — les pages chargent theme-init.js &
+#                 co. ; static.cloudflareinsights.com = mesure d'audience
+#   style-src   : 'unsafe-inline' requis par les attributs style posés par
+#                 Leaflet et par le rendu (badges, popups)
+#   img-src     : tuiles du Plan IGN
+#   connect-src : prix (data.economie / opendatasoft), géocodage IGN,
+#                 routage FOSSGIS / OSRM, balise de mesure d'audience
+#
+# Strict-Transport-Security sans « preload » : réversible tant que le domaine
+# n'est pas inscrit dans la liste de préchargement des navigateurs.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://data.geopf.fr; font-src 'self'; connect-src 'self' https://data.economie.gouv.fr https://public.opendatasoft.com https://data.geopf.fr https://valhalla1.openstreetmap.de https://router.project-osrm.org https://routing.openstreetmap.de https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# La police est aussi chargée par l'email d'alerte, donc depuis une autre
+# origine (le client mail) : sans cet en-tête, @font-face est refusé.
+/fonts/*
+  Access-Control-Allow-Origin: *
+
+# Le navigateur doit toujours revalider le service worker, faute de quoi une
+# nouvelle version du site pourrait mettre longtemps à être prise en compte.
+/sw.js
+  Cache-Control: no-cache

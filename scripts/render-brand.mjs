@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Génère les visuels raster d'Octane à partir de leurs sources vectorielles :
-//   favicon.svg                → apple-touch-icon.png (180), icons/icon-192.png,
-//                                icons/icon-512.png
-//   scripts/brand/og-image.html → og-image.png (1200 × 630, aperçu de partage)
+//   public/favicon.svg          → public/apple-touch-icon.png (180),
+//                                 public/icons/icon-192.png, public/icons/icon-512.png
+//   scripts/brand/og-image.html → public/og-image.png (1200 × 630, aperçu de partage)
 //
 // Les réseaux sociaux (Facebook, X, LinkedIn, WhatsApp) n'affichent pas d'aperçu
 // SVG et iOS ignore une apple-touch-icon SVG : il faut des PNG. Plutôt qu'une
@@ -13,7 +13,7 @@
 //   node scripts/render-brand.mjs
 //   BROWSER_PATH="/chemin/vers/chrome" node scripts/render-brand.mjs
 //
-// À relancer après toute modification de favicon.svg ou de og-image.html,
+// À relancer après toute modification de public/favicon.svg ou de og-image.html,
 // puis committer les PNG produits.
 
 import { spawnSync } from 'node:child_process';
@@ -44,10 +44,10 @@ if (!browser) {
 }
 
 const TARGETS = [
-  { src: 'scripts/brand/og-image.html', out: 'og-image.png', w: 1200, h: 630 },
-  { src: 'favicon.svg', out: 'apple-touch-icon.png', w: 180, h: 180 },
-  { src: 'favicon.svg', out: 'icons/icon-192.png', w: 192, h: 192 },
-  { src: 'favicon.svg', out: 'icons/icon-512.png', w: 512, h: 512 }
+  { src: 'scripts/brand/og-image.html', out: 'public/og-image.png', w: 1200, h: 630 },
+  { src: 'public/favicon.svg', out: 'public/apple-touch-icon.png', w: 180, h: 180 },
+  { src: 'public/favicon.svg', out: 'public/icons/icon-192.png', w: 192, h: 192 },
+  { src: 'public/favicon.svg', out: 'public/icons/icon-512.png', w: 512, h: 512 }
 ];
 
 // Dimensions réelles lues dans l'en-tête IHDR du PNG : un écart signale un

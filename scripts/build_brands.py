@@ -6,9 +6,9 @@ dispo.
 
 Usage :
   python3 scripts/build_brands.py
-  python3 scripts/build_brands.py --out data/osm/brands.json
+  python3 scripts/build_brands.py --out public/data/osm/brands.json
 
-Sortie : data/osm/brands.json
+Sortie : public/data/osm/brands.json
 Format : { generated, source, brands: [...], stations: [[lat, lon, brandIdx], ...] }
 """
 from __future__ import annotations
@@ -74,7 +74,7 @@ def extract_brand(tags: dict) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument("--out", default="data/osm/brands.json")
+    parser.add_argument("--out", default="public/data/osm/brands.json")
     args = parser.parse_args()
     out_path = (ROOT / args.out).resolve()
 

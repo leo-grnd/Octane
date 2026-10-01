@@ -3,8 +3,14 @@
   "configurations": [
     {
       "name": "octane",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "wrangler@4", "dev", "--port", "8787", "--ip", "127.0.0.1"],
+      "port": 8787
+    },
+    {
+      "name": "octane-static",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765"],
+      "runtimeArgs": ["-m", "http.server", "8765", "-d", "public"],
       "port": 8765
     }
   ]

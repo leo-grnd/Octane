@@ -38,7 +38,7 @@ const flag = (name) => process.argv.includes(`--${name}`);
 const DRY_RUN = flag('dry-run');
 const FORCE = flag('force');
 const STATE_PATH = resolve(ROOT, arg('state', 'data/alerts/state.json'));
-const SITE_URL = (process.env.SITE_URL || 'https://leo-grnd.github.io/Octane/').replace(/\/?$/, '/');
+const SITE_URL = (process.env.SITE_URL || 'https://octane-carburant.fr/').replace(/\/?$/, '/');
 
 const log = (msg) => process.stderr.write(`${msg}\n`);
 
@@ -150,11 +150,11 @@ async function fetchJson(url, opts = {}, { tries = 3, timeoutMs = 20000 } = {}) 
 }
 
 // ===== Marques OSM =====
-// Réutilise data/osm/brands.json, déjà présent dans le checkout et rafraîchi
+// Réutilise public/data/osm/brands.json, déjà présent dans le checkout et rafraîchi
 // mensuellement par build-brands.mjs. Même logique de grille que app.js ; sans
 // bundler, app.js n'est pas importable côté Node, d'où cette copie locale.
 function loadBrands() {
-  const path = resolve(ROOT, 'data/osm/brands.json');
+  const path = resolve(ROOT, 'public/data/osm/brands.json');
   if (!existsSync(path)) return null;
   try {
     const data = JSON.parse(readFileSync(path, 'utf8'));
@@ -277,7 +277,7 @@ async function fetchGroup(a) {
 function backLink(a) {
   const p = new URLSearchParams({ fuel: a.fuel });
   if (a.scope === 'radius') { p.set('q', a.label); p.set('r', String(a.radius)); }
-  return `${SITE_URL}index.html?${p.toString()}`;
+  return `${SITE_URL}?${p.toString()}`;
 }
 
 function mapsUrl(lat, lon) {

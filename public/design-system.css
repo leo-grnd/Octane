@@ -199,6 +199,9 @@ select option { background: var(--o-surface); color: var(--o-ink); }
 }
 .text-muted { color: var(--o-subtle); }
 
+/* Icône en ligne (jeu Lucide de la maquette), à la couleur du texte. */
+.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 /* Petite capitale espacée : intitulés de section, méta, en-têtes de colonne. */
 .kicker {
   font-size: 12px;
@@ -208,12 +211,8 @@ select option { background: var(--o-surface); color: var(--o-ink); }
   color: var(--o-accent-ink);
 }
 
-@keyframes octPulse {
-  0% { box-shadow: 0 0 0 0 rgba(236, 48, 19, .45); }
-  70% { box-shadow: 0 0 0 7px rgba(236, 48, 19, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(236, 48, 19, 0); }
-}
 @keyframes octSpin { to { transform: rotate(360deg); } }
+@keyframes octFade { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 
 /* ═══════════════════════════ Composants ═══════════════════════════ */
 
@@ -587,17 +586,8 @@ textarea.input { min-height: 90px; padding: 12px 14px; resize: vertical; }
   text-transform: uppercase;
   color: var(--o-muted);
 }
-.hero-card-foot .live-time { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--o-ink); }
 .hero-card-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .hero-card-actions .btn { flex: 1 1 auto; }
-.pulse {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--o-accent);
-  animation: octPulse 2s infinite;
-}
 
 /* — Pied de page — */
 .site-footer {
@@ -666,7 +656,6 @@ a.source-sub:hover { color: var(--o-accent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse { animation: none; }
   .seg::before { transition: none; }
   body { transition: none; }
 }

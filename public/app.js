@@ -1,14 +1,3 @@
-// Timestamp
-const updateTime = () => {
-  const now = new Date();
-  document.getElementById('timestamp').textContent = now.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-updateTime();
-setInterval(updateTime, 30000);
-
 // Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
 
 // Éléments
@@ -19,6 +8,7 @@ const $searchBtn = document.getElementById('searchBtn');
 const $geolocBtn = document.getElementById('geolocBtn');
 const $status = document.getElementById('status');
 const $results = document.getElementById('results');
+const $resultsTop = document.getElementById('resultsTop');
 const $stationList = document.getElementById('stationList');
 const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
@@ -778,10 +768,38 @@ function getBrandBadge(name) {
   for (const b of BRAND_BADGES) {
     if (b.re.test(name)) return { mono: b.mono, bg: b.bg, fg: b.fg || '#fff' };
   }
-  // Fallback : initiale du 1er mot signifiant, fond gris neutre
+  // Fallback : initiale du 1er mot signifiant, sur la pastille neutre
   const word = name.trim().split(/\s+/).find(w => /[a-z]/i.test(w));
   if (!word) return null;
-  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--color-text)' };
+  return { mono: word[0].toUpperCase(), neutral: true };
+}
+
+// Pastille d'enseigne. Les couleurs de marque passent en style en ligne : ce
+// sont celles des enseignes, pas du design system. Enseigne inconnue ou prix
+// périmé (`neutral`) : pastille neutre, aux couleurs du thème.
+function brandBadgeHtml(brandName, { neutral = false } = {}) {
+  const badge = getBrandBadge(brandName);
+  const mono = esc(badge ? badge.mono : '—');
+  if (!badge || badge.neutral || neutral) {
+    return `<span class="brand-badge brand-badge-neutral" aria-hidden="true">${mono}</span>`;
+  }
+  return `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${mono}</span>`;
+}
+
+// Icônes de l'interface (jeu Lucide, comme la maquette), tracées en
+// currentColor : elles prennent la couleur du texte qu'elles accompagnent.
+const ICONS = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  trendDown: '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
+  trendUp: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+  trendFlat: '<path d="M5 12h14"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  navigation: '<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'
+};
+function icon(name) {
+  return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
 // Nom commercial de la station (avec la ville si on peut)
@@ -876,10 +894,18 @@ function getStationTrend(stationId, fuelField, currentPrice) {
   if (series.length < 2) return null;
   const avg = series.reduce((s, v) => s + v, 0) / series.length;
   const deltaEur = currentPrice - avg;
-  const deltaCt = Math.round(deltaEur * 100); // centimes
-  const sign = deltaCt <= -1 ? 'down' : deltaCt >= 1 ? 'up' : 'flat';
+  const deltaCt = Math.round(deltaEur * 1000) / 10; // centimes, au dixième
+  // Moins d'un demi-centime d'écart : on parle de stabilité.
+  const sign = deltaCt <= -0.5 ? 'down' : deltaCt >= 0.5 ? 'up' : 'flat';
   const arrow = sign === 'down' ? '↘' : sign === 'up' ? '↗' : '→';
   return { sign, arrow, deltaCt };
+}
+
+// « −1,8 ct/L vs moyenne 7 jours », avec un vrai signe moins.
+function formatTrend(trend) {
+  if (trend.sign === 'flat') return 'stable sur 7 jours';
+  const value = Math.abs(trend.deltaCt).toFixed(1).replace('.', ',');
+  return `${trend.deltaCt > 0 ? '+' : '−'}${value} ct/L vs moyenne 7 jours`;
 }
 
 // URL Google Maps pour itinéraire depuis la position de l'utilisateur
@@ -938,8 +964,10 @@ function stationView(s, fuelField) {
   if (brandName && s.adresse) subParts.push(s.adresse);
   if (cpVille) subParts.push(cpVille);
   return {
+    brandName,
     title,
     subtitle: subParts.join(' · '),
+    cpVille,
     freshness: formatRelativeTime(s[fuelField.replace('_prix', '_maj')]),
     distKm: s.driveKm != null ? s.driveKm : s.distance,
     byRoad: s.driveKm != null,
@@ -951,32 +979,34 @@ const km1 = (v) => `${v.toFixed(1).replace('.', ',')} km`;
 const eur2 = (v) => `${v.toFixed(2).replace('.', ',')} €`;
 
 // Bloc « Le moins cher » : l'objet de la page, traité à l'échelle qu'il mérite.
-// Le prix est posé en clamp(56px, 9vw, 104px) comme dans la maquette — c'est
+// Le prix est posé en clamp(64px, 13vw, 112px) comme dans la maquette — c'est
 // l'information qu'on vient chercher, tout le reste la commente.
+const TREND_ICONS = { down: 'trendDown', up: 'trendUp', flat: 'trendFlat' };
 function buildWinnerBlock(s, fuelField) {
   const v = stationView(s, fuelField);
   const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
   const [euros, cents] = s.price.toFixed(3).split('.');
 
-  const el = document.createElement('section');
+  const el = document.createElement('article');
   el.className = 'winner';
   el.innerHTML = `
-    <div class="winner-price-col">
-      <div class="kicker">Le moins cher</div>
+    <div class="winner-main">
+      <span class="winner-tag">${icon('check')}Le moins cher</span>
       <div class="winner-price">${euros},${cents}<span class="winner-unit">€ / L</span></div>
-      ${trend ? `<div class="winner-trend trend-${trend.sign}">${trend.arrow} ${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours</div>` : ''}
+      ${trend ? `<div class="winner-trend trend-${trend.sign}">${icon(TREND_ICONS[trend.sign])}${esc(formatTrend(trend))}</div>` : ''}
     </div>
     <div class="winner-info">
-      <h3 class="winner-name">${esc(v.title)}</h3>
+      <div class="winner-title">${brandBadgeHtml(v.brandName)}<h3 class="winner-name">${esc(v.title)}</h3></div>
       <div class="winner-addr">${esc(v.subtitle)}</div>
       <div class="winner-facts">
-        <div><span class="winner-num">${v.distKm != null ? esc(km1(v.distKm)) : '—'}</span> <span class="text-muted">${v.byRoad ? 'par la route' : 'à vol d’oiseau'}</span></div>
-        ${s.driveMin != null ? `<div><span class="winner-num">${s.driveMin}</span> <span class="text-muted">min</span></div>` : ''}
-        ${v.freshness ? `<div class="text-muted winner-fresh freshness-${v.freshness.tier}">relevé ${esc(v.freshness.text)}</div>` : ''}
+        <span><span class="winner-num">${v.distKm != null ? esc(km1(v.distKm)) : '—'}</span> ${v.byRoad ? 'par la route' : 'à vol d’oiseau'}</span>
+        ${s.driveMin != null ? `<span><span class="winner-num">${s.driveMin}</span> min</span>` : ''}
+        ${v.freshness ? `<span class="winner-fresh freshness-${v.freshness.tier}">${icon('clock')}relevé ${esc(v.freshness.text)}</span>` : ''}
       </div>
-      ${s._outlier ? `<div class="winner-warn">⚠ Prix qui s'écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale — à vérifier sur place.</div>` : ''}
+      ${s._outlier ? `<div class="winner-warn">${icon('alert')}Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale — à vérifier sur place.</div>` : ''}
       <div class="winner-actions">
-        <a class="btn btn-primary" href="${esc(v.dirUrl)}" target="_blank" rel="noopener">Itinéraire</a>
+        <a class="btn btn-primary" href="${esc(v.dirUrl)}" target="_blank" rel="noopener">${icon('navigation')}Itinéraire</a>
+        <button type="button" class="btn btn-secondary" data-show-map>Voir sur la carte</button>
         <button type="button" class="btn btn-secondary" data-station-idx="0">Détails</button>
       </div>
     </div>
@@ -984,15 +1014,19 @@ function buildWinnerBlock(s, fuelField) {
   return el;
 }
 
-// Une ligne du tableau. La maquette ne garde que rang, station, distance, prix
-// et surcoût sur un plein ; badges, services, fraîcheur et tendance basculent
-// dans la fiche détail, qui s'ouvre au clic sur la ligne.
+// Une ligne du tableau : rang, station, distance, prix et surcoût sur un plein.
+// Services, tendance et autres carburants sont dans la fiche détail, qui
+// s'ouvre au clic sur la ligne. Sur téléphone, la même ligne se replie en
+// deux étages (voir style.css) : la distance passe sous le nom, avec le temps
+// de trajet et la ville (`station-sub-phone`), et le surcoût sous le prix.
 // `refStation` (la moins chère actualisée) peut être null quand aucune station
 // du rayon n'a de prix récent. Une ligne périmée n'a ni rang ni surcoût : la
 // comparer au gagnant serait affirmer un écart qui n'existe peut-être plus.
 function buildStationRow(s, i, fuelField, refStation) {
   const v = stationView(s, fuelField);
   const extra = refStation && !s._stale ? (s.price - refStation.price) * getTankSize() : 0;
+  const dist = v.distKm != null ? km1(v.distKm) : '—';
+  const phoneSub = [dist, s.driveMin != null ? `${s.driveMin} min` : null, v.cpVille].filter(Boolean).join(' · ');
 
   const tr = document.createElement('tr');
   tr.className = s._stale ? 'station-row is-stale' : 'station-row';
@@ -1004,12 +1038,15 @@ function buildStationRow(s, i, fuelField, refStation) {
   tr.innerHTML = `
     <td class="col-rank">${s._stale ? '—' : String(i + 1).padStart(2, '0')}</td>
     <td class="col-station">
-      ${esc(v.title)}
-      ${s._outlier ? '<span class="row-warn" title="Prix qui s’écarte fortement de la médiane locale — à vérifier sur place.">⚠</span>' : ''}
-      <div class="col-station-sub">${esc(v.subtitle)}</div>
-      ${s._stale ? `<div class="col-stale">relevé ${v.freshness ? esc(v.freshness.text) : 'à une date inconnue'}</div>` : ''}
+      <div class="station-id">
+        ${brandBadgeHtml(v.brandName, { neutral: s._stale })}
+        <span class="station-name">${esc(v.title)}${s._outlier ? `<span class="row-warn" title="Prix qui s’écarte fortement de la médiane locale — à vérifier sur place.">${icon('alert')}</span>` : ''}</span>
+        ${s._stale
+          ? `<span class="station-sub station-stale">Relevé ${v.freshness ? esc(v.freshness.text) : 'à une date inconnue'}</span>`
+          : `<span class="station-sub station-sub-wide">${esc(v.subtitle)}</span><span class="station-sub station-sub-phone">${esc(phoneSub)}</span>`}
+      </div>
     </td>
-    <td class="col-dist">${v.distKm != null ? esc(km1(v.distKm)) : '—'}${s.driveMin != null ? `<div class="col-eta">${s.driveMin} min</div>` : ''}</td>
+    <td class="col-dist">${esc(dist)}${s.driveMin != null ? `<span class="col-eta">${s.driveMin} min</span>` : ''}</td>
     <td class="col-price">${s.price.toFixed(3).replace('.', ',')}</td>
     <td class="col-extra">${extra >= 0.005 ? `+${esc(eur2(extra))}` : '—'}</td>
   `;
@@ -1021,7 +1058,7 @@ function buildStationRow(s, i, fuelField, refStation) {
 function buildStaleSeparator(count) {
   const tr = document.createElement('tr');
   tr.className = 'stale-sep';
-  tr.innerHTML = `<td colspan="5">Hors classement · ${count} prix non actualisé${count > 1 ? 's' : ''} depuis plus de ${STALE_DAYS} jours</td>`;
+  tr.innerHTML = `<td colspan="5">${icon('info')}Hors classement · ${count} prix non actualisé${count > 1 ? 's' : ''} depuis plus de ${STALE_DAYS} jours</td>`;
   return tr;
 }
 
@@ -1029,10 +1066,7 @@ function buildHistoryCard(s, i, total) {
   const color = getColorForRank(s._stale ? -1 : i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
-  const badge = getBrandBadge(brandName);
-  const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
-    : '';
+  const badgeHtml = brandBadgeHtml(brandName, { neutral: s._stale });
   const subParts = [];
   if (brandName && s.adresse) subParts.push(s.adresse);
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
@@ -1065,39 +1099,36 @@ function buildSavingsBanner(stations) {
   const el = document.createElement('section');
   el.className = 'savings';
   el.innerHTML = `
-    <div class="savings-kicker">Écart dans votre rayon</div>
+    <div class="savings-kicker">Écart dans ton rayon</div>
     <div class="savings-line">${eur2(delta * tankSize)} d’écart sur un plein de ${tankSize} litres.</div>
   `;
   return el;
 }
 
-// Squelettes calqués sur la structure réelle : un bloc gagnant puis des lignes
-// de tableau. Un placeholder qui ne ressemble pas au résultat final provoque un
-// saut de mise en page au premier rendu.
-function renderSkeletons(rows = 4) {
+// Squelette de la maquette : la ligne de méta, puis le bloc gagnant (pastille,
+// prix, nom, adresse, bouton). Il occupe la place du résultat final, qui
+// s'affiche donc sans saut de mise en page.
+function renderSkeletons() {
   $stationList.setAttribute('aria-busy', 'true');
-  $resultsTitle.textContent = '';
-  $resultsCount.textContent = '';
   $results.classList.remove('hidden');
-  $stationList.innerHTML = `
-    <section class="winner winner-skeleton">
-      <div class="winner-price-col">
-        <div class="sk-line sk-kicker"></div>
-        <div class="sk-line sk-bigprice"></div>
-      </div>
-      <div class="winner-info">
-        <div class="sk-line sk-line-name"></div>
-        <div class="sk-line sk-line-addr"></div>
-        <div class="sk-line sk-line-km"></div>
-      </div>
-    </section>
-    <table class="table station-table">
-      <tbody>
-        ${Array.from({ length: rows }, () => `
-          <tr><td colspan="5"><div class="sk-line sk-line-row"></div></td></tr>`).join('')}
-      </tbody>
-    </table>
+  $results.classList.add('is-loading');
+  $resultsTitle.innerHTML = '<span class="sk sk-meta"></span>';
+  $resultsCount.textContent = '';
+  $resultsTop.innerHTML = `
+    <div class="winner winner-skeleton" aria-hidden="true">
+      <div class="winner-main"><div class="sk sk-tag"></div><div class="sk sk-price"></div></div>
+      <div class="winner-info"><div class="sk sk-name"></div><div class="sk sk-addr"></div><div class="sk sk-btn"></div></div>
+    </div>
   `;
+  $stationList.innerHTML = '';
+}
+
+// Lieu affiché dans la ligne de méta : la commune seule, comme la maquette
+// (« GAZOLE · AVIGNON · 5 KM »), y compris quand la recherche part d'une
+// adresse précise (« 15 Place de l'Horloge 84000 Avignon » → « Avignon »).
+function placeName(label) {
+  const m = /\b\d{5}\s+(.+)$/.exec(label || '');
+  return m ? m[1] : label;
 }
 
 // Nombre de lignes affichées avant le bouton « Afficher les N autres ». Au-delà,
@@ -1110,6 +1141,8 @@ function renderStations() {
   const { fuelField, stations } = currentResults;
   const total = stations.length;
 
+  $results.classList.remove('is-loading');
+  $resultsTop.innerHTML = '';
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
   // Ligne de méta unique, comme la maquette : carburant, lieu, rayon, effectif.
@@ -1117,27 +1150,27 @@ function renderStations() {
   // chose sur deux lignes.
   $resultsTitle.textContent = [
     FUEL_LABELS[fuelField],
-    currentResults.label,
+    placeName(currentResults.label),
     `${currentResults.radiusKm || parseInt($radius.value, 10) || 5} km`,
     `${total} station${total > 1 ? 's' : ''}`
   ].join(' · ');
 
   if (total === 0) {
     const node = document.createElement('div');
-    node.className = 'status empty-state';
+    node.className = 'notice';
     const currentR = currentResults.radiusKm || parseInt($radius.value, 10) || 5;
     const nextR = Math.min(50, currentR * 2);
     if (nextR > currentR) {
-      node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km.</div>
-        <button type="button" class="btn btn-primary status-cta">Élargir à ${nextR} km</button>`;
+      node.innerHTML = `${icon('info')}<p>Aucune station avec ce carburant dans un rayon de ${currentR} km.</p>
+        <button type="button" class="btn btn-primary btn-sm">Élargir à ${nextR} km</button>`;
       node.querySelector('button').addEventListener('click', () => {
         $radius.value = String(nextR);
         doAddressSearch();
       }, { once: true });
     } else {
-      node.innerHTML = `<div>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</div>`;
+      node.innerHTML = `${icon('info')}<p>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</p>`;
     }
-    $stationList.appendChild(node);
+    $resultsTop.appendChild(node);
     $resultsCount.textContent = '';
     return;
   }
@@ -1149,26 +1182,33 @@ function renderStations() {
   const refStation = fresh.length ? stations[0] : null;
 
   if (refStation) {
-    $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+    $resultsTop.appendChild(buildWinnerBlock(refStation, fuelField));
   } else {
     const note = document.createElement('div');
-    note.className = 'stale-notice';
-    note.textContent = `Aucune station de ce rayon n’a déclaré de prix ${FUEL_LABELS[fuelField]} ces ` +
-      `${STALE_DAYS} derniers jours. Voici les derniers prix connus, sans classement : vérifie-les sur place.`;
-    $stationList.appendChild(note);
+    note.className = 'notice';
+    note.innerHTML = `${icon('info')}<p>Aucune station de ce rayon n’a déclaré de prix ${esc(FUEL_LABELS[fuelField])} ces ` +
+      `${STALE_DAYS} derniers jours. Voici les derniers prix connus, sans classement : vérifie-les sur place.</p>`;
+    $resultsTop.appendChild(note);
   }
+
+  // L'écart ne se calcule qu'entre prix actualisés : un vieux prix bas ou haut
+  // gonflerait un écart qui n'existe plus à la pompe.
+  const savings = buildSavingsBanner(fresh);
+  if (savings) $resultsTop.appendChild(savings);
 
   const rest = refStation ? stations.slice(1) : stations;
   const offset = refStation ? 1 : 0; // index de `rest[0]` dans `stations`
   if (rest.length) {
     const shown = rowsExpanded ? rest.length : Math.min(rest.length, ROWS_VISIBLE);
+    const card = document.createElement('div');
+    card.className = 'list-card';
     const table = document.createElement('table');
-    table.className = 'table station-table';
+    table.className = 'station-table';
     table.innerHTML = `
       <thead>
         <tr>
           <th class="col-rank">Nº</th>
-          <th>Station</th>
+          <th class="col-station">Station</th>
           <th class="col-dist">Distance</th>
           <th class="col-price">Prix</th>
           <th class="col-extra">Sur un plein</th>
@@ -1185,22 +1225,17 @@ function renderStations() {
       }
       tbody.appendChild(buildStationRow(s, i + offset, fuelField, refStation));
     });
-    $stationList.appendChild(table);
+    card.appendChild(table);
 
     if (rest.length > shown) {
-      const more = document.createElement('button');
-      more.type = 'button';
-      more.className = 'btn btn-secondary more-btn';
-      more.textContent = `Afficher les ${rest.length - shown} autres stations`;
-      more.addEventListener('click', () => { rowsExpanded = true; renderStations(); });
-      $stationList.appendChild(more);
+      const foot = document.createElement('div');
+      foot.className = 'list-more';
+      foot.innerHTML = `<button type="button" class="btn btn-secondary btn-sm">Afficher les ${rest.length - shown} autres stations</button>`;
+      foot.querySelector('button').addEventListener('click', () => { rowsExpanded = true; renderStations(); });
+      card.appendChild(foot);
     }
+    $stationList.appendChild(card);
   }
-
-  // L'écart ne se calcule qu'entre prix actualisés : un vieux prix bas ou haut
-  // gonflerait un écart qui n'existe plus à la pompe.
-  const savings = buildSavingsBanner(fresh);
-  if (savings) $stationList.appendChild(savings);
 
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
   // rayon contient plus de stations qu'on n'en charge.
@@ -1354,7 +1389,7 @@ async function runSearch(lat, lon, label) {
 
   try {
     showStatus(`Recherche des stations dans un rayon de ${radiusKm} km autour de ${label}...`);
-    renderSkeletons(5);
+    renderSkeletons();
     // Base de marques shippée statiquement : chargée une fois par session, < 1 s
     // même sur la toute première visite grâce à la taille (~200 Ko gzip).
     const brandsPromise = loadOSMBrands();
@@ -1431,8 +1466,13 @@ async function runSearch(lat, lon, label) {
     });
   } catch (err) {
     if (token !== currentSearchToken) return;
+    // Rien à montrer : le squelette disparaît avec la section, la barre d'état
+    // porte l'erreur et le bouton de rattrapage.
     $stationList.setAttribute('aria-busy', 'false');
     $stationList.innerHTML = '';
+    $resultsTop.innerHTML = '';
+    $results.classList.remove('is-loading');
+    $results.classList.add('hidden');
     console.error(err);
     showStatusAction(
       friendlyError(err, 'prix'),
@@ -2051,11 +2091,8 @@ function wazeUrl(lat, lon) {
 
 function buildSheetContent(s, fuelField) {
   const brandName = extractStationName(s) || s.adresse || 'Station sans nom';
-  const badge = getBrandBadge(brandName);
-  const badgeHtml = badge
-    ? `<span class="brand-badge" style="background:${badge.bg};color:${badge.fg}" aria-hidden="true">${esc(badge.mono)}</span>`
-    : '';
-  const fullAddr = [s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const badgeHtml = brandBadgeHtml(brandName);
+  const fullAddr =[s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
   // --- Tous les prix : montre dispo + rupture (temporaire / définitive)
   const pricesRows = ALL_FUELS.map(f => {
@@ -2100,10 +2137,7 @@ function buildSheetContent(s, fuelField) {
     facts.push(`<div><dt>Trajet</dt><dd>≈ ${s.driveMin} min</dd></div>`);
   }
   if (trend) {
-    const label = trend.sign === 'flat'
-      ? 'stable sur 7 jours'
-      : `${trend.deltaCt > 0 ? '+' : ''}${trend.deltaCt} ct/L vs moyenne 7 jours`;
-    facts.push(`<div><dt>Tendance</dt><dd class="trend-${trend.sign}">${trend.arrow} ${esc(label)}</dd></div>`);
+    facts.push(`<div><dt>Tendance</dt><dd class="trend-${trend.sign}">${trend.arrow} ${esc(formatTrend(trend))}</dd></div>`);
   }
   if (extra >= 0.005) {
     facts.push(`<div><dt>Sur un plein</dt><dd>+${esc(eur2(extra))} <span class="text-muted">vs la moins chère (${getTankSize()} L)</span></dd></div>`);
@@ -2211,8 +2245,18 @@ function openCardFromEvent(e) {
   const s = currentResults.stations[idx];
   if (s) openStationSheet(s, currentResults.fuelField, trigger);
 }
-$stationList.addEventListener('click', openCardFromEvent);
-$stationList.addEventListener('keydown', (e) => {
+// Écoute sur toute la section : le bloc gagnant (au-dessus des onglets) comme
+// le tableau. « Voir sur la carte » bascule sur l'onglet Carte et l'amène à
+// l'écran, sous le bloc gagnant qui reste en place.
+$results.addEventListener('click', (e) => {
+  if (e.target.closest('[data-show-map]')) {
+    setView('map');
+    $stationMap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  openCardFromEvent(e);
+});
+$results.addEventListener('keydown', (e) => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.station-row')) {
     e.preventDefault();
     openCardFromEvent(e);

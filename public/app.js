@@ -2056,9 +2056,18 @@ function setView(view) {
   if (view === 'map' && currentResults) renderMap(currentResults.stations);
   if (view === 'history' && currentResults) renderPriceHistory();
 }
-$viewList.addEventListener('click', () => setView('list'));
-$viewMap.addEventListener('click', () => setView('map'));
-$viewHistory.addEventListener('click', () => setView('history'));
+// Choix d'un onglet par l'utilisateur : la page descend jusqu'au panneau
+// affiché, comme elle descend jusqu'aux résultats après une recherche
+// (défilement doux, 16 px de marge haute via scroll-margin-top). Sans ça, le
+// panneau s'ouvre sous le bloc gagnant et l'écart, souvent hors de l'écran.
+function showView(view) {
+  setView(view);
+  const panel = { list: $stationList, map: $stationMap, history: $historyList }[view];
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$viewList.addEventListener('click', () => showView('list'));
+$viewMap.addEventListener('click', () => showView('map'));
+$viewHistory.addEventListener('click', () => showView('history'));
 
 // ===== Bottom sheet "détails station" =====
 // Ouvert au clic sur une carte. Recyclable : un seul DOM, rempli dynamiquement.
@@ -2214,12 +2223,11 @@ function openCardFromEvent(e) {
   if (s) openStationSheet(s, currentResults.fuelField, trigger);
 }
 // Écoute sur toute la section : le bloc gagnant (au-dessus des onglets) comme
-// le tableau. « Voir sur la carte » bascule sur l'onglet Carte et l'amène à
-// l'écran, sous le bloc gagnant qui reste en place.
+// le tableau. « Voir sur la carte » fait comme l'onglet Carte : il l'ouvre et
+// descend jusqu'à elle.
 $results.addEventListener('click', (e) => {
   if (e.target.closest('[data-show-map]')) {
-    setView('map');
-    $stationMap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showView('map');
     return;
   }
   openCardFromEvent(e);

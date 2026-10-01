@@ -289,6 +289,11 @@
 .results-top { display: flex; flex-direction: column; gap: 16px; }
 .results-top:empty,
 .station-list:empty { display: none; }
+/* Panneaux des onglets : même marge que la section quand la page y descend
+   (showView dans app.js). */
+.station-list,
+.station-map,
+.history-list { scroll-margin-top: 16px; }
 
 .results-header {
   display: flex;

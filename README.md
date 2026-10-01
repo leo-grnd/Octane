@@ -5,7 +5,7 @@ Comparateur de prix de carburant en France, en temps réel.
 Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
 - **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
-- **Géocodage** · `api-adresse.data.gouv.fr` (Base Adresse Nationale)
+- **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
 - **Routage** · Valhalla (primaire) + OSRM (fallback), pour le mode « en voiture »
 
@@ -27,6 +27,11 @@ près : « Avignon » renvoyait la rue Avignon de Combourg (Ille-et-Vilaine) plu
 d'Avignon. Le client demande donc 5 résultats et, à score quasi équivalent, privilégie le type
 `municipality`. Sans risque pour les adresses précises : dès qu'une requête contient une voie ou
 un numéro, BAN ne remonte aucune commune dans son top 5.
+
+L'ancienne adresse `api-adresse.data.gouv.fr` est **fermée depuis le 31/01/2026** (en-têtes
+`Sunset` et `Deprecation`) ; Octane interroge la Géoplateforme de l'IGN depuis octobre 2026.
+C'est le même moteur : scores, types et format GeoJSON sont identiques, d'où une migration
+limitée à l'URL.
 
 ## Récupération des stations
 

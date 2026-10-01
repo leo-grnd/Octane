@@ -148,6 +148,10 @@ document.querySelectorAll('input[name="scope"]').forEach(r =>
   r.addEventListener('change', syncScopeFields));
 
 // ===== Géocodage BAN =====
+// Servi par la Géoplateforme de l'IGN, comme dans app.js : l'ancienne adresse
+// `api-adresse.data.gouv.fr` est fermée depuis le 31/01/2026.
+const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search';
+
 // Même correctif que app.js : BAN classe parfois une voie homonyme au-dessus de
 // la commune cherchée, à un millième près (« Avignon » → Combourg, Ille-et-Vilaine).
 const GEO_MUNICIPALITY_TOLERANCE = 0.02;
@@ -169,7 +173,7 @@ function pickBestGeoFeature(features) {
 let pickedPlace = null;
 
 async function geocode(address) {
-  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=5`;
+  const url = `${GEOCODER_URL}?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Géocodage indisponible');
   const data = await res.json();
@@ -194,7 +198,7 @@ const suggest = debounce(async (q) => {
   if (q !== lastSuggestionQuery || q.length < 3) return;
   let features = [];
   try {
-    const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`);
+    const res = await fetch(`${GEOCODER_URL}?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`);
     if (res.ok) features = (await res.json()).features || [];
   } catch { /* réseau indisponible : on laisse la saisie libre */ }
   if (q !== lastSuggestionQuery || !features.length) { closeSuggestions(); return; }

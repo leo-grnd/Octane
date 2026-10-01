@@ -190,7 +190,12 @@ function cacheSet(store, key, data) {
 const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
 const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
 
-// Géocodage via API BAN (gouvernementale, gratuite)
+// Géocodage : Base Adresse Nationale, servie par la Géoplateforme de l'IGN.
+// L'ancienne adresse `api-adresse.data.gouv.fr` est fermée depuis le 31/01/2026
+// (en-têtes `Sunset` / `Deprecation`) ; elle répondait encore mais pouvait
+// s'éteindre à tout moment. Même moteur, même format GeoJSON, mêmes scores —
+// vérifié requête par requête — donc les entrées de cache restent valables.
+const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search';
 
 // `geo2:` = v2 du schéma : la sélection du résultat privilégie la commune.
 // Les entrées v1 pointent potentiellement sur le mauvais lieu, on change donc
@@ -226,7 +231,7 @@ async function geocode(address) {
   if (cached) return cached;
   // limit=5 (et non 1) : il faut voir les suivants pour repérer la commune
   // homonyme coiffée au poteau par une voie.
-  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=5`;
+  const url = `${GEOCODER_URL}?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetchWithRetry(signal => fetch(url, { signal }));
   if (!res.ok) throw new Error('Erreur géocodage');
   const data = await res.json();
@@ -1484,7 +1489,7 @@ function highlightSuggestion(idx) {
 
 async function fetchSuggestions(q) {
   try {
-    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`;
+    const url = `${GEOCODER_URL}?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`;
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();

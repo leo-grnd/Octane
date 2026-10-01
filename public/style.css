@@ -10,99 +10,263 @@
 
 * { margin: 0; padding: 0; }
 
-/* Banner offline — fixé en haut, discret, apparaît si la connexion chute */
+/* Bandeau hors ligne : collé en haut de l'écran tant que la connexion manque. */
 .offline-banner {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--color-accent-700);
-  color: var(--color-neutral-100);
+  padding: 10px var(--space-4);
+  background: var(--o-ink);
+  color: var(--o-bg);
   text-align: center;
-  padding: var(--space-2) var(--space-4);
   font-size: 13px;
-  box-shadow: var(--shadow-sm);
+  font-weight: 500;
 }
-.offline-banner.hidden { display: none; }
 
 /* ═══════════════════ Formulaire de recherche ═══════════════════
-   Plus de panneau encadré ni d'équerres d'angle : la maquette sépare les
-   sections par de simples filets de 2px. */
+   Carte blanche posée sur le fond de carte. Partagée avec la page Alertes,
+   qui n'en reprend que la carte : sa grille est dans alertes.css. */
 .search-panel {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid var(--color-divider);
-  padding: var(--space-6) 0;
-  margin-bottom: 0;
   position: relative;
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 1px solid var(--o-line);
+  border-radius: clamp(18px, 2vw, 22px);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
 }
-.form-grid {
+
+/* Trois dispositions, celles de la maquette : une ligne sur ordinateur,
+   champs sur deux lignes sur tablette, une colonne (rayon et réservoir
+   côte à côte) sur téléphone. Le bouton reste en dernier dans le DOM, après
+   les options qu'il prend en compte. */
+.search-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "addr addr" "fuel fuel" "rad tank" "opts opts" "cta cta";
+  gap: 14px;
   align-items: end;
 }
-.form-grid .btn { min-height: 38px; justify-content: flex-start; }
-.field-address { grid-column: span 2; min-width: 0; }
-.field-distance-mode { grid-column: span 2; min-width: 0; }
-.field { position: relative; min-width: 0; }
+@media (min-width: 640px) {
+  .search-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: "addr addr addr" "fuel rad tank" "opts opts opts" "cta cta cta";
+  }
+}
+@media (min-width: 1024px) {
+  .search-grid {
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, .75fr) minmax(0, .85fr) 168px;
+    grid-template-areas: "addr fuel rad tank cta" "opts opts opts opts opts";
+  }
+}
+.search-grid .field-address { grid-area: addr; }
+.search-grid .field-fuel { grid-area: fuel; }
+.search-grid .field-radius { grid-area: rad; }
+.search-grid .field-tank { grid-area: tank; }
+.search-grid .search-opts { grid-area: opts; }
+.search-grid .search-cta { grid-area: cta; }
 
-@media (max-width: 560px) {
-  .field-address, .field-distance-mode { grid-column: auto; }
-  .form-grid .btn { width: 100%; }
-}
-
-/* Autocomplétion BAN */
-.suggestions {
-  position: absolute;
-  top: 100%; left: 0; right: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-divider);
-  border-top: none;
-  list-style: none;
-  margin: 0; padding: 0;
-  z-index: 20;
-  max-height: 280px;
-  overflow-y: auto;
-  box-shadow: var(--shadow-md);
-}
-.suggestions li {
-  padding: var(--space-2) var(--space-3);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text);
-  border-left: 2px solid transparent;
-}
-.suggestions li .sg-ctx {
-  display: block;
-  font-size: 11px;
-  color: var(--color-neutral-600);
-  margin-top: 2px;
-}
-.suggestions li:hover,
-.suggestions li[aria-selected="true"] {
-  background: color-mix(in srgb, var(--color-text) 6%, transparent);
-  border-left-color: var(--color-accent);
-}
-
-.status {
+/* Champ composé : icône ou unité dans le même cadre que la saisie. */
+.field-box {
+  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-md);
+  background: var(--o-field);
+  color: var(--o-faint);
+}
+.field-box:hover { border-color: var(--o-faint); }
+/* La maquette n'a pas d'état de focus : sans lui, impossible de savoir au
+   clavier quel champ est actif. */
+.field-box:focus-within { border-color: var(--o-accent); box-shadow: 0 0 0 3px var(--o-accent-soft2); }
+.field-box input,
+.field-box select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--o-ink);
+  font: inherit;
+  font-size: 16px; /* 16 px minimum : en dessous, iOS zoome au focus */
+}
+.field-box select {
+  appearance: none;
+  margin: 0 -14px;
+  padding: 0 36px 0 14px;
+  cursor: pointer;
+}
+.field-icon,
+.field-chevron { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.field-icon { width: 18px; height: 18px; }
+.field-chevron { position: absolute; right: 12px; width: 16px; height: 16px; color: var(--o-subtle); pointer-events: none; }
+.field-unit { font-size: 14px; color: var(--o-subtle); }
+
+/* — Bouton Chercher : libellé à gauche, loupe (ou roue) à droite — */
+.search-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 52px;
+  padding: 0 18px 0 20px;
+  border: 0;
+  border-radius: var(--o-radius-md);
+  background: var(--o-accent);
+  color: var(--o-on-accent);
+  box-shadow: var(--o-sh-cta);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+.search-cta:hover { background: var(--o-accent-hover); }
+.search-cta:active { background: var(--o-accent-press); }
+.cta-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cta-spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 2.4px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: octSpin .8s linear infinite;
+}
+.cta-busy,
+.cta-spinner,
+.search-cta[aria-busy="true"] .cta-idle,
+.search-cta[aria-busy="true"] .cta-icon { display: none; }
+.search-cta[aria-busy="true"] .cta-busy,
+.search-cta[aria-busy="true"] .cta-spinner { display: inline-block; }
+.search-cta[aria-busy="true"] { cursor: progress; }
+
+/* — Options : géolocalisation et mode de distance — */
+.search-opts {
+  display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-divider);
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--o-line-soft);
+}
+.geo-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 5px 16px 5px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--o-radius-pill);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.geo-btn:hover { background: var(--o-accent-soft); border-color: var(--o-accent-soft2); }
+.geo-btn:disabled { cursor: progress; }
+.geo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--o-radius-pill);
+  background: var(--o-accent-soft);
+  color: var(--o-accent);
+  transition: background .2s;
+}
+.geo-btn.is-done .geo-icon { background: var(--o-accent); color: var(--o-on-accent); }
+.geo-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.geo-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.geo-label { font-size: 15px; font-weight: 600; color: var(--o-ink); }
+.geo-sub { font-size: 13px; color: var(--o-subtle); overflow-wrap: anywhere; }
+
+.distance-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.distance-mode-label { font-size: 13px; font-weight: 500; color: var(--o-muted); }
+.distance-mode .seg { width: 320px; }
+.distance-mode .icon-car { width: 16px; height: 16px; stroke-width: 2; }
+@media (max-width: 639.98px) {
+  .distance-mode,
+  .distance-mode .seg { width: 100%; }
+}
+
+/* — Autocomplétion (adresses de la Géoplateforme, recherches récentes) — */
+.suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+  list-style: none;
+}
+.suggestions li {
+  padding: 10px 12px;
+  border-radius: var(--o-radius-sm);
+  font-size: 15px;
+  color: var(--o-ink);
+  cursor: pointer;
+}
+.suggestions li .sg-ctx { display: block; margin-top: 1px; font-size: 12.5px; color: var(--o-subtle); }
+.suggestions li:hover,
+.suggestions li[aria-selected="true"] { background: var(--o-hover); }
+.suggestions .sg-history {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+  cursor: default;
+}
+.suggestions .sg-history:hover { background: none; }
+/* Horloge dessinée par un masque : elle prend la couleur du thème. */
+.suggestions li.sg-hist-item { display: flex; align-items: center; gap: 10px; }
+.suggestions li.sg-hist-item::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background: var(--o-faint);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/></svg>") center / contain no-repeat;
+}
+
+/* — Barre d'état (chargement, erreurs avec action de rattrapage) — */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: var(--space-4);
+  padding: 14px 18px;
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-sm);
   font-size: 14px;
-  color: var(--color-neutral-800);
-  margin: var(--space-4) 0;
+  color: var(--o-muted);
 }
 .status.error {
-  border-left-color: var(--color-accent);
-  color: var(--color-text);
+  border-color: var(--o-accent-soft2);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
 }
-/* Le CTA de rattrapage est un vrai bouton du système : c'est une action, pas
-   une décoration de la barre. */
-.status-cta { min-height: 34px; }
+.status .status-cta { margin-left: auto; }
 
 /* État vide affiché directement dans la liste des stations */
 .empty-state {
@@ -266,16 +430,16 @@ body.sheet-open { overflow: hidden; }
   .sheet-title-row h2 { font-size: 1rem; }
 }
 
+/* Roue de la barre d'état. */
 .loader {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--color-divider);
-  border-top-color: var(--color-accent);
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--o-line);
+  border-top-color: var(--o-accent);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.6rem;
-  vertical-align: middle;
+  animation: octSpin .8s linear infinite;
 }
 
 @keyframes spin {
@@ -468,16 +632,8 @@ body.sheet-open { overflow: hidden; }
 
 /* ============ RESPONSIVE ============ */
 
-/* Tablette (≤ 900px) */
-@media (max-width: 900px) {
-  .search-panel { padding: 1.5rem; }
-}
-
 /* Mobile (≤ 640px) */
 @media (max-width: 640px) {
-  /* Status */
-  .status { padding: 1rem 1.1rem; font-size: 0.8rem; }
-
   /* Results header */
   .results-header { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
   .results-header h2 { font-size: 1.05rem; }
@@ -732,35 +888,25 @@ body.sheet-open { overflow: hidden; }
   letter-spacing: 0.02em;
 }
 
-/* ═══════════════════ Bandeau « reprendre la dernière recherche » ═══════════ */
+/* ═══════════════════ Bandeau « reprendre la dernière recherche » ═══════════
+   Posé au-dessus du hero, vitré comme sa carte. */
 .resume-banner {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  margin-top: var(--space-4);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-accent);
-  font-size: 14px;
+  align-items: center;
+  gap: 12px 14px;
+  margin-top: 4px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--o-line);
+  border-radius: 16px;
+  background: var(--o-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--o-sh-badge);
 }
-.resume-text { display: flex; align-items: center; gap: var(--space-2); }
-.resume-dot { color: var(--color-accent); }
-.resume-actions { display: flex; gap: var(--space-2); }
-.resume-btn {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 13px;
-  padding: 7px 14px;
-  border: 1px solid var(--color-divider);
-  background: transparent;
-  color: var(--color-text);
-  cursor: pointer;
-}
-.resume-go { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
-.resume-go:hover { background: var(--color-accent-600); border-color: var(--color-accent-600); }
-.resume-dismiss:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.resume-text { flex: 1 1 240px; margin: 0; font-size: 14px; color: var(--o-muted); }
+.resume-text strong { font-weight: 600; color: var(--o-ink); }
+.resume-actions { display: flex; gap: 8px; margin-left: auto; }
 
 /* ═══════════════════ Indication de chargement des enseignes ═══════════════ */
 .osm-hint {

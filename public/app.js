@@ -108,7 +108,7 @@ function hideStatus() {
 function showStatusAction(msg, actionLabel, onClick) {
   $status.classList.remove('hidden');
   $status.classList.add('error');
-  $status.innerHTML = `${esc(msg)} <button type="button" class="status-cta">${esc(actionLabel)}</button>`;
+  $status.innerHTML = `<span>${esc(msg)}</span> <button type="button" class="btn btn-secondary btn-sm status-cta">${esc(actionLabel)}</button>`;
   const btn = $status.querySelector('.status-cta');
   if (btn && onClick) btn.addEventListener('click', onClick, { once: true });
 }
@@ -269,6 +269,24 @@ async function geocode(address) {
   const result = { lat, lon, label: best.properties.label };
   cacheSet(localStorage, key, result);
   return result;
+}
+
+// Adresse la plus proche d'une position, pour remplir le champ après une
+// géolocalisation (« 15 Place de l'Horloge 84000 Avignon » plutôt que des
+// coordonnées). Même service que le géocodage ; position arrondie à 4
+// décimales (~10 m). Facultatif : null en cas d'échec, l'appelant garde alors
+// les coordonnées.
+const REVERSE_GEOCODER_URL = 'https://data.geopf.fr/geocodage/reverse';
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = `${REVERSE_GEOCODER_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&limit=1`;
+    const res = await fetchWithRetry(signal => fetch(url, { signal }), { tries: 1, timeoutMs: 4000 });
+    if (!res.ok) return null;
+    const feature = ((await res.json()).features || [])[0];
+    return (feature && feature.properties && feature.properties.label) || null;
+  } catch {
+    return null;
+  }
 }
 
 // Historique : `data.economie.gouv.fr` et `public.opendatasoft.com` refusaient
@@ -1326,6 +1344,7 @@ async function runSearch(lat, lon, label) {
   }
 
   const token = ++currentSearchToken;
+  setCtaLoading(true);
   rowsExpanded = false; // toute nouvelle recherche repart sur un tableau replié
   // En mode voiture, on sur-fetch en vol d'oiseau pour ne pas manquer de
   // stations accessibles qui sont au-delà du cercle haversine.
@@ -1420,6 +1439,10 @@ async function runSearch(lat, lon, label) {
       'Réessayer',
       () => { hideStatus(); runSearch(lat, lon, label); }
     );
+  } finally {
+    // Une recherche plus récente a repris le bouton à son compte ; pendant un
+    // géocodage en cours (searchBusy), il reste en « Recherche… ».
+    if (token === currentSearchToken) setCtaLoading(searchBusy);
   }
 }
 
@@ -1445,7 +1468,14 @@ function setSearchBusy(busy) {
   searchBusy = busy;
   $searchBtn.disabled = busy;
   $geolocBtn.disabled = busy;
-  $searchBtn.setAttribute('aria-busy', String(busy));
+  setCtaLoading(busy);
+}
+
+// Bouton Chercher en « Recherche… » avec sa roue, quel que soit le point
+// d'entrée de la recherche (bouton, suggestion, reprise, changement de mode).
+// Le CSS bascule libellé et icône sur aria-busy.
+function setCtaLoading(on) {
+  $searchBtn.setAttribute('aria-busy', String(on));
 }
 
 async function doAddressSearch() {
@@ -1618,6 +1648,25 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.field-address')) closeSuggestions();
 });
 
+// Bouton de géolocalisation : trois états, comme la maquette. Une fois la
+// position utilisée, la seconde ligne montre l'adresse retrouvée ; retaper
+// une adresse le ramène au repos.
+const $geoLabel = $geolocBtn.querySelector('.geo-label');
+const $geoSub = $geolocBtn.querySelector('.geo-sub');
+const GEO_TEXT = {
+  idle: ['Utiliser ma position actuelle', 'Remplit l’adresse automatiquement'],
+  busy: ['Localisation en cours…', 'Autorise l’accès à ta position'],
+  done: ['Position actuelle utilisée', 'Coordonnées GPS']
+};
+function setGeoState(state, sub) {
+  $geoLabel.textContent = GEO_TEXT[state][0];
+  $geoSub.textContent = sub || GEO_TEXT[state][1];
+  $geolocBtn.classList.toggle('is-done', state === 'done');
+}
+$address.addEventListener('input', () => {
+  if ($geolocBtn.classList.contains('is-done')) setGeoState('idle');
+});
+
 $geolocBtn.addEventListener('click', () => {
   if (searchBusy) return;
   if (!navigator.geolocation) {
@@ -1629,16 +1678,23 @@ $geolocBtn.addEventListener('click', () => {
     return;
   }
   setSearchBusy(true);
+  setGeoState('busy');
   showStatus('Récupération de ta position...');
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
-      $address.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      const address = await reverseGeocode(lat, lon);
+      $address.value = address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      setGeoState('done', address);
+      // Relancer « Chercher » sur cette adresse ne coûte pas de nouvel appel,
+      // et retombe sur la position exacte plutôt que sur le numéro de rue.
+      if (address) cacheSet(localStorage, geoCacheKey(address), { lat, lon, label: address });
       updateUrlParams();
-      try { await runSearch(lat, lon, 'ta position actuelle'); }
+      try { await runSearch(lat, lon, address || 'ta position actuelle'); }
       finally { setSearchBusy(false); }
     },
     (err) => {
+      setGeoState('idle');
       // err.code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
       const isDenied = err.code === 1;
       const msg = isDenied
@@ -2222,13 +2278,11 @@ function showResumeBanner(last) {
   banner.id = 'resumeBanner';
   banner.className = 'resume-banner';
   banner.innerHTML = `
-    <div class="resume-text">
-      <span class="resume-dot" aria-hidden="true">↻</span>
-      Reprendre votre dernière recherche : <strong>${esc(fuelLabel)}</strong> autour de <strong>${esc(last.q)}</strong> (${esc(last.radius)} km)
-    </div>
+    <span class="icon-chip icon-chip-sm" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>
+    <p class="resume-text">Reprendre ta dernière recherche : <strong>${esc(fuelLabel)}</strong> autour de <strong>${esc(last.q)}</strong> (${esc(last.radius)} km)</p>
     <div class="resume-actions">
-      <button type="button" class="resume-btn resume-go" aria-label="Reprendre la recherche">Reprendre</button>
-      <button type="button" class="resume-btn resume-dismiss" aria-label="Ignorer">✕</button>
+      <button type="button" class="btn btn-primary btn-sm resume-go" aria-label="Reprendre la recherche">Reprendre</button>
+      <button type="button" class="icon-btn icon-btn-sm resume-dismiss" aria-label="Ignorer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
   `;
   const hero = document.querySelector('.hero');

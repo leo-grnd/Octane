@@ -100,48 +100,74 @@
       </div>
     </section>
 
-    <section class="search-panel">
-      <div class="form-grid">
+    <section class="search-panel" aria-label="Recherche">
+      <div class="search-grid">
         <div class="field field-address">
           <label for="address">Adresse ou ville</label>
-          <input id="address" class="input" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          <div class="field-box">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            <input id="address" type="text" placeholder="12 rue de la Paix, Paris" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+          </div>
           <ul id="suggestions" class="suggestions hidden" role="listbox" aria-label="Suggestions d'adresses"></ul>
         </div>
-        <div class="field">
+        <div class="field field-fuel">
           <label for="fuel">Carburant</label>
-          <select id="fuel" class="input">
-            <option value="e10_prix">SP95-E10</option>
-            <option value="sp95_prix">SP95</option>
-            <option value="sp98_prix">SP98</option>
-            <option value="gazole_prix" selected>Gazole</option>
-            <option value="e85_prix">E85</option>
-            <option value="gplc_prix">GPLc</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="radius">Rayon (km)</label>
-          <input id="radius" class="input" type="number" min="1" max="50" value="5" />
-        </div>
-        <button id="searchBtn" class="btn btn-primary" aria-label="Lancer la recherche">Chercher</button>
-        <div class="field field-tank">
-          <label for="tank">Mon réservoir (L)</label>
-          <input id="tank" class="input" type="number" min="1" max="200" value="60" inputmode="numeric" />
-        </div>
-        <div class="field field-distance-mode">
-          <label id="distanceModeLabel">Mode de distance</label>
-          <!-- Contrôle segmenté du design system : la case doit être imbriquée
-               dans le label, `.seg-opt:has(input:checked)` s'appuyant dessus. -->
-          <div class="seg" role="radiogroup" aria-labelledby="distanceModeLabel">
-            <label class="seg-opt" title="Distance en ligne droite entre deux points">
-              <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />à vol d'oiseau
-            </label>
-            <label class="seg-opt" title="Distance par la route (routage Valhalla / OSRM)">
-              <input type="radio" id="modeDrive" name="distanceMode" value="drive" />en voiture
-            </label>
+          <div class="field-box">
+            <select id="fuel">
+              <option value="e10_prix">SP95-E10</option>
+              <option value="sp95_prix">SP95</option>
+              <option value="sp98_prix">SP98</option>
+              <option value="gazole_prix" selected>Gazole</option>
+              <option value="e85_prix">E85</option>
+              <option value="gplc_prix">GPLc</option>
+            </select>
+            <svg class="field-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </div>
         </div>
+        <div class="field field-radius">
+          <label for="radius">Rayon<span class="sr-only"> en kilomètres</span></label>
+          <div class="field-box">
+            <input id="radius" type="number" min="1" max="50" value="5" inputmode="numeric" />
+            <span class="field-unit" aria-hidden="true">km</span>
+          </div>
+        </div>
+        <div class="field field-tank">
+          <label for="tank">Mon réservoir<span class="sr-only"> en litres</span></label>
+          <div class="field-box">
+            <input id="tank" type="number" min="1" max="200" value="60" inputmode="numeric" />
+            <span class="field-unit" aria-hidden="true">L</span>
+          </div>
+        </div>
+        <div class="search-opts">
+          <button id="geolocBtn" class="geo-btn" type="button">
+            <span class="geo-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3"/><path d="M19 12h3"/><path d="M12 2v3"/><path d="M12 19v3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="geo-text">
+              <span class="geo-label">Utiliser ma position actuelle</span>
+              <span class="geo-sub">Remplit l’adresse automatiquement</span>
+            </span>
+          </button>
+          <div class="distance-mode">
+            <span id="distanceModeLabel" class="distance-mode-label">Mode de distance</span>
+            <!-- Sélecteur à deux options du design system : la case doit être
+                 imbriquée dans le label, le curseur s'appuyant sur `:has`. -->
+            <div class="seg" role="radiogroup" aria-labelledby="distanceModeLabel">
+              <label class="seg-opt" title="Distance en ligne droite entre deux points">
+                <input type="radio" id="modeCrow" name="distanceMode" value="crow" checked />
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>À vol d'oiseau
+              </label>
+              <label class="seg-opt" title="Distance par la route (routage Valhalla / OSRM)">
+                <input type="radio" id="modeDrive" name="distanceMode" value="drive" />
+                <svg class="icon-car" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>En voiture
+              </label>
+            </div>
+          </div>
+        </div>
+        <button id="searchBtn" class="search-cta" type="button" aria-label="Lancer la recherche">
+          <span class="cta-idle">Chercher</span><span class="cta-busy" aria-hidden="true">Recherche…</span>
+          <svg class="cta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="cta-spinner" aria-hidden="true"></span>
+        </button>
       </div>
-      <button id="geolocBtn" class="btn btn-ghost" aria-label="Utiliser ma position géographique actuelle">⊙ Utiliser ma position actuelle</button>
     </section>
 
     <div id="status" class="status hidden" role="status" aria-live="polite"></div>

@@ -247,29 +247,32 @@ via l'onglet Actions → Refresh OSM brands → Run workflow.
 
 ## Design system
 
-L'interface suit le design system **Modernist** exporté de Claude Design : angles droits
-(`--radius-*` à 0), filets francs plutôt que cartes ombrées, Archivo en trois graisses, un seul
-accent rouge (`#ec3013`) sur une rampe de neutres chauds.
+L'interface suit la maquette **« Octane Accueil v3 »** de Claude Design (octobre 2026). Elle
+garde du système Modernist précédent la police (Archivo) et l'accent rouge (`#ec3013`), mais
+passe aux angles arrondis, à des cartes blanches ombrées posées sur un fond zinc (`#f7f7f8`), et
+à des pastilles. La maquette ne dessinait que l'accueil : Alertes, Comment ça marche, les mentions
+légales et la page 404 en transposent le langage. Deux écarts volontaires avec la maquette :
+l'accueil n'a pas de carte « Source officielle » à droite du titre (la colonne reste vide), et
+l'onglet Historique est conservé à côté de Liste et Carte.
 
-- **`design-system.css` est la copie conforme de l'export**, chargée avant `style.css` sur les
-  trois pages. Elle porte les tokens (`--color-*`, `--font-*`, `--space-*`, `--shadow-*`) et les
-  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On la retouche le
-  moins possible, pour qu'une nouvelle version de l'export puisse l'écraser. Deux écarts
-  seulement, à refaire après un nouvel export : l'`@import` Google Fonts de la ligne 2 est retiré
-  (voir « Ressources tierces »), et le bloc « Thème sombre » est ajouté en fin de fichier.
-- **`style.css` et les feuilles de page n'emploient que ces tokens.** Exceptions assumées, listées
-  en tête de `style.css` : couleurs d'enseigne des badges, rouge/vert des tendances de prix,
-  orange/rouge de la fraîcheur. L'accent étant lui-même rouge, une hausse à sa couleur ne se
-  distinguerait plus de la marque.
-- **Le clair est le thème par défaut**, conformément à la direction artistique. Le sombre est
-  activé par `data-theme="dark"` sur `<html>` (préférence système, puis choix mémorisé sous
-  `octane-theme` dans `localStorage`). Un script en ligne dans le `<head>` de chaque page l'applique
-  avant le premier rendu, pour éviter un flash clair.
-- **Le sombre inverse les rampes tonales au lieu de redéfinir les composants** :
-  `--color-neutral-100` reste « le plus proche du fond » et `-900` « le plus contrasté ». Chaque
-  règle écrite pour le clair fonctionne donc en sombre sans duplication. L'accent remonte d'un cran
-  (`#ff563c`) pour garder un contraste de 5,8:1 sur le fond sombre.
-- **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
+- **`design-system.css` porte tout le socle commun** : les tokens `--o-*` (couleurs, ombres,
+  filtres du fond de carte) **repris à l'identique de la maquette**, en clair et en sombre, plus
+  `--font-*`, `--o-radius-*` et `--space-*` ; les composants (`.btn`, `.icon-btn`, `.input`,
+  `.field`, `.seg` à curseur glissant, `.card`, `.tag`, `.table`, `.icon-chip`, `.ic`) ; et
+  l'habillage partagé par toutes les pages (fond de carte, en-tête et menu mobile, hero, pied de
+  page). Pour retoucher l'apparence, on change un token, jamais une couleur dans une feuille.
+- **`style.css` est propre à l'outil** (formulaire, résultats, carte, historique, fiche détail) ;
+  `alertes.css`, `comment-ca-marche.css` et `mentions-legales.css` aux pages du même nom. Toutes
+  n'emploient que les tokens. Exceptions assumées, listées en tête de `style.css` : le voile de la
+  fiche détail, l'ombre des épingles de la carte et les couleurs d'enseigne des badges.
+- **Le clair est le thème par défaut.** Le sombre est activé par `data-theme="dark"` sur `<html>`
+  (préférence système, puis choix mémorisé sous `octane-theme` dans `localStorage`) : il redéfinit
+  les mêmes tokens, les composants n'ont rien à dupliquer. `theme-init.js`, chargé de façon
+  bloquante dans le `<head>`, l'applique avant le premier rendu ; `site.js` porte le bouton de
+  bascule et le menu mobile de toutes les pages.
+- **Points de rupture de la maquette** : téléphone sous 640 px (menu burger, liste en deux étages),
+  tablette sous 1024 px (formulaire sur deux lignes), ordinateur au-delà.
+- **L'email d'alerte reprend la palette claire en valeurs littérales** (`MAIL` dans
   `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
 
 ### Ressources tierces servies par le site
@@ -291,16 +294,20 @@ correspondant, mettre à jour le hash SRI et le tableau ci-dessus, puis bumper l
 
 ### Icônes et aperçu de partage
 
-`public/favicon.svg` (carré accent, anneau clair) est la source unique des icônes ; `og-image.png`
-reprend le hero de l'accueil. Les réseaux sociaux n'affichent pas d'aperçu SVG et iOS ignore une
-`apple-touch-icon` SVG, d'où des PNG, générés par le navigateur déjà installé :
+Le logo est une **jauge** (arc rouge, aiguille et moyeu à l'encre) qui tient lieu de « O » dans
+« CTANE ». `public/favicon.svg` est la jauge seule, sur fond transparent, avec une aiguille claire
+quand le navigateur est en thème sombre. Les icônes d'application partent d'une autre source,
+`scripts/brand/app-icon.svg` : fond blanc jusqu'aux bords (iOS remplit de noir un coin
+transparent) et jauge dans la zone sûre des icônes « maskable ». `og-image.png` reprend le hero de
+l'accueil. Les réseaux sociaux n'affichent pas d'aperçu SVG et iOS ignore une `apple-touch-icon`
+SVG, d'où des PNG, générés par le navigateur déjà installé :
 
 ```bash
 node scripts/render-brand.mjs
 ```
 
-À relancer après toute retouche de `public/favicon.svg` ou de `scripts/brand/og-image.html`, puis
-committer les PNG. Le même script produit `backdrop.webp`, le fond de carte du haut des pages : la
+À relancer après toute retouche d'une source de `scripts/brand/`, puis committer les images. Le
+même script produit `backdrop.webp`, le fond de carte du haut des pages : la
 page `scripts/brand/backdrop.html` assemble les tuiles Plan IGN et encode elle-même l'image, que le
 script récupère par le protocole DevTools (`node scripts/render-brand.mjs backdrop` pour ne
 régénérer qu'elle). Le script vérifie les dimensions de chaque image produite. `og:image` et
@@ -317,13 +324,13 @@ régénérer qu'elle). Le script vérifie les dimensions de chaque image produit
 | `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |
 | `comment-ca-marche.html` · `.css` · `.js` | Page d'explication et ses animations |
 | `mentions-legales.html` · `.css` | Mentions légales (LCEN), confidentialité (RGPD), licences, conditions d'utilisation |
-| `404.html` | Page d'erreur au design system |
+| `404.html` | Page d'erreur, servie pour toute adresse inconnue |
 | `design-system.css` | Design system v3 (maquette Claude Design) : tokens clair et sombre, composants, en-tête, hero, pied de page |
 | `theme-init.js` · `site.js` | Thème avant le premier rendu · bascule du thème et menu mobile, sur toutes les pages |
 | `backdrop.webp` | Fond de carte du haut des pages (Plan IGN en gris) — généré |
 | `sw.js` · `manifest.webmanifest` | Service worker et manifest PWA |
 | `fonts/` · `vendor/` | Archivo · Leaflet et markercluster, avec leurs licences |
-| `favicon.svg` | Icône, et source de toutes les icônes PNG |
+| `favicon.svg` | Favicon : la jauge du logo, fond transparent, variante sombre |
 | `apple-touch-icon.png` · `icons/` | Icônes iOS (180) et PWA (192, 512, aussi « maskable ») — générées |
 | `og-image.png` | Aperçu de partage 1200 × 630 (réseaux sociaux, messageries) — généré |
 | `data/osm/brands.json` | Base des marques OSM (générée chaque mois par la CI, diffusée sous ODbL) |

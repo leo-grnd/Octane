@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Génère les visuels raster d'Octane à partir de leurs sources vectorielles :
-//   public/favicon.svg          → public/apple-touch-icon.png (180),
+//   scripts/brand/app-icon.svg  → public/apple-touch-icon.png (180),
 //                                 public/icons/icon-192.png, public/icons/icon-512.png
+//                                 (public/favicon.svg, la jauge seule sur fond
+//                                 transparent, est servi tel quel)
 //   scripts/brand/og-image.html → public/og-image.png (1200 × 630, aperçu de partage)
 //   scripts/brand/backdrop.html → public/backdrop.webp (1408 × 1024, fond de carte
 //                                 du haut des pages, assemblé depuis le Plan IGN)
@@ -16,8 +18,8 @@
 //   node scripts/render-brand.mjs backdrop     (seulement celles dont le chemin contient « backdrop »)
 //   BROWSER_PATH="/chemin/vers/chrome" node scripts/render-brand.mjs
 //
-// À relancer après toute modification d'une source (public/favicon.svg,
-// scripts/brand/*.html), puis committer les images produites. Node 22 ou plus.
+// À relancer après toute modification d'une source (scripts/brand/*), puis
+// committer les images produites. Node 22 ou plus.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -48,9 +50,9 @@ if (!browser) {
 
 const TARGETS = [
   { src: 'scripts/brand/og-image.html', out: 'public/og-image.png', w: 1200, h: 630 },
-  { src: 'public/favicon.svg', out: 'public/apple-touch-icon.png', w: 180, h: 180 },
-  { src: 'public/favicon.svg', out: 'public/icons/icon-192.png', w: 192, h: 192 },
-  { src: 'public/favicon.svg', out: 'public/icons/icon-512.png', w: 512, h: 512 },
+  { src: 'scripts/brand/app-icon.svg', out: 'public/apple-touch-icon.png', w: 180, h: 180 },
+  { src: 'scripts/brand/app-icon.svg', out: 'public/icons/icon-192.png', w: 192, h: 192 },
+  { src: 'scripts/brand/app-icon.svg', out: 'public/icons/icon-512.png', w: 512, h: 512 },
   // Image encodée par la page elle-même (canvas → data: URL dans #out), et non
   // capturée : une capture ne sait produire que du PNG, ~5 fois plus lourd ici.
   { src: 'scripts/brand/backdrop.html', out: 'public/backdrop.webp', w: 1408, h: 1024, encoded: true }

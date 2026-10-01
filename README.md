@@ -231,6 +231,21 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
 - **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
   `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
 
+### Icônes et aperçu de partage
+
+`favicon.svg` (carré accent, anneau clair) est la source unique des icônes ; `og-image.png`
+reprend le hero de l'accueil. Les réseaux sociaux n'affichent pas d'aperçu SVG et iOS ignore une
+`apple-touch-icon` SVG, d'où des PNG, générés par le navigateur déjà installé :
+
+```bash
+node scripts/render-brand.mjs
+```
+
+À relancer après toute retouche de `favicon.svg` ou de `scripts/brand/og-image.html`, puis
+committer les PNG. Le script vérifie les dimensions de chaque image produite. `og:image` et
+`canonical` exigent des URL absolues : elles pointent vers l'hébergement en cours et sont à mettre
+à jour à chaque changement de domaine.
+
 ## Fichiers
 
 | Fichier | Rôle |
@@ -242,7 +257,12 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
 | `comment-ca-marche.html` · `.css` | Page d'explication |
 | `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |
 | `sw.js` + `manifest.webmanifest` | Service worker et manifest PWA |
-| `favicon.svg` · `og-image.svg` | Icône + preview sociale |
+| `favicon.svg` | Icône, et source de toutes les icônes PNG |
+| `apple-touch-icon.png` · `icons/` | Icônes iOS (180) et PWA (192, 512, aussi « maskable ») — générées |
+| `og-image.png` | Aperçu de partage 1200 × 630 (réseaux sociaux, messageries) — généré |
+| `scripts/brand/og-image.html` | Source de `og-image.png` |
+| `scripts/render-brand.mjs` | Rend les PNG ci-dessus via Chrome/Edge headless (sans dépendance) |
+| `404.html` · `robots.txt` | Page d'erreur au design system · consignes aux moteurs |
 | `scripts/build-brands.mjs` | Scrape OSM → `data/osm/brands.json` (Node) |
 | `scripts/build_brands.py` | Équivalent stdlib Python |
 | `scripts/send-alerts.mjs` | Envoi des alertes quotidiennes (Node, sans dépendance) |

@@ -1,0 +1,5 @@
+# Octane — tout le site est public et indexable.
+# La ligne « Sitemap: » (URL absolue obligatoire) sera ajoutée avec le domaine
+# définitif, lors de la mise en ligne sur Cloudflare.
+User-agent: *
+Allow: /

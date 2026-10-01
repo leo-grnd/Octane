@@ -138,6 +138,59 @@ function showStatusAction(msg, actionLabel, onClick) {
   if (btn && onClick) btn.addEventListener('click', onClick, { once: true });
 }
 
+// ===== Erreurs réseau lisibles =====
+// Les messages bruts (« Failed to fetch », « HTTP 503 », « API carburants:
+// 429 ») ne disent rien à l'utilisateur. Le cas qui compte le plus pour un
+// lancement public est le 429 : l'API prix limite chaque IP à 50 000 appels
+// par jour, et les opérateurs mobiles partagent une même IP entre de nombreux
+// abonnés (CGNAT). L'API expose son compteur via CORS, ce qui permet de dire
+// précisément quand la recherche refonctionnera.
+const SERVICE_NAMES = {
+  prix: 'le service officiel des prix',
+  adresses: 'le service d’adresses de l’IGN'
+};
+const RESET_FMT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' });
+
+// Erreur HTTP d'une réponse non-ok, déjà formulée pour l'utilisateur. Pas de
+// retry sur 429 (fetchWithRetry ne rejoue que les 5xx) : un quota épuisé ne se
+// débloquera pas en quelques secondes.
+function httpError(res, service) {
+  const name = SERVICE_NAMES[service];
+  if (res.status === 429) {
+    const remaining = res.headers.get('X-RateLimit-Remaining');
+    // Format Opendatasoft : « 2026-10-02 00:00:00+00:00 »
+    const reset = new Date(String(res.headers.get('X-RateLimit-Reset') || '').replace(' ', 'T'));
+    if (remaining === '0' && !isNaN(reset)) {
+      return new Error(`${capitalize(name)} limite le nombre de recherches par réseau, et la limite du jour ` +
+        `est atteinte pour le tien. Elle se réinitialise à ${RESET_FMT.format(reset)}.`);
+    }
+    return new Error(`Trop de recherches en peu de temps depuis ton réseau. Réessaie dans quelques minutes.`);
+  }
+  if (res.status >= 500) {
+    return new Error(`${capitalize(name)} est momentanément indisponible (erreur ${res.status}). Réessaie dans un instant.`);
+  }
+  return new Error(`${capitalize(name)} a refusé la requête (erreur ${res.status}).`);
+}
+
+// Traduit une erreur levée pendant un appel réseau. Les messages déjà
+// lisibles (httpError, « Adresse introuvable »…) passent tels quels.
+function friendlyError(err, service) {
+  const name = SERVICE_NAMES[service];
+  if (err && err.name === 'AbortError') {
+    return `${capitalize(name)} met trop de temps à répondre. Réessaie dans un instant.`;
+  }
+  // Libellés d'échec réseau de fetch selon le moteur : Chromium, Firefox, WebKit.
+  if (err instanceof TypeError && /Failed to fetch|NetworkError|Load failed/i.test(err.message)) {
+    return `Impossible de joindre ${name}. Vérifie ta connexion puis réessaie.`;
+  }
+  // 5xx persistant après les retries de fetchWithRetry
+  const http = /^HTTP (\d{3})$/.exec(err && err.message);
+  if (http) return `${capitalize(name)} est momentanément indisponible (erreur ${http[1]}). Réessaie dans un instant.`;
+  return (err && err.message) || 'Erreur inattendue.';
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
 // Distance Haversine (km)
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -233,7 +286,7 @@ async function geocode(address) {
   // homonyme coiffée au poteau par une voie.
   const url = `${GEOCODER_URL}?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetchWithRetry(signal => fetch(url, { signal }));
-  if (!res.ok) throw new Error('Erreur géocodage');
+  if (!res.ok) throw httpError(res, 'adresses');
   const data = await res.json();
   const best = pickBestGeoFeature(data.features || []);
   if (!best) throw new Error('Adresse introuvable');
@@ -251,8 +304,7 @@ async function geocode(address) {
 // sans clé API) et faisait tomber toute l'app, miroirs compris.
 
 // Retry générique avec backoff exponentiel + timeout global. À utiliser pour
-// les APIs publiques sans redondance native (BAN, Opendatasoft). Overpass a
-// déjà sa propre stratégie multi-endpoint via Promise.any.
+// les APIs publiques sans redondance native (BAN, Opendatasoft).
 async function fetchWithRetry(fetcher, { tries = 3, backoff = [400, 1200, 2500], timeoutMs = 8000 } = {}) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
@@ -314,8 +366,8 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
     const res = await fetchWithRetry(signal => fetch(url, { signal }));
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.error('API 4xx body:', body);
-      throw new Error(`API carburants: ${res.status}`);
+      console.error(`API carburants ${res.status} :`, body);
+      throw httpError(res, 'prix');
     }
     return res.json();
   };
@@ -597,73 +649,11 @@ function lookupOSMBrand(lat, lon, data) {
   return nearest ? data.brands[nearest[2]] : null;
 }
 
-// Fallback n°4 : Overpass runtime. Appelé uniquement quand la base shippée +
-// regex n'ont rien trouvé pour certaines stations (ex: POIs OSM ajoutés après
-// notre dernier scrape mensuel). Silencieux, non bloquant.
-const runtimeOverpassCache = {}; // session-only, par zone arrondie
-async function fetchOSMFuelStationsRuntime(lat, lon, radiusKm) {
-  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
-  if (key in runtimeOverpassCache) return runtimeOverpassCache[key];
-
-  const radiusM = Math.round(radiusKm * 1000 * 1.1);
-  const query = `[out:json][timeout:20];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.openstreetmap.fr/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter'
-  ];
-  const tryOne = (ep) => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    return fetch(ep, {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      signal: ctrl.signal
-    }).then(res => {
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }).then(data => {
-      const out = (data.elements || []).map(e => {
-        const elat = e.lat ?? e.center?.lat;
-        const elon = e.lon ?? e.center?.lon;
-        const t = e.tags || {};
-        const brand = t.brand || t.operator || t.name || null;
-        return elat != null && elon != null && brand
-          ? { lat: elat, lon: elon, brand: brand.trim() }
-          : null;
-      }).filter(Boolean);
-      if (!out.length) throw new Error('empty');
-      return out;
-    });
-  };
-
-  try {
-    const out = await Promise.any(endpoints.map(tryOne));
-    runtimeOverpassCache[key] = out;
-    return out;
-  } catch {
-    runtimeOverpassCache[key] = [];
-    return [];
-  }
-}
-
-function findNearestRuntimeBrand(lat, lon, osmStations) {
-  if (!osmStations.length || lat == null) return null;
-  const MAX_KM = 0.15;
-  let nearest = null;
-  let minDist = Infinity;
-  for (const osm of osmStations) {
-    const d = haversine(lat, lon, osm.lat, osm.lon);
-    if (d < minDist && d <= MAX_KM) {
-      minDist = d;
-      nearest = osm;
-    }
-  }
-  return nearest?.brand || null;
-}
+// Pas de requête Overpass au runtime : un ancien fallback interrogeait les
+// instances publiques à chaque recherche où une enseigne manquait. Leurs
+// politiques d'usage proscrivent ce trafic dès qu'il devient massif, et une
+// station sans enseigne garde de toute façon un affichage complet (adresse,
+// ville). La base mensuelle et les regex sur les libellés suffisent.
 
 // Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
 function extractCoords(s) {
@@ -1383,20 +1373,6 @@ async function runSearch(lat, lon, label) {
         });
         if (changed) renderStations();
       }
-      // Fallback n°4 : si certaines stations n'ont toujours ni marque OSM ni
-      // match regex, on tente un Overpass runtime ciblé (zone de recherche).
-      // Silencieux et non bloquant — si Overpass est HS ou lent, on s'en fout.
-      const unmatched = currentResults.stations.filter(s => extractStationName(s) === null);
-      if (!unmatched.length) return;
-      fetchOSMFuelStationsRuntime(lat, lon, radiusKm).then(osm => {
-        if (token !== currentSearchToken || !osm.length) return;
-        let changed = false;
-        unmatched.forEach(s => {
-          const brand = findNearestRuntimeBrand(s.lat, s.lon, osm);
-          if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
-        });
-        if (changed) renderStations();
-      });
     });
   } catch (err) {
     if (token !== currentSearchToken) return;
@@ -1404,7 +1380,7 @@ async function runSearch(lat, lon, label) {
     $stationList.innerHTML = '';
     console.error(err);
     showStatusAction(
-      `Erreur lors du chargement des prix : ${err.message}`,
+      friendlyError(err, 'prix'),
       'Réessayer',
       () => { hideStatus(); runSearch(lat, lon, label); }
     );
@@ -1439,8 +1415,10 @@ function setSearchBusy(busy) {
 async function doAddressSearch() {
   if (searchBusy) return;
   const address = $address.value.trim();
-  if (!address || address.length < 2) {
-    showStatus('Entre une adresse ou une ville (2 caractères minimum)', true);
+  // Le géocodeur refuse les requêtes de moins de 3 caractères (400) ; les
+  // communes à nom très court (Eu, Ay, Y…) passent avec leur code postal.
+  if (!address || address.length < 3) {
+    showStatus('Entre au moins 3 caractères (pour une commune très courte, ajoute son code postal : « Eu 76260 »)', true);
     return;
   }
   updateUrlParams();
@@ -1452,7 +1430,7 @@ async function doAddressSearch() {
     await runSearch(lat, lon, label);
   } catch (err) {
     showStatusAction(
-      `Erreur : ${err.message}`,
+      friendlyError(err, 'adresses'),
       'Réessayer',
       () => { hideStatus(); doAddressSearch(); }
     );

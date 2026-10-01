@@ -175,6 +175,11 @@ avec leur tag `brand`/`operator`/`name`, et on ship le résultat dans
 `data/osm/brands.json`. Le client le charge une seule fois par session et cherche
 la marque la plus proche (≤ 150 m) en local.
 
+Il n'y a **aucun appel Overpass depuis le navigateur**. Un ancien fallback interrogeait les
+instances publiques à chaque recherche où une enseigne manquait ; il a été retiré avant la mise
+en ligne publique, leurs politiques d'usage proscrivant ce trafic dès qu'il devient massif. Une
+station absente de la base garde un affichage complet, simplement sans enseigne.
+
 **Rafraîchir localement (Node) :**
 ```bash
 node scripts/build-brands.mjs

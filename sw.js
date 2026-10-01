@@ -2,7 +2,7 @@
 // sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v39';
+const VERSION = 'octane-v40';
 const SHELL = [
   './',
   './index.html',
@@ -38,13 +38,11 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // Ne jamais cacher les appels data / géocodage / overpass — on laisse passer.
+  // Ne jamais cacher les appels data / géocodage / tuiles / routage — on laisse passer.
   const bypass = [
     'data.economie.gouv.fr',
     'public.opendatasoft.com',
     'data.geopf.fr',
-    'overpass.kumi.systems',
-    'overpass-api.de',
     'router.project-osrm.org',
     'routing.openstreetmap.de',
     'valhalla.openstreetmap.de'

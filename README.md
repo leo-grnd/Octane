@@ -81,6 +81,13 @@ Hébergé sur **Cloudflare** (Workers + fichiers statiques, offre gratuite), à 
 **https://octane-carburant.fr**. Le déploiement suit le dépôt via Workers Builds : chaque push sur
 `main` part en production, chaque autre branche reçoit une URL d'aperçu.
 
+**L'ancienne adresse `leo-grnd.github.io/Octane/` redirige vers le nouveau domaine.** GitHub Pages n'y
+publie plus le site mais des pages de redirection (`.github/workflows/pages-redirect.yml`, contenu
+généré par `scripts/build-pages-redirect.mjs`) : chaque ancien lien rouvre la même page et la même
+recherche (`/Octane/index.html?q=Lyon&fuel=e10_prix` → `/?q=Lyon&fuel=e10_prix`), toute autre adresse
+passe par `404.html`, et un `sw.js` de désinstallation remplace le service worker de l'ancien site
+(caches vidés, onglets rechargés). Prérequis : *Settings → Pages → Source = GitHub Actions*.
+
 | Fichier | Rôle |
 |--|--|
 | `wrangler.jsonc` | Worker, dossier publié (`public/`), domaine |
@@ -330,11 +337,12 @@ committer les PNG. Le script vérifie les dimensions de chaque image produite. `
 | `data/alerts/state.json` | Prix de la veille + anti-doublon (empreintes, écrit par la CI) |
 | `.github/workflows/build-brands.yml` | Cron mensuel GHA (marques) |
 | `.github/workflows/daily-alerts.yml` | Cron horaire GHA (alertes) |
+| `.github/workflows/pages-redirect.yml` · `scripts/build-pages-redirect.mjs` | Redirections de l'ancienne adresse GitHub Pages |
 
-> **Mentions légales — à tenir à jour.** Le champ `<mark class="todo">` (nom de l'éditeur) doit être
-> rempli avant la mise en ligne : il s'affiche en rouge tant qu'il ne l'est pas. Toute nouvelle donnée
-> collectée, nouveau stockage local ou nouveau service tiers appelé par le navigateur doit y être
-> ajouté, et la date de mise à jour en tête de page modifiée.
+> **Mentions légales — à tenir à jour.** Toute nouvelle donnée collectée, nouveau stockage local ou
+> nouveau service tiers appelé par le navigateur doit y être ajouté, et la date de mise à jour en tête
+> de page modifiée. Un champ provisoire se balise `<mark class="todo">` : il s'affiche en rouge tant
+> qu'il n'est pas rempli, pour ne pas partir en ligne par mégarde.
 
 > `sw.js` met en cache le *shell* de l'app : **bumper `VERSION` à chaque release**, sinon les
 > navigateurs déjà venus servent l'ancienne version. Tout nouveau fichier de shell doit aussi

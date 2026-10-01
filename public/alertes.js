@@ -6,27 +6,7 @@
 // esc(), les libellés carburants, la préférence commune du géocodeur. Toute
 // correction sur l'un doit être reportée sur l'autre.
 
-// ===== Thème (même contrat que index.html : clé localStorage octane-theme) =====
-(function initTheme() {
-  const icon = document.getElementById('themeIcon');
-  const apply = (t) => {
-    if (t === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      icon.textContent = '☀';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      icon.textContent = '☾';
-    }
-  };
-  let saved = null;
-  try { saved = localStorage.getItem('octane-theme'); } catch {}
-  apply(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('octane-theme', next); } catch {}
-    apply(next);
-  });
-})();
+// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
 
 // ===== Constantes partagées avec le job d'envoi =====
 // Le filtre de fraîcheur est le cœur de la fiabilité de l'alerte : sans lui, le

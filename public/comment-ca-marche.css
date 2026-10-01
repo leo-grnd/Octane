@@ -1,6 +1,6 @@
 /* comment-ca-marche.css — page « Comment ça marche ».
-   S'appuie sur design-system.css pour les tokens et les composants, et sur
-   style.css pour la nav, le hero et le footer, partagés avec l'outil. */
+   S'appuie sur design-system.css pour les tokens, les composants, l'en-tête,
+   le hero et le pied de page, partagés avec l'outil. */
 
 .hero strong { color: var(--color-text); font-weight: 600; }
 

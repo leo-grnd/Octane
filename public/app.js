@@ -9,32 +9,7 @@ const updateTime = () => {
 updateTime();
 setInterval(updateTime, 30000);
 
-// Thème clair / sombre (persistence localStorage + prefers-color-scheme).
-// Convention INVERSÉE depuis l'adoption du design system : le clair est
-// désormais le défaut — c'est la direction artistique de la maquette — et c'est
-// le sombre qui porte l'attribut `data-theme="dark"`. Les valeurs stockées dans
-// localStorage ('light' | 'dark') sont inchangées, donc les visiteurs gardent
-// leur préférence sans migration.
-const $themeToggle = document.getElementById('themeToggle');
-const $themeIcon = document.getElementById('themeIcon');
-function applyTheme(theme) {
-  if (theme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    $themeIcon.textContent = '☀';
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-    $themeIcon.textContent = '☾';
-  }
-}
-const savedTheme = localStorage.getItem('octane-theme');
-const initialTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-applyTheme(initialTheme);
-$themeToggle.addEventListener('click', () => {
-  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  const next = current === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('octane-theme', next);
-  applyTheme(next);
-});
+// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
 
 // Éléments
 const $address = document.getElementById('address');

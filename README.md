@@ -104,8 +104,8 @@ Quelques règles qui en découlent :
   liens partagés continuent donc de fonctionner, mais le code, les URL canoniques et le
   `sitemap.xml` utilisent la forme courte pour éviter une redirection à chaque clic.
 - **Aucun script en ligne** dans les pages : la CSP de `_headers` les bloquerait. Le thème est posé
-  par `theme-init.js` (chargé de façon bloquante dans le `<head>`), la bascule par
-  `theme-toggle.js`, `app.js` ou `alertes.js`.
+  par `theme-init.js` (chargé de façon bloquante dans le `<head>`), la bascule et le menu mobile
+  par `site.js`, commun à toutes les pages.
 - **Seul `public/` est publié.** Sources, scripts, configuration et état des alertes vivent hors de
   ce dossier : ils ne peuvent pas fuiter par oubli. Le site y est aussi rangé parce que
   `wrangler dev` surveille le dossier publié et écrit son propre état dans `.wrangler/` : servi depuis
@@ -300,7 +300,10 @@ node scripts/render-brand.mjs
 ```
 
 À relancer après toute retouche de `public/favicon.svg` ou de `scripts/brand/og-image.html`, puis
-committer les PNG. Le script vérifie les dimensions de chaque image produite. `og:image` et
+committer les PNG. Le même script produit `backdrop.webp`, le fond de carte du haut des pages : la
+page `scripts/brand/backdrop.html` assemble les tuiles Plan IGN et encode elle-même l'image, que le
+script récupère par le protocole DevTools (`node scripts/render-brand.mjs backdrop` pour ne
+régénérer qu'elle). Le script vérifie les dimensions de chaque image produite. `og:image` et
 `canonical` exigent des URL absolues, sur `https://octane-carburant.fr/` : à mettre à jour avec le
 `sitemap.xml` si le domaine change un jour.
 
@@ -315,8 +318,9 @@ committer les PNG. Le script vérifie les dimensions de chaque image produite. `
 | `comment-ca-marche.html` · `.css` · `.js` | Page d'explication et ses animations |
 | `mentions-legales.html` · `.css` | Mentions légales (LCEN), confidentialité (RGPD), licences, conditions d'utilisation |
 | `404.html` | Page d'erreur au design system |
-| `design-system.css` | Design system Modernist (export Claude Design) + thème sombre |
-| `theme-init.js` · `theme-toggle.js` | Thème avant le premier rendu · bascule des pages de contenu |
+| `design-system.css` | Design system v3 (maquette Claude Design) : tokens clair et sombre, composants, en-tête, hero, pied de page |
+| `theme-init.js` · `site.js` | Thème avant le premier rendu · bascule du thème et menu mobile, sur toutes les pages |
+| `backdrop.webp` | Fond de carte du haut des pages (Plan IGN en gris) — généré |
 | `sw.js` · `manifest.webmanifest` | Service worker et manifest PWA |
 | `fonts/` · `vendor/` | Archivo · Leaflet et markercluster, avec leurs licences |
 | `favicon.svg` | Icône, et source de toutes les icônes PNG |
@@ -331,7 +335,7 @@ committer les PNG. Le script vérifie les dimensions de chaque image produite. `
 | Fichier | Rôle |
 |--|--|
 | `wrangler.jsonc` · `worker/` | Configuration Cloudflare · code des routes `/api/*` |
-| `scripts/render-brand.mjs` · `scripts/brand/` | Rendu des PNG via Chrome/Edge headless (sans dépendance) |
+| `scripts/render-brand.mjs` · `scripts/brand/` | Rendu des images générées via Chrome/Edge headless (sans dépendance) |
 | `scripts/build-brands.mjs` · `build_brands.py` | Scrape OSM → `public/data/osm/brands.json` (Node ou Python stdlib) |
 | `scripts/send-alerts.mjs` | Envoi des alertes quotidiennes (Node, sans dépendance) |
 | `data/alerts/state.json` | Prix de la veille + anti-doublon (empreintes, écrit par la CI) |

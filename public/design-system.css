@@ -1,316 +1,665 @@
-/* Modernist — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
-/* OCTANE — l'export appelait ici Google Fonts (@import). Ligne retirée : la
-   police est servie par le site (fonts/archivo.css, lié par chaque page). À
-   refaire si l'export est remplacé par une nouvelle version. Seule autre
-   modification de l'export : le bloc « Thème sombre » en fin de fichier. */
+/* ══════════════════════════════════════════════════════════════════════════
+   OCTANE — design system v3
+   Source : maquette Claude Design « Octane Accueil v3 » (octobre 2026), bâtie
+   sur le système Modernist dont elle garde la police (Archivo) et l'accent
+   (#ec3013), mais pas la géométrie : angles arrondis, cartes posées sur un
+   fond zinc, ombres douces, pastilles.
+
+   Les tokens --o-* sont repris À L'IDENTIQUE de la maquette, thème sombre
+   compris : pour retoucher l'apparence, on change une valeur ici, jamais une
+   couleur en dur dans une feuille de page. Le thème sombre est porté par
+   data-theme="dark" sur <html> (theme-init.js, site.js) ; le clair est le
+   défaut.
+
+   Contenu : tokens, base, composants communs (boutons, champs, sélecteur à
+   deux options, cartes, pastilles, tableaux) puis l'habillage partagé par
+   toutes les pages (fond de carte, en-tête, hero, pied de page). Les feuilles
+   de page (style.css, alertes.css…) n'ajoutent que ce qui leur est propre.
+   ══════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --color-bg: #f3f2f2;
-  --color-surface: #eae9e9;
-  --color-text: #201e1d;
-  --color-accent: #ec3013;
-  --color-accent-2: #e15b47;
-  --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
-
-  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
-     same step of any role matches the others in visual value. */
-  --color-neutral-100: #f8f4f4;
-  --color-neutral-200: #eae7e7;
-  --color-neutral-300: #d7d3d3;
-  --color-neutral-400: #bab6b6;
-  --color-neutral-500: #9b9797;
-  --color-neutral-600: #7d7979;
-  --color-neutral-700: #605d5d;
-  --color-neutral-800: #444141;
-  --color-neutral-900: #2d2b2b;
-
-  --color-accent-100: #fff2ef;
-  --color-accent-200: #ffe0d9;
-  --color-accent-300: #ffc4b8;
-  --color-accent-400: #ff9783;
-  --color-accent-500: #ff563c;
-  --color-accent-600: #dd2b0f;
-  --color-accent-700: #ae1800;
-  --color-accent-800: #7c1405;
-  --color-accent-900: #4d170e;
-
-  --color-accent-2-100: #fff2ef;
-  --color-accent-2-200: #ffe0da;
-  --color-accent-2-300: #ffc4b9;
-  --color-accent-2-400: #ff9784;
-  --color-accent-2-500: #ef6853;
-  --color-accent-2-600: #c94b39;
-  --color-accent-2-700: #9e3526;
-  --color-accent-2-800: #71261b;
-  --color-accent-2-900: #471d16;
+  --o-bg: #f7f7f8;
+  --o-surface: #fff;
+  --o-glass: rgba(255, 255, 255, .86);
+  --o-field: #fafafa;
+  --o-chip: #f4f4f5;
+  --o-line: #e4e4e7;
+  --o-line-soft: #f0f0f2;
+  --o-ink: #18181b;
+  --o-ink2: #27272a;
+  --o-text: #3f3f46;
+  --o-muted: #52525b;
+  --o-subtle: #71717a;
+  --o-faint: #a1a1aa;
+  --o-accent: #ec3013;
+  --o-accent-hover: #dd2b0f;
+  --o-accent-press: #ae1800;
+  --o-on-accent: #fff;
+  --o-accent-soft: #fff2ef;
+  --o-accent-soft2: #ffe0d9;
+  --o-accent-ink: #ae1800;
+  --o-hover: rgba(24, 24, 27, .06);
+  --o-thumb: #fff;
+  --o-footer: rgba(255, 255, 255, .8);
+  /* Sémantique des prix : baisse, hausse, relevé ancien. Hors accent, sans
+     quoi une hausse se confondrait avec la couleur de la marque. */
+  --o-down: #15803d;
+  --o-up: #b91c1c;
+  --o-stale: #c2410c;
+  /* Fond de carte : décor du haut de page, et tuiles de la vue Carte. */
+  --o-map-filter: grayscale(1) contrast(1.15);
+  --o-map-op: .17;
+  --o-tile-filter: grayscale(1) contrast(.95) brightness(1.04);
+  --o-sh-sm: 0 1px 2px rgba(24, 24, 27, .05);
+  --o-sh-card: 0 1px 2px rgba(24, 24, 27, .04), 0 24px 48px -20px rgba(24, 24, 27, .22);
+  --o-sh-badge: 0 1px 2px rgba(24, 24, 27, .04), 0 10px 30px -12px rgba(24, 24, 27, .18);
+  --o-sh-cta: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 10px 24px -8px rgba(236, 48, 19, .6);
+  /* Curseur des sélecteurs et onglets : même valeur dans les deux thèmes. */
+  --o-sh-thumb: 0 1px 2px rgba(24, 24, 27, .08), 0 4px 10px -2px rgba(24, 24, 27, .12);
 
   --font-heading: "Archivo", system-ui, sans-serif;
-  --font-heading-weight: 800;
   --font-body: "Archivo", system-ui, sans-serif;
 
-  --space-1: 4.0px;
-  --space-2: 8.0px;
-  --space-3: 12.0px;
-  --space-4: 16.0px;
-  --space-6: 24.0px;
-  --space-8: 32.0px;
+  /* Rayons de la maquette : 10 (liens, épingles), 12 (champs, boutons),
+     18 (carte du hero), 22 (grandes cartes), pastilles entièrement rondes. */
+  --o-radius-sm: 10px;
+  --o-radius-md: 12px;
+  --o-radius-lg: 18px;
+  --o-radius-xl: 22px;
+  --o-radius-pill: 999px;
 
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
+  /* Largeur utile et gouttière latérale, communes à toutes les pages. */
+  --o-max: 1280px;
+  --o-gutter: clamp(16px, 5vw, 80px);
 
-  /* Elevation — derived from the ground: soft ink-tinted shadows on a
-     light theme, a hairline edge + ambient darkness on a dark one. */
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
+:root[data-theme="dark"] {
+  --o-bg: #0f0f11;
+  --o-surface: #18181b;
+  --o-glass: rgba(24, 24, 27, .86);
+  --o-field: #1f1f23;
+  --o-chip: #232328;
+  --o-line: #2e2e34;
+  --o-line-soft: #26262b;
+  --o-ink: #f4f4f5;
+  --o-ink2: #e4e4e7;
+  --o-text: #d4d4d8;
+  --o-muted: #a1a1aa;
+  --o-subtle: #8e8e97;
+  --o-faint: #64646c;
+  --o-accent: #ff563c;
+  --o-accent-hover: #ff7a64;
+  --o-accent-press: #ff9783;
+  --o-on-accent: #171615;
+  --o-accent-soft: rgba(255, 86, 60, .13);
+  --o-accent-soft2: rgba(255, 86, 60, .28);
+  --o-accent-ink: #ff9783;
+  --o-hover: rgba(255, 255, 255, .07);
+  --o-thumb: #34343a;
+  --o-footer: rgba(24, 24, 27, .7);
+  --o-down: #4ade80;
+  --o-up: #ef4444;
+  --o-stale: #fb923c;
+  --o-map-filter: grayscale(1) invert(.92) contrast(.9);
+  --o-map-op: .2;
+  --o-tile-filter: grayscale(1) invert(.9) contrast(.9) brightness(.95);
+  --o-sh-sm: 0 1px 2px rgba(0, 0, 0, .5);
+  --o-sh-card: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 24px 48px -20px rgba(0, 0, 0, .7);
+  --o-sh-badge: 0 12px 30px -12px rgba(0, 0, 0, .6);
+  --o-sh-cta: 0 10px 24px -8px rgba(255, 86, 60, .45);
 }
-h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
 
-.grayscale{filter:grayscale(1) contrast(1.08)}
+/* ── Transition : anciens noms de tokens (Modernist) ──────────────────────
+   Les feuilles pas encore redessinées lisent encore --color-*, --shadow-*,
+   --radius-*. Chaque nom est rebranché sur son équivalent v3, thème sombre
+   compris. Bloc temporaire : supprimé quand plus aucune feuille ne s'en sert. */
+:root {
+  --color-bg: var(--o-bg);
+  --color-surface: var(--o-surface);
+  --color-text: var(--o-ink);
+  --color-accent: var(--o-accent);
+  --color-divider: var(--o-line);
+  --color-neutral-100: var(--o-chip);
+  --color-neutral-200: var(--o-line-soft);
+  --color-neutral-300: var(--o-line);
+  --color-neutral-500: var(--o-faint);
+  --color-neutral-600: var(--o-subtle);
+  --color-neutral-700: var(--o-muted);
+  --color-neutral-800: var(--o-text);
+  --color-accent-100: var(--o-accent-soft);
+  --color-accent-600: var(--o-accent-hover);
+  --color-accent-700: var(--o-accent-ink);
+  --color-accent-800: var(--o-accent-ink);
+  --font-heading-weight: 800;
+  --shadow-sm: var(--o-sh-sm);
+  --shadow-md: var(--o-sh-badge);
+  --shadow-lg: var(--o-sh-card);
+  --radius-md: var(--o-radius-md);
+  --radius-lg: var(--o-radius-xl);
+}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   Components — built with the tokens above. Plain CSS
-   on plain HTML: no JavaScript, no build step. Each class is documented in
-   readme.md and demonstrated in foundations/ and components/.
-   ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════ Base ══════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--o-bg);
+  color: var(--o-ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  transition: background-color .25s, color .25s;
+}
+
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--o-ink);
 }
-h1 { font-size: 42px; }
-h2 { font-size: 32px; }
-h3 { font-size: 25px; }
-h4 { font-size: 20px; }
-h5 { font-size: 16px; }
-h6 { font-size: 13px; }
-h6 { letter-spacing: 0.08em; text-transform: uppercase; }
 p { margin: 0 0 var(--space-3); }
-a { color: var(--color-accent); text-underline-offset: 3px; }
 img { display: block; max-width: 100%; }
-figure { margin: 0; }
-figcaption {
-  font-size: 11px; margin-top: var(--space-1);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
-}
-.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+svg { flex: none; }
+
+/* Liens de texte : accent et soulignés, pour qu'on les distingue dans un
+   paragraphe. Les liens d'interface (menu, pied de page, boutons) posent
+   leur propre style. */
+a { color: var(--o-accent); text-underline-offset: 3px; }
+a:hover { color: var(--o-accent-hover); }
+
+input::placeholder { color: var(--o-faint); }
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type=number] { -moz-appearance: textfield; }
+select option { background: var(--o-surface); color: var(--o-ink); }
+::selection { background: rgba(236, 48, 19, .25); }
 :focus { outline: none; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+:focus-visible { outline: 2px solid var(--o-accent); outline-offset: 2px; }
 
-/* — rules — */
-.hr {
-  height: 2px; border: 0; margin: var(--space-4) 0;
-  background: var(--color-divider);
+.hidden { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.text-muted { color: var(--o-subtle); }
+
+/* Petite capitale espacée : intitulés de section, méta, en-têtes de colonne. */
+.kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-accent-ink);
 }
 
-/* — buttons — */
+@keyframes octPulse {
+  0% { box-shadow: 0 0 0 0 rgba(236, 48, 19, .45); }
+  70% { box-shadow: 0 0 0 7px rgba(236, 48, 19, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(236, 48, 19, 0); }
+}
+@keyframes octSpin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════ Composants ═══════════════════════════ */
+
+/* — Boutons — */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  cursor: pointer; text-decoration: none;
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 14px; line-height: 1.2; color: var(--color-text); /* matches the .input's 14px —
-     the pair sits side by side in sign-up rows */
-  background: transparent; border: 1px solid transparent;
-  padding: var(--space-2) calc(var(--space-3) * 1.2);
-  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--o-radius-md);
+  background: transparent;
+  color: var(--o-ink);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
 }
-.btn svg { display: block; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: var(--color-accent); color: var(--color-bg); }
-.btn-primary:hover { background: var(--color-accent-600); }
-.btn-primary:active { background: var(--color-accent-700); }
-.btn-secondary { border-color: var(--color-divider); }
-.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
-.btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
-.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
-.btn-icon { width: 36px; height: 36px; padding: 0; }
-.btn-block { width: 100%; margin-top: var(--space-2); justify-content: flex-start; text-align: left; }
+.btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--o-accent); color: var(--o-on-accent); box-shadow: var(--o-sh-cta); }
+.btn-primary:hover { background: var(--o-accent-hover); color: var(--o-on-accent); }
+.btn-primary:active { background: var(--o-accent-press); }
+.btn-secondary { border-color: var(--o-line); background: var(--o-surface); color: var(--o-ink); }
+.btn-secondary:hover { background: var(--o-hover); color: var(--o-ink); }
+.btn-ghost { color: var(--o-accent); }
+.btn-ghost:hover { background: var(--o-accent-soft); color: var(--o-accent); }
 
-/* — forms — */
+/* Bouton carré à icône seule (thème, menu). */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-md);
+  background: var(--o-surface);
+  color: var(--o-text);
+  box-shadow: var(--o-sh-sm);
+  cursor: pointer;
+}
+.icon-btn:hover { color: var(--o-ink); border-color: var(--o-faint); }
+.icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* — Champs — */
+.field { position: relative; min-width: 0; }
 .field > label {
-  display: block; font-size: 12px; margin-bottom: 5px;
-  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--o-muted);
 }
 .input {
-  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
-  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
-  background: var(--color-surface);
-  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-md);
+  background: var(--o-field);
+  color: var(--o-ink);
+  caret-color: var(--o-accent);
+  font: inherit;
+  font-size: 16px; /* 16 px minimum : en dessous, iOS zoome au focus */
 }
-.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
-.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
-textarea.input { min-height: 90px; resize: vertical; }
-.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
-.radio input, .seg-opt input {
-  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+.input:hover { border-color: var(--o-faint); }
+.input:focus-visible { border-color: var(--o-accent); outline: 0; box-shadow: 0 0 0 3px var(--o-accent-soft2); }
+/* Le sélecteur natif n'expose pas sa flèche au style : on la redessine
+   (couleur --o-subtle de chaque thème, une image ne lisant pas les tokens). */
+select.input {
+  appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
-.radio .dot {
-  width: 16px; height: 16px; flex: none; border-radius: 50%;
-  border: 1.5px solid var(--color-divider);
+:root[data-theme="dark"] select.input {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238e8e97' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
 }
-.radio:hover .dot { border-color: var(--color-accent); }
-.radio input:checked + .dot {
-  border-color: var(--color-accent); background: var(--color-accent);
-  box-shadow: inset 0 0 0 4px var(--color-bg);
-}
-.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+textarea.input { min-height: 90px; padding: 12px 14px; resize: vertical; }
+
+/* — Sélecteur à deux options (« À vol d'oiseau / En voiture »…) —
+   Des boutons radio dans des <label class="seg-opt"> : le curseur blanc
+   glisse sous l'option cochée. Conçu pour exactement deux options. */
 .seg {
-  display: inline-flex; overflow: hidden;
-  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  position: relative;
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--o-line-soft);
+  border-radius: var(--o-radius-pill);
+  background: var(--o-chip);
 }
+.seg::before {
+  content: "";
+  position: absolute;
+  top: 4px; bottom: 4px; left: 4px;
+  width: calc(50% - 4px);
+  border-radius: var(--o-radius-pill);
+  background: var(--o-thumb);
+  box-shadow: var(--o-sh-thumb);
+  transition: left .25s cubic-bezier(.16, 1, .3, 1);
+}
+.seg:has(.seg-opt:last-child input:checked)::before { left: 50%; }
 .seg-opt {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; font-size: 13px; cursor: pointer;
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--o-subtle);
+  white-space: nowrap;
+  cursor: pointer;
 }
-.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
-.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
-.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.seg-opt:has(input:checked) { color: var(--o-ink); }
+.seg-opt:not(:has(input:checked)):hover { color: var(--o-ink); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--o-accent); outline-offset: -2px; border-radius: var(--o-radius-pill); }
+.seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.seg-opt svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* — cards — */
+/* — Cartes — */
 .card {
-  display: flex; flex-direction: column; gap: var(--space-2);
-  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
 }
-.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
-.card-title {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 17px; line-height: 1.2;
-}
-.card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
-.card-meta {
-  display: flex; align-items: center; gap: 6px; font-size: 11px;
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
-}
-.elev-sm { box-shadow: var(--shadow-sm); }
-.elev-md { box-shadow: var(--shadow-md); }
-.elev-lg { box-shadow: var(--shadow-lg); }
 
-/* — tags — */
+/* — Pastilles — */
 .tag {
-  display: inline-flex; align-items: center; font-size: 11px;
-  letter-spacing: 0.02em; padding: 3px 10px;
-  border-radius: calc(var(--radius-md) * 0.75);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: var(--o-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
 }
-.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
-.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
-.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
-.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+.tag-neutral { background: var(--o-chip); color: var(--o-text); border: 1px solid var(--o-line-soft); }
+.tag-accent { background: var(--o-accent-soft); color: var(--o-accent-ink); }
+.tag-outline { border: 1px solid var(--o-accent-soft2); color: var(--o-accent-ink); }
 
-/* — navigation — */
-.nav {
-  display: flex; align-items: center; gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 2px solid var(--color-divider);
-}
-.nav-brand {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 18px; margin-right: auto;
-}
-.nav a { color: inherit; text-decoration: none; font-size: 14px; }
-.nav a:hover, .nav a[aria-current='page'] { color: var(--color-accent); }
-
-/* — tables — */
+/* — Tableaux — */
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th {
-  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text) 60%, transparent);
-  padding: var(--space-2); border-bottom: 2px solid var(--color-divider);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--o-line);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
 }
-.table td {
-  padding: var(--space-2);
-  border-bottom: 1px solid var(--color-divider);
+.table td { padding: 14px 16px; border-bottom: 1px solid var(--o-line-soft); }
+.table tbody tr:hover { background: var(--o-hover); }
+
+/* Pastille d'icône sur fond d'accent pâle (hero, géolocalisation). */
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--o-radius-md);
+  background: var(--o-accent-soft);
+  color: var(--o-accent-ink);
 }
-.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.icon-chip svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* — dialog — */
-.dialog-backdrop {
-  position: fixed; inset: 0; display: grid; place-items: center;
-  padding: var(--space-4);
-  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+/* ══════════════════════ Habillage commun des pages ══════════════════════ */
+
+/* — Fond de carte —
+   Plan IGN autour de Paris, en niveaux de gris, estompé vers les bords.
+   Une seule image servie par le site (backdrop.webp, 156 Ko, générée par
+   scripts/render-brand.mjs) plutôt que les 28 tuiles que la maquette demande
+   à l'IGN à chaque visite (~1,5 Mo). Le calque garde les 1792 px de la
+   maquette, dont dépend la géométrie du masque ; l'image s'arrête à 1408 px,
+   là où le masque devient entièrement transparent. */
+.backdrop {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1100px;
+  overflow: hidden;
+  pointer-events: none;
 }
-.dialog {
-  width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-4); border-radius: var(--radius-lg);
-  background: var(--color-surface); box-shadow: var(--shadow-lg);
+.backdrop::before {
+  content: "";
+  position: absolute;
+  left: -260px;
+  top: -90px;
+  width: 1792px;
+  height: 1024px;
+  background: url("backdrop.webp") 0 0 / 1408px 1024px no-repeat;
+  filter: var(--o-map-filter);
+  opacity: var(--o-map-op);
+  -webkit-mask-image: radial-gradient(ellipse 62% 60% at 30% 50%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 62% 60% at 30% 50%, #000 25%, transparent 78%);
 }
-.dialog-title {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 20px;
+
+.page {
+  position: relative;
+  max-width: var(--o-max);
+  margin: 0 auto;
+  padding: 0 var(--o-gutter);
 }
-.dialog-body { font-size: 14px; opacity: 0.85; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
+/* — En-tête — */
+.site-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: clamp(64px, 8vw, 84px);
+}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   Thème sombre — AJOUT OCTANE, absent du système livré.
-   Octane est utilisée de nuit (on fait son plein en rentrant) et expose un
-   bouton de bascule persisté depuis ses débuts : le supprimer aurait été une
-   régression. Le clair reste le défaut, conforme à la direction artistique.
+/* Logo : la jauge tient lieu de « O ». */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-right: auto;
+  color: var(--o-ink);
+  text-decoration: none;
+}
+.brand:hover { color: var(--o-ink); }
+.brand-mark { width: 29px; height: 29px; }
+.brand-mark .arc { fill: none; stroke: var(--o-accent); stroke-width: 4.4; stroke-dasharray: 60 15.4; }
+.brand-mark .needle { stroke: var(--o-ink); stroke-width: 3.6; stroke-linecap: round; }
+.brand-mark .hub { fill: var(--o-ink); }
+.brand-word {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 25px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
 
-   Principe : les rampes tonales sont INVERSÉES plutôt que redéfinies au cas
-   par cas. `--color-neutral-100` reste « le plus proche du fond » et `-900`
-   « le plus contrasté », si bien que chaque règle de composant écrite pour le
-   thème clair — y compris les styles en ligne de la maquette — fonctionne en
-   sombre sans être dupliquée.
-   ══════════════════════════════════════════════════════════════════════ */
-:root[data-theme="dark"] {
-  --color-bg: #171615;
-  --color-surface: #211f1e;
-  --color-text: #f3f2f2;
-  /* #ec3013 ne passe qu'à 4,1:1 sur le fond sombre : on remonte d'un cran la
-     rampe pour rester lisible (5,8:1). */
-  --color-accent: #ff563c;
-  --color-accent-2: #ef6853;
-  --color-divider: color-mix(in srgb, #f3f2f2 26%, transparent);
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--o-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--o-text);
+  text-decoration: none;
+}
+.nav-link:hover,
+.nav-link[aria-current="page"] { background: var(--o-hover); color: var(--o-ink); }
+.nav-link svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Sur ordinateur, seul « Alertes » porte son icône ; le menu mobile les montre toutes. */
+.nav-link .menu-only { display: none; }
+.nav-sep { width: 1px; height: 22px; margin: 0 8px; background: var(--o-line); }
 
-  --color-neutral-100: #211f1e;
-  --color-neutral-200: #2d2b2b;
-  --color-neutral-300: #3c3939;
-  --color-neutral-400: #4f4c4c;
-  --color-neutral-500: #6b6767;
-  --color-neutral-600: #8b8787;
-  --color-neutral-700: #aeaaaa;
-  --color-neutral-800: #d0cccc;
-  --color-neutral-900: #f0ecec;
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+.theme-toggle .icon-moon { width: 17px; height: 17px; }
 
-  /* Progression pensée pour les états : -600 au survol et -700 à l'activation
-     éclaircissent, là où ils assombrissent en thème clair. */
-  --color-accent-100: #3d120a;
-  --color-accent-200: #55190c;
-  --color-accent-300: #7c2412;
-  --color-accent-400: #ae3419;
-  --color-accent-500: #ec3013;
-  --color-accent-600: #ff7a64;
-  --color-accent-700: #ff9783;
-  --color-accent-800: #ffc4b8;
-  --color-accent-900: #ffe0d9;
+.menu-toggle { display: none; margin-left: 6px; color: var(--o-ink); }
+.menu-toggle svg { width: 19px; height: 19px; }
+.menu-toggle .icon-close,
+.menu-toggle[aria-expanded="true"] .icon-menu { display: none; }
+.menu-toggle[aria-expanded="true"] .icon-close { display: block; }
 
-  --color-accent-2-100: #3d1410;
-  --color-accent-2-200: #551c16;
-  --color-accent-2-300: #7a2c22;
-  --color-accent-2-400: #a53f30;
-  --color-accent-2-500: #ef6853;
-  --color-accent-2-600: #ff8570;
-  --color-accent-2-700: #ffa693;
-  --color-accent-2-800: #ffc4b9;
-  --color-accent-2-900: #ffe0da;
+@media (max-width: 639.98px) {
+  .nav-sep { display: none; }
+  .menu-toggle { display: inline-flex; }
+  .nav-links { display: none; }
+  .nav-links.is-open {
+    position: absolute;
+    top: calc(100% - 6px);
+    left: 0; right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 8px;
+    border: 1px solid var(--o-line);
+    border-radius: 16px;
+    background: var(--o-surface);
+    box-shadow: var(--o-sh-card);
+  }
+  .nav-links.is-open .nav-link { gap: 12px; height: 52px; font-size: 16px; color: var(--o-ink); }
+  .nav-links.is-open .nav-link svg { width: 18px; height: 18px; color: var(--o-subtle); }
+  .nav-links.is-open .nav-link .menu-only { display: block; }
+}
 
-  /* Sur fond sombre une ombre teintée d'encre ne se voit pas : on passe à du
-     noir franc, comme l'annonce le commentaire « ambient darkness » du système. */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 3px 10px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.62);
+/* — Hero — */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: end;
+  padding: clamp(24px, 6vw, 56px) 0 clamp(24px, 4vw, 44px);
+}
+@media (min-width: 1024px) {
+  .hero { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+}
+.hero h1 {
+  margin: 0;
+  font-size: clamp(42px, 10.6vw, 76px);
+  line-height: .97;
+  letter-spacing: -0.035em;
+}
+/* Ligne d'accent et points finaux en rouge, comme la maquette. */
+.hero h1 em,
+.hero h1 .dot { font-style: normal; color: var(--o-accent); }
+
+.hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+  padding: clamp(18px, 2.4vw, 24px);
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-lg);
+  background: var(--o-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--o-sh-badge);
+}
+.hero-card-head { display: flex; align-items: center; gap: 12px; }
+.hero-kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-ink);
+}
+.hero-card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--o-muted); }
+.hero-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--o-line-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--o-muted);
+}
+.hero-card-foot .live-time { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--o-ink); }
+.hero-card-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.hero-card-actions .btn { flex: 1 1 auto; }
+.pulse {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--o-accent);
+  animation: octPulse 2s infinite;
+}
+
+/* — Pied de page — */
+.site-footer {
+  position: relative;
+  margin-top: clamp(56px, 8vw, 96px);
+  border-top: 1px solid var(--o-line);
+  background: var(--o-footer);
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 32px 40px;
+  max-width: var(--o-max);
+  margin: 0 auto;
+  padding: clamp(32px, 4vw, 44px) var(--o-gutter) 32px;
+}
+.footer-col { display: flex; flex-direction: column; gap: 14px; }
+.footer-col p { margin: 0; max-width: 30ch; font-size: 14px; line-height: 1.55; color: var(--o-muted); }
+.footer-col .brand-mark { width: 22px; height: 22px; }
+.footer-col .brand-word { font-size: 19px; }
+.footer-title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+}
+.footer-legal { gap: 12px; }
+.footer-legal .footer-title { margin-bottom: 2px; }
+.footer-link { font-size: 14px; font-weight: 500; color: var(--o-text); text-decoration: none; }
+.footer-link:hover { color: var(--o-accent); }
+
+.source { display: flex; align-items: center; gap: 12px; }
+.source-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--o-line);
+  border-radius: 9px;
+  background: var(--o-chip);
+  color: var(--o-subtle);
+}
+.source-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.source-text { display: flex; flex-direction: column; }
+.source-name { font-size: 14px; font-weight: 600; color: var(--o-ink2); }
+.source-sub { font-size: 13px; color: var(--o-subtle); text-decoration: none; }
+a.source-sub:hover { color: var(--o-accent); }
+
+.footer-bar { border-top: 1px solid var(--o-line-soft); }
+.footer-bar > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: var(--o-max);
+  margin: 0 auto;
+  padding: 18px var(--o-gutter);
+  font-size: 13px;
+  color: var(--o-subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+  .seg::before { transition: none; }
+  body { transition: none; }
 }

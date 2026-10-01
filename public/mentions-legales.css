@@ -1,6 +1,6 @@
 /* Page « Mentions légales et confidentialité ».
-   S'appuie sur design-system.css (tokens, .table) et sur style.css (nav, hero,
-   footer). Même langage que « Comment ça marche » : filets francs, numéros de
+   S'appuie sur design-system.css (tokens, .table, en-tête, hero, pied de
+   page). Même langage que « Comment ça marche » : filets francs, numéros de
    section en accent, texte limité à ~70 caractères par ligne pour la lecture. */
 
 .hero sup { font-size: 0.7em; }

@@ -1,7 +1,7 @@
 /* Page « Alerte quotidienne ».
-   S'appuie sur design-system.css pour les tokens et les composants (.input,
-   .btn, .seg, .field), et sur style.css pour la nav, le hero, la barre de
-   statut, l'autocomplétion et le footer. On ne définit ici que la grille du
+   S'appuie sur design-system.css pour les tokens, les composants (.input,
+   .btn, .seg, .field), l'en-tête, le hero et le pied de page, et sur
+   style.css pour la barre de statut et l'autocomplétion. On ne définit ici que la grille du
    formulaire et les deux blocs propres à la page : aperçu et configuration. */
 
 /* Grille propre à la page : .form-grid de l'outil embarque des règles

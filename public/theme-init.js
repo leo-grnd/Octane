@@ -3,8 +3,8 @@
 // <head> de chaque page, avant les feuilles de style.
 //
 // Fichier externe plutôt que script en ligne : la Content-Security-Policy
-// (_headers) n'autorise aucun script en ligne. Convention partagée avec app.js,
-// alertes.js et theme-toggle.js : le clair est le défaut, seul le sombre pose
+// (_headers) n'autorise aucun script en ligne. Convention partagée avec site.js,
+// qui porte le bouton de bascule : le clair est le défaut, seul le sombre pose
 // data-theme="dark" sur <html>, choix mémorisé sous la clé « octane-theme ».
 (function () {
   try {

@@ -138,6 +138,59 @@ function showStatusAction(msg, actionLabel, onClick) {
   if (btn && onClick) btn.addEventListener('click', onClick, { once: true });
 }
 
+// ===== Erreurs réseau lisibles =====
+// Les messages bruts (« Failed to fetch », « HTTP 503 », « API carburants:
+// 429 ») ne disent rien à l'utilisateur. Le cas qui compte le plus pour un
+// lancement public est le 429 : l'API prix limite chaque IP à 50 000 appels
+// par jour, et les opérateurs mobiles partagent une même IP entre de nombreux
+// abonnés (CGNAT). L'API expose son compteur via CORS, ce qui permet de dire
+// précisément quand la recherche refonctionnera.
+const SERVICE_NAMES = {
+  prix: 'le service officiel des prix',
+  adresses: 'le service d’adresses de l’IGN'
+};
+const RESET_FMT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' });
+
+// Erreur HTTP d'une réponse non-ok, déjà formulée pour l'utilisateur. Pas de
+// retry sur 429 (fetchWithRetry ne rejoue que les 5xx) : un quota épuisé ne se
+// débloquera pas en quelques secondes.
+function httpError(res, service) {
+  const name = SERVICE_NAMES[service];
+  if (res.status === 429) {
+    const remaining = res.headers.get('X-RateLimit-Remaining');
+    // Format Opendatasoft : « 2026-10-02 00:00:00+00:00 »
+    const reset = new Date(String(res.headers.get('X-RateLimit-Reset') || '').replace(' ', 'T'));
+    if (remaining === '0' && !isNaN(reset)) {
+      return new Error(`${capitalize(name)} limite le nombre de recherches par réseau, et la limite du jour ` +
+        `est atteinte pour le tien. Elle se réinitialise à ${RESET_FMT.format(reset)}.`);
+    }
+    return new Error(`Trop de recherches en peu de temps depuis ton réseau. Réessaie dans quelques minutes.`);
+  }
+  if (res.status >= 500) {
+    return new Error(`${capitalize(name)} est momentanément indisponible (erreur ${res.status}). Réessaie dans un instant.`);
+  }
+  return new Error(`${capitalize(name)} a refusé la requête (erreur ${res.status}).`);
+}
+
+// Traduit une erreur levée pendant un appel réseau. Les messages déjà
+// lisibles (httpError, « Adresse introuvable »…) passent tels quels.
+function friendlyError(err, service) {
+  const name = SERVICE_NAMES[service];
+  if (err && err.name === 'AbortError') {
+    return `${capitalize(name)} met trop de temps à répondre. Réessaie dans un instant.`;
+  }
+  // Libellés d'échec réseau de fetch selon le moteur : Chromium, Firefox, WebKit.
+  if (err instanceof TypeError && /Failed to fetch|NetworkError|Load failed/i.test(err.message)) {
+    return `Impossible de joindre ${name}. Vérifie ta connexion puis réessaie.`;
+  }
+  // 5xx persistant après les retries de fetchWithRetry
+  const http = /^HTTP (\d{3})$/.exec(err && err.message);
+  if (http) return `${capitalize(name)} est momentanément indisponible (erreur ${http[1]}). Réessaie dans un instant.`;
+  return (err && err.message) || 'Erreur inattendue.';
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
 // Distance Haversine (km)
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -190,7 +243,12 @@ function cacheSet(store, key, data) {
 const TTL_GEO = 24 * 60 * 60 * 1000;   // adresse → coords stable
 const TTL_FUEL = 5 * 60 * 1000;         // prix carburants : changent rarement
 
-// Géocodage via API BAN (gouvernementale, gratuite)
+// Géocodage : Base Adresse Nationale, servie par la Géoplateforme de l'IGN.
+// L'ancienne adresse `api-adresse.data.gouv.fr` est fermée depuis le 31/01/2026
+// (en-têtes `Sunset` / `Deprecation`) ; elle répondait encore mais pouvait
+// s'éteindre à tout moment. Même moteur, même format GeoJSON, mêmes scores —
+// vérifié requête par requête — donc les entrées de cache restent valables.
+const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search';
 
 // `geo2:` = v2 du schéma : la sélection du résultat privilégie la commune.
 // Les entrées v1 pointent potentiellement sur le mauvais lieu, on change donc
@@ -226,9 +284,9 @@ async function geocode(address) {
   if (cached) return cached;
   // limit=5 (et non 1) : il faut voir les suivants pour repérer la commune
   // homonyme coiffée au poteau par une voie.
-  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=5`;
+  const url = `${GEOCODER_URL}?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetchWithRetry(signal => fetch(url, { signal }));
-  if (!res.ok) throw new Error('Erreur géocodage');
+  if (!res.ok) throw httpError(res, 'adresses');
   const data = await res.json();
   const best = pickBestGeoFeature(data.features || []);
   if (!best) throw new Error('Adresse introuvable');
@@ -246,8 +304,7 @@ async function geocode(address) {
 // sans clé API) et faisait tomber toute l'app, miroirs compris.
 
 // Retry générique avec backoff exponentiel + timeout global. À utiliser pour
-// les APIs publiques sans redondance native (BAN, Opendatasoft). Overpass a
-// déjà sa propre stratégie multi-endpoint via Promise.any.
+// les APIs publiques sans redondance native (BAN, Opendatasoft).
 async function fetchWithRetry(fetcher, { tries = 3, backoff = [400, 1200, 2500], timeoutMs = 8000 } = {}) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
@@ -309,8 +366,8 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
     const res = await fetchWithRetry(signal => fetch(url, { signal }));
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.error('API 4xx body:', body);
-      throw new Error(`API carburants: ${res.status}`);
+      console.error(`API carburants ${res.status} :`, body);
+      throw httpError(res, 'prix');
     }
     return res.json();
   };
@@ -342,7 +399,12 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
 // Valhalla (FOSSGIS) en primaire : costing plus nuancé qu'OSRM, respecte mieux
 // les restrictions de virages et les classes de routes, donc précision > OSRM
 // sur le terrain urbain. OSRM reste en fallback si Valhalla flanche.
-const VALHALLA_ENDPOINT = 'https://valhalla.openstreetmap.de';
+// L'API est servie par `valhalla1.openstreetmap.de` (100 lieux max par matrice,
+// d'où les lots de ROUTING_BATCH_MAX). `valhalla.openstreetmap.de` n'héberge
+// plus que l'interface web de démonstration : interrogé là, `/sources_to_targets`
+// renvoyait une page HTML sans en-tête CORS, et chaque matrice échouait en
+// silence — le mode voiture ne tenait plus que sur OSRM.
+const VALHALLA_ENDPOINT = 'https://valhalla1.openstreetmap.de';
 const OSRM_ENDPOINTS = [
   'https://router.project-osrm.org',
   'https://routing.openstreetmap.de/routed-car'
@@ -592,73 +654,11 @@ function lookupOSMBrand(lat, lon, data) {
   return nearest ? data.brands[nearest[2]] : null;
 }
 
-// Fallback n°4 : Overpass runtime. Appelé uniquement quand la base shippée +
-// regex n'ont rien trouvé pour certaines stations (ex: POIs OSM ajoutés après
-// notre dernier scrape mensuel). Silencieux, non bloquant.
-const runtimeOverpassCache = {}; // session-only, par zone arrondie
-async function fetchOSMFuelStationsRuntime(lat, lon, radiusKm) {
-  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
-  if (key in runtimeOverpassCache) return runtimeOverpassCache[key];
-
-  const radiusM = Math.round(radiusKm * 1000 * 1.1);
-  const query = `[out:json][timeout:20];(node["amenity"="fuel"](around:${radiusM},${lat},${lon});way["amenity"="fuel"](around:${radiusM},${lat},${lon}););out center tags;`;
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.openstreetmap.fr/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter'
-  ];
-  const tryOne = (ep) => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    return fetch(ep, {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      signal: ctrl.signal
-    }).then(res => {
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }).then(data => {
-      const out = (data.elements || []).map(e => {
-        const elat = e.lat ?? e.center?.lat;
-        const elon = e.lon ?? e.center?.lon;
-        const t = e.tags || {};
-        const brand = t.brand || t.operator || t.name || null;
-        return elat != null && elon != null && brand
-          ? { lat: elat, lon: elon, brand: brand.trim() }
-          : null;
-      }).filter(Boolean);
-      if (!out.length) throw new Error('empty');
-      return out;
-    });
-  };
-
-  try {
-    const out = await Promise.any(endpoints.map(tryOne));
-    runtimeOverpassCache[key] = out;
-    return out;
-  } catch {
-    runtimeOverpassCache[key] = [];
-    return [];
-  }
-}
-
-function findNearestRuntimeBrand(lat, lon, osmStations) {
-  if (!osmStations.length || lat == null) return null;
-  const MAX_KM = 0.15;
-  let nearest = null;
-  let minDist = Infinity;
-  for (const osm of osmStations) {
-    const d = haversine(lat, lon, osm.lat, osm.lon);
-    if (d < minDist && d <= MAX_KM) {
-      minDist = d;
-      nearest = osm;
-    }
-  }
-  return nearest?.brand || null;
-}
+// Pas de requête Overpass au runtime : un ancien fallback interrogeait les
+// instances publiques à chaque recherche où une enseigne manquait. Leurs
+// politiques d'usage proscrivent ce trafic dès qu'il devient massif, et une
+// station sans enseigne garde de toute façon un affichage complet (adresse,
+// ville). La base mensuelle et les regex sur les libellés suffisent.
 
 // Parse tous les formats possibles retournés par Opendatasoft (geom GeoJSON, geo_point_2d {lon,lat} ou [lat,lon], WKT)
 function extractCoords(s) {
@@ -788,7 +788,7 @@ function getBrandBadge(name) {
   // Fallback : initiale du 1er mot signifiant, fond gris neutre
   const word = name.trim().split(/\s+/).find(w => /[a-z]/i.test(w));
   if (!word) return null;
-  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--ink)' };
+  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--color-text)' };
 }
 
 // Nom commercial de la station (avec la ville si on peut)
@@ -826,11 +826,31 @@ function formatPrice(price) {
   return `${euros}<span class="cents">,${cents}</span> €`;
 }
 
+// Un prix non redéclaré depuis plus de STALE_DAYS jours sort du classement :
+// il reste visible, en fin de tableau, mais ne peut plus être désigné « le
+// moins cher ». Sans cette règle, le bloc gagnant de Paris (5 km) affichait au
+// 01/10/2026 un gazole à 2,200 € relevé 184 jours plus tôt, devant des prix du
+// jour à 2,250 € — typiquement une station qui ne déclare plus. 7 jours plutôt
+// que les 3 des alertes email : une station au prix inchangé peut légitimement
+// ne rien déclarer pendant quelques jours.
+const STALE_DAYS = 7;
+
+function isStalePrice(s, fuelField) {
+  const t = new Date(s[fuelField.replace('_prix', '_maj')]).getTime();
+  return !Number.isFinite(t) || Date.now() - t > STALE_DAYS * 864e5;
+}
+
+// Ordre du classement : prix actualisés d'abord, chaque groupe trié par prix.
+// Les stations périmées se retrouvent donc toujours en queue de liste.
+function compareStations(a, b) {
+  return (a._stale - b._stale) || (a.price - b.price);
+}
+
 // "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour.
 // Retourne { text, tier } pour permettre une coloration selon la fraîcheur :
 //   fresh = < 48 h (chip neutre, opacité faible)
 //   stale = 48 h–7 j (chip orange, attention douce)
-//   veryStale = > 7 j (chip rouge, donnée potentiellement obsolète)
+//   veryStale = > 7 j (chip rouge, hors classement — voir STALE_DAYS)
 function formatRelativeTime(iso) {
   if (!iso) return null;
   const then = new Date(iso).getTime();
@@ -844,7 +864,7 @@ function formatRelativeTime(iso) {
   else if (diffH < 24) text = `il y a ${Math.round(diffH)} h`;
   else if (diffD < 30) text = `il y a ${Math.round(diffD)} j`;
   else text = `il y a ${Math.round(diffD / 30)} mois`;
-  const tier = diffD > 7 ? 'veryStale' : diffD > 2 ? 'stale' : 'fresh';
+  const tier = diffD > STALE_DAYS ? 'veryStale' : diffD > 2 ? 'stale' : 'fresh';
   return { text, tier };
 }
 
@@ -974,22 +994,27 @@ function buildWinnerBlock(s, fuelField) {
 // Une ligne du tableau. La maquette ne garde que rang, station, distance, prix
 // et surcoût sur un plein ; badges, services, fraîcheur et tendance basculent
 // dans la fiche détail, qui s'ouvre au clic sur la ligne.
+// `refStation` (la moins chère actualisée) peut être null quand aucune station
+// du rayon n'a de prix récent. Une ligne périmée n'a ni rang ni surcoût : la
+// comparer au gagnant serait affirmer un écart qui n'existe peut-être plus.
 function buildStationRow(s, i, fuelField, refStation) {
   const v = stationView(s, fuelField);
-  const extra = (s.price - refStation.price) * getTankSize();
+  const extra = refStation && !s._stale ? (s.price - refStation.price) * getTankSize() : 0;
 
   const tr = document.createElement('tr');
-  tr.className = 'station-row';
+  tr.className = s._stale ? 'station-row is-stale' : 'station-row';
   tr.dataset.stationIdx = String(i);
   tr.setAttribute('tabindex', '0');
   tr.setAttribute('role', 'button');
-  tr.setAttribute('aria-label', `Voir les détails de ${v.title}, ${s.price.toFixed(3)} euros par litre`);
+  tr.setAttribute('aria-label', `Voir les détails de ${v.title}, ${s.price.toFixed(3)} euros par litre` +
+    (s._stale && v.freshness ? `, prix relevé ${v.freshness.text}` : ''));
   tr.innerHTML = `
-    <td class="col-rank">${String(i + 1).padStart(2, '0')}</td>
+    <td class="col-rank">${s._stale ? '—' : String(i + 1).padStart(2, '0')}</td>
     <td class="col-station">
       ${esc(v.title)}
       ${s._outlier ? '<span class="row-warn" title="Prix qui s’écarte fortement de la médiane locale — à vérifier sur place.">⚠</span>' : ''}
       <div class="col-station-sub">${esc(v.subtitle)}</div>
+      ${s._stale ? `<div class="col-stale">relevé ${v.freshness ? esc(v.freshness.text) : 'à une date inconnue'}</div>` : ''}
     </td>
     <td class="col-dist">${v.distKm != null ? esc(km1(v.distKm)) : '—'}${s.driveMin != null ? `<div class="col-eta">${s.driveMin} min</div>` : ''}</td>
     <td class="col-price">${s.price.toFixed(3).replace('.', ',')}</td>
@@ -998,8 +1023,17 @@ function buildStationRow(s, i, fuelField, refStation) {
   return tr;
 }
 
+// Intercalaire entre le classement et les prix périmés, dans le tableau même :
+// la frontière se lit sans quitter la liste des yeux.
+function buildStaleSeparator(count) {
+  const tr = document.createElement('tr');
+  tr.className = 'stale-sep';
+  tr.innerHTML = `<td colspan="5">Hors classement · ${count} prix non actualisé${count > 1 ? 's' : ''} depuis plus de ${STALE_DAYS} jours</td>`;
+  return tr;
+}
+
 function buildHistoryCard(s, i, total) {
-  const color = getColorForRank(i, total);
+  const color = getColorForRank(s._stale ? -1 : i, total);
   const brandName = extractStationName(s);
   const title = brandName || s.adresse || 'Station sans nom';
   const badge = getBrandBadge(brandName);
@@ -1017,7 +1051,7 @@ function buildHistoryCard(s, i, total) {
   el.style.setProperty('--rank-color', color);
   el.style.animationDelay = `${Math.min(i, 8) * 0.04}s`;
   el.innerHTML = `
-    <div class="rank" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
+    <div class="rank" aria-hidden="true">${s._stale ? '—' : String(i + 1).padStart(2, '0')}</div>
     <div class="info">
       <div class="name">${badgeHtml}<span class="name-text">${esc(title)}</span></div>
       <div class="addr">${esc(subtitle)}</div>
@@ -1115,11 +1149,25 @@ function renderStations() {
     return;
   }
 
-  const refStation = stations[0];
-  $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+  // Les stations périmées sont triées en queue (compareStations) : le gagnant
+  // est donc la première station, à condition qu'elle soit actualisée.
+  const fresh = stations.filter(s => !s._stale);
+  const staleCount = total - fresh.length;
+  const refStation = fresh.length ? stations[0] : null;
 
-  if (total > 1) {
-    const rest = stations.slice(1);
+  if (refStation) {
+    $stationList.appendChild(buildWinnerBlock(refStation, fuelField));
+  } else {
+    const note = document.createElement('div');
+    note.className = 'stale-notice';
+    note.textContent = `Aucune station de ce rayon n’a déclaré de prix ${FUEL_LABELS[fuelField]} ces ` +
+      `${STALE_DAYS} derniers jours. Voici les derniers prix connus, sans classement : vérifie-les sur place.`;
+    $stationList.appendChild(note);
+  }
+
+  const rest = refStation ? stations.slice(1) : stations;
+  const offset = refStation ? 1 : 0; // index de `rest[0]` dans `stations`
+  if (rest.length) {
     const shown = rowsExpanded ? rest.length : Math.min(rest.length, ROWS_VISIBLE);
     const table = document.createElement('table');
     table.className = 'table station-table';
@@ -1137,7 +1185,12 @@ function renderStations() {
     `;
     const tbody = table.querySelector('tbody');
     rest.slice(0, shown).forEach((s, i) => {
-      tbody.appendChild(buildStationRow(s, i + 1, fuelField, refStation));
+      // L'intercalaire ne sert que s'il sépare quelque chose : quand tout est
+      // périmé, la note au-dessus du tableau le dit déjà.
+      if (s._stale && refStation && (i === 0 || !rest[i - 1]._stale)) {
+        tbody.appendChild(buildStaleSeparator(staleCount));
+      }
+      tbody.appendChild(buildStationRow(s, i + offset, fuelField, refStation));
     });
     $stationList.appendChild(table);
 
@@ -1151,7 +1204,9 @@ function renderStations() {
     }
   }
 
-  const savings = buildSavingsBanner(stations);
+  // L'écart ne se calcule qu'entre prix actualisés : un vieux prix bas ou haut
+  // gonflerait un écart qui n'existe plus à la pompe.
+  const savings = buildSavingsBanner(fresh);
   if (savings) $stationList.appendChild(savings);
 
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
@@ -1191,10 +1246,11 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
       lat,
       lon,
       distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
-      price: parseFloat(s[fuelField])
+      price: parseFloat(s[fuelField]),
+      _stale: isStalePrice(s, fuelField)
     };
   }).filter(s => s.lat != null && s.lon != null && !isNaN(s.price) && s.price > 0)
-    .sort((a, b) => a.price - b.price);
+    .sort(compareStations);
 
   // Détection des prix aberrants : écart > 25 % avec la médiane locale du set.
   // Au moins 5 stations pour que la médiane soit représentative, sinon on ne
@@ -1246,8 +1302,8 @@ function applyDistMapAndRender(distMap, stations, radiusKm) {
       kept.push(s);
     }
   }
-  // Tri par prix inchangé (rang n°1 = moins cher).
-  currentResults.stations = kept.sort((a, b) => a.price - b.price);
+  // Même ordre que le premier rendu : actualisées d'abord, puis par prix.
+  currentResults.stations = kept.sort(compareStations);
   renderStations();
 }
 
@@ -1378,20 +1434,6 @@ async function runSearch(lat, lon, label) {
         });
         if (changed) renderStations();
       }
-      // Fallback n°4 : si certaines stations n'ont toujours ni marque OSM ni
-      // match regex, on tente un Overpass runtime ciblé (zone de recherche).
-      // Silencieux et non bloquant — si Overpass est HS ou lent, on s'en fout.
-      const unmatched = currentResults.stations.filter(s => extractStationName(s) === null);
-      if (!unmatched.length) return;
-      fetchOSMFuelStationsRuntime(lat, lon, radiusKm).then(osm => {
-        if (token !== currentSearchToken || !osm.length) return;
-        let changed = false;
-        unmatched.forEach(s => {
-          const brand = findNearestRuntimeBrand(s.lat, s.lon, osm);
-          if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
-        });
-        if (changed) renderStations();
-      });
     });
   } catch (err) {
     if (token !== currentSearchToken) return;
@@ -1399,7 +1441,7 @@ async function runSearch(lat, lon, label) {
     $stationList.innerHTML = '';
     console.error(err);
     showStatusAction(
-      `Erreur lors du chargement des prix : ${err.message}`,
+      friendlyError(err, 'prix'),
       'Réessayer',
       () => { hideStatus(); runSearch(lat, lon, label); }
     );
@@ -1434,8 +1476,10 @@ function setSearchBusy(busy) {
 async function doAddressSearch() {
   if (searchBusy) return;
   const address = $address.value.trim();
-  if (!address || address.length < 2) {
-    showStatus('Entre une adresse ou une ville (2 caractères minimum)', true);
+  // Le géocodeur refuse les requêtes de moins de 3 caractères (400) ; les
+  // communes à nom très court (Eu, Ay, Y…) passent avec leur code postal.
+  if (!address || address.length < 3) {
+    showStatus('Entre au moins 3 caractères (pour une commune très courte, ajoute son code postal : « Eu 76260 »)', true);
     return;
   }
   updateUrlParams();
@@ -1447,7 +1491,7 @@ async function doAddressSearch() {
     await runSearch(lat, lon, label);
   } catch (err) {
     showStatusAction(
-      `Erreur : ${err.message}`,
+      friendlyError(err, 'adresses'),
       'Réessayer',
       () => { hideStatus(); doAddressSearch(); }
     );
@@ -1484,7 +1528,7 @@ function highlightSuggestion(idx) {
 
 async function fetchSuggestions(q) {
   try {
-    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`;
+    const url = `${GEOCODER_URL}?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`;
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
@@ -1862,8 +1906,17 @@ let userMarker = null;
 function ensureMap() {
   if (map || typeof L === 'undefined') return map;
   map = L.map($stationMap, { scrollWheelZoom: true, zoomControl: true });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  // Fond Plan IGN (Géoplateforme) plutôt que les serveurs de tuiles d'OSM, dont
+  // la politique d'usage interdit le trafic intensif sans accord préalable — un
+  // passage médiatique suffirait à faire bloquer la carte. Service public,
+  // gratuit et sans clé ; il ne couvre que la France (404 au-delà des
+  // frontières, ce qui laisse le fond neutre de la carte). Désaturé en CSS pour
+  // laisser la couleur aux seuls marqueurs.
+  L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png' +
+    '&TILEMATRIXSET=PM_0_19&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    attribution: '&copy; <a href="https://www.ign.fr/">IGN</a> – Géoplateforme · ' +
+      'enseignes &copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
   // Cluster si le plugin a chargé, sinon layerGroup simple. Le cluster ne se
@@ -1892,10 +1945,12 @@ function renderMap(stations) {
 
   if (stations.length) {
     stations.forEach((s, i) => {
-      const color = getColorForRank(i, stations.length);
+      // Prix périmé : marqueur creux et sans numéro, comme sa ligne du tableau.
+      const color = getColorForRank(s._stale ? -1 : i, stations.length);
+      const fresh = formatRelativeTime(s[currentResults.fuelField.replace('_prix', '_maj')]);
       const icon = L.divIcon({
-        className: 'map-pin',
-        html: `<div class="map-pin-inner" style="background:${color}"><span>${i + 1}</span></div>`,
+        className: s._stale ? 'map-pin map-pin-stale' : 'map-pin',
+        html: `<div class="map-pin-inner" style="background:${s._stale ? 'var(--color-surface)' : color}"><span>${s._stale ? '–' : i + 1}</span></div>`,
         // Carré de 26px ancré en son centre — l'ancrage bas d'origine visait
         // la pointe de la goutte, que le système sans rayon a supprimée.
         iconSize: [26, 26],
@@ -1909,7 +1964,8 @@ function renderMap(stations) {
       marker.bindPopup(
         `<strong>${esc(name)}</strong><br>` +
         (addrLine ? `<span style="color:var(--color-neutral-600);font-size:12px">${esc(addrLine)}</span><br>` : '') +
-        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}`
+        `<b style="color:${color}">${s.price.toFixed(3)} €/L</b> · ${distStr}${etaStr}` +
+        (s._stale ? `<br><span style="color:var(--color-neutral-600);font-size:12px">Hors classement · relevé ${esc(fresh ? fresh.text : 'à une date inconnue')}</span>` : '')
       );
       markersLayer.addLayer(marker);
       bounds.extend([s.lat, s.lon]);
@@ -1998,10 +2054,13 @@ function buildSheetContent(s, fuelField) {
   // 7 jours, surcoût sur un plein et alerte de prix aberrant. La maquette a
   // volontairement allégé la liste, mais aucune de ces données ne doit être
   // perdue — elles sont regroupées ici.
-  const ref = currentResults && currentResults.stations && currentResults.stations[0];
+  // Référence du surcoût : la moins chère ACTUALISÉE. Rien à comparer quand
+  // aucune ne l'est, ni quand la station ouverte a elle-même un prix périmé.
+  const first = currentResults && currentResults.stations && currentResults.stations[0];
+  const ref = first && !first._stale ? first : null;
   const distKm = s.driveKm != null ? s.driveKm : s.distance;
   const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
-  const extra = ref && ref !== s ? (s.price - ref.price) * getTankSize() : 0;
+  const extra = ref && ref !== s && !s._stale ? (s.price - ref.price) * getTankSize() : 0;
   const facts = [];
   if (distKm != null) {
     facts.push(`<div><dt>Distance</dt><dd>${esc(km1(distKm))} <span class="text-muted">${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}</span></dd></div>`);
@@ -2024,6 +2083,10 @@ function buildSheetContent(s, fuelField) {
   const outlierHtml = s._outlier
     ? `<div class="sheet-warn">⚠ Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale (${esc(s._outlier.median.toFixed(3).replace('.', ','))} €). Possible saisie erronée — à vérifier sur place.</div>`
     : '';
+  const staleFresh = s._stale ? formatRelativeTime(s[fuelField.replace('_prix', '_maj')]) : null;
+  const staleHtml = s._stale
+    ? `<div class="sheet-note">Prix ${esc(FUEL_LABELS[fuelField])} relevé ${esc(staleFresh ? staleFresh.text : 'à une date inconnue')} : la station ne l’a pas redéclaré depuis plus de ${STALE_DAYS} jours, il est donc exclu du classement. À vérifier sur place.</div>`
+    : '';
 
   // --- Services
   const amenities = getAmenities(s.services_service);
@@ -2044,6 +2107,7 @@ function buildSheetContent(s, fuelField) {
         ${fullAddr ? `<button type="button" class="btn btn-secondary sheet-copy" data-copy="${esc(fullAddr)}">Copier l'adresse</button>` : ''}
       </div>
     </header>
+    ${staleHtml}
     ${outlierHtml}
     ${factsHtml}
     <section class="sheet-section">

@@ -68,6 +68,39 @@ function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+// Erreurs réseau lisibles — même logique que httpError / friendlyError dans
+// app.js (les deux pages n'ont pas de module partagé, faute de build step).
+const SERVICE_NAMES = {
+  prix: 'le service officiel des prix',
+  adresses: 'le service d’adresses de l’IGN'
+};
+const RESET_FMT = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' });
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function httpError(res, service) {
+  const name = SERVICE_NAMES[service];
+  if (res.status === 429) {
+    const remaining = res.headers.get('X-RateLimit-Remaining');
+    const reset = new Date(String(res.headers.get('X-RateLimit-Reset') || '').replace(' ', 'T'));
+    if (remaining === '0' && !isNaN(reset)) {
+      return new Error(`${capitalize(name)} limite le nombre de recherches par réseau, et la limite du jour ` +
+        `est atteinte pour le tien. Elle se réinitialise à ${RESET_FMT.format(reset)}.`);
+    }
+    return new Error('Trop de recherches en peu de temps depuis ton réseau. Réessaie dans quelques minutes.');
+  }
+  if (res.status >= 500) {
+    return new Error(`${capitalize(name)} est momentanément indisponible (erreur ${res.status}). Réessaie dans un instant.`);
+  }
+  return new Error(`${capitalize(name)} a refusé la requête (erreur ${res.status}).`);
+}
+
+function friendlyError(err, service) {
+  if (err instanceof TypeError && /Failed to fetch|NetworkError|Load failed/i.test(err.message)) {
+    return `Impossible de joindre ${SERVICE_NAMES[service]}. Vérifie ta connexion puis réessaie.`;
+  }
+  return (err && err.message) || 'Erreur inattendue.';
+}
+
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -148,6 +181,10 @@ document.querySelectorAll('input[name="scope"]').forEach(r =>
   r.addEventListener('change', syncScopeFields));
 
 // ===== Géocodage BAN =====
+// Servi par la Géoplateforme de l'IGN, comme dans app.js : l'ancienne adresse
+// `api-adresse.data.gouv.fr` est fermée depuis le 31/01/2026.
+const GEOCODER_URL = 'https://data.geopf.fr/geocodage/search';
+
 // Même correctif que app.js : BAN classe parfois une voie homonyme au-dessus de
 // la commune cherchée, à un millième près (« Avignon » → Combourg, Ille-et-Vilaine).
 const GEO_MUNICIPALITY_TOLERANCE = 0.02;
@@ -169,9 +206,9 @@ function pickBestGeoFeature(features) {
 let pickedPlace = null;
 
 async function geocode(address) {
-  const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=5`;
+  const url = `${GEOCODER_URL}?q=${encodeURIComponent(address)}&limit=5`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Géocodage indisponible');
+  if (!res.ok) throw httpError(res, 'adresses');
   const data = await res.json();
   const best = pickBestGeoFeature(data.features || []);
   if (!best) throw new Error('Adresse introuvable');
@@ -194,7 +231,7 @@ const suggest = debounce(async (q) => {
   if (q !== lastSuggestionQuery || q.length < 3) return;
   let features = [];
   try {
-    const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`);
+    const res = await fetch(`${GEOCODER_URL}?q=${encodeURIComponent(q)}&limit=6&autocomplete=1`);
     if (res.ok) features = (await res.json()).features || [];
   } catch { /* réseau indisponible : on laisse la saisie libre */ }
   if (q !== lastSuggestionQuery || !features.length) { closeSuggestions(); return; }
@@ -250,8 +287,8 @@ async function fetchCheapest(cfg, limit = 3) {
   const res = await fetch(url);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error('API carburants:', body);
-    throw new Error(`API carburants : ${res.status}`);
+    console.error(`API carburants ${res.status} :`, body);
+    throw httpError(res, 'prix');
   }
   const data = await res.json();
   return { results: data.results || [], total: data.total_count || 0 };
@@ -407,7 +444,7 @@ async function handleSubmit(e) {
         $address.value = place.label;
         pickedPlace = place;
       } catch (err) {
-        showStatus(`Erreur : ${err.message}`, true);
+        showStatus(friendlyError(err, 'adresses'), true);
         return;
       }
     }
@@ -425,7 +462,7 @@ async function handleSubmit(e) {
     $preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     console.error(err);
-    showStatus(`Impossible de récupérer les prix : ${err.message}`, true);
+    showStatus(friendlyError(err, 'prix'), true);
   } finally {
     $previewBtn.disabled = false;
   }

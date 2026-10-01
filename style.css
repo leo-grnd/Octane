@@ -1,19 +1,11 @@
-/* Les variables historiques d'Octane sont désormais des ALIAS des tokens du
-   design system (design-system.css). Elles restent en place parce qu'elles sont
-   citées des centaines de fois dans cette feuille : les réécrire d'un bloc
-   aurait produit un diff illisible pour aucun gain. Le thème bascule donc en un
-   seul endroit — ici il n'y a plus rien à dupliquer, les tokens sombres étant
-   définis dans le design system. */
-:root {
-  --bg: var(--color-bg);
-  --bg-soft: var(--color-surface);
-  --bg-card: var(--color-surface);
-  --ink: var(--color-text);
-  --ink-dim: var(--color-neutral-700);
-  --accent: var(--color-accent);
-  --accent-soft: var(--color-accent-600);
-  --border: var(--color-divider);
-}
+/* Styles propres à Octane, posés sur design-system.css. Couleurs, typographie,
+   espacements et ombres viennent exclusivement de ses tokens (--color-*,
+   --font-*, --space-*, --shadow-*) : le thème sombre y est défini une fois,
+   rien n'est à dupliquer ici. Exceptions assumées, hors système : le voile
+   de la fiche détail, les couleurs d'enseigne des badges (app.js), et les
+   teintes sémantiques des tendances (rouge/vert) et de la fraîcheur
+   (orange/rouge) — l'accent étant lui-même rouge, une hausse de prix à sa
+   couleur ne se distinguerait plus de la marque. */
 
 html, body {
   transition: background-color 0.25s ease, color 0.25s ease;
@@ -22,8 +14,8 @@ html, body {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: var(--font-body);
   min-height: 100vh;
   overflow-x: hidden;
@@ -204,46 +196,6 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   border-left-color: var(--color-accent);
 }
 
-/* ═══ Transitoire : styles conservés pour comment-ca-marche.html et
-   alertes.html, qui portent encore l'ancien en-tête. Ils passeront au
-   composant .nav aux étapes 5 et 6, après quoi ce bloc disparaît. ═══ */
-.logo {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: clamp(1.6rem, 4vw, 2.2rem);
-  letter-spacing: -0.03em;
-  line-height: 0.95;
-  color: var(--color-text);
-  text-decoration: none;
-  display: inline-block;
-}
-.logo span { color: var(--color-accent); }
-.tagline {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
-  color: var(--color-neutral-600); margin-top: var(--space-2);
-}
-.meta { text-align: right; font-size: 11px; color: var(--color-neutral-600); }
-.meta .meta-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
-.nav-link {
-  display: inline-block;
-  font-size: 13px;
-  color: var(--color-text);
-  text-decoration: none;
-  border: 1px solid var(--color-divider);
-  padding: 7px 12px;
-  white-space: nowrap;
-}
-.nav-link:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.theme-toggle {
-  background: none;
-  border: 1px solid var(--color-divider);
-  color: var(--color-text);
-  width: 36px; height: 36px;
-  cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 14px; line-height: 1;
-}
-.theme-toggle:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-
 .status {
   display: flex;
   align-items: center;
@@ -317,7 +269,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   background: none;
   border: none;
   font-size: 1.6rem;
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   cursor: pointer;
   line-height: 1;
   padding: 0.4rem 0.6rem;
@@ -335,14 +287,14 @@ select.input option { background: var(--color-surface); color: var(--color-text)
 .sheet-title-row h2 {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 1.15rem;
-  color: var(--ink);
+  color: var(--color-text);
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 .sheet-addr {
   font-size: 0.8rem;
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   margin-top: 0.45rem;
 }
 .sheet-actions {
@@ -351,65 +303,19 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   gap: 0.5rem;
   margin-top: 1rem;
 }
-/* Transitoire : alertes.html utilise encore .sheet-btn pour ses actions ;
-   la fiche est passée aux .btn du système. Retiré à l'étape 6. */
-.sheet-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.9rem;
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.sheet-btn:hover { border-color: var(--accent); color: var(--accent); }
-.sheet-btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.sheet-btn-primary:hover { background: var(--color-accent-600); color: var(--color-bg); }
-
 .sheet-section { margin-top: 1.3rem; }
 .sheet-section h3 {
   font-family: var(--font-body);
   font-size: 0.7rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   margin: 0 0 0.6rem;
   font-weight: 500;
 }
 .sheet-section h3 + .table { margin-top: var(--space-2); }
-.sheet-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-.sheet-table th,
-.sheet-table td {
-  text-align: left;
-  padding: 0.45rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.sheet-table th {
-  color: var(--ink-dim);
-  font-weight: 500;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  letter-spacing: 0.05em;
-  width: 40%;
-}
-.sheet-table td { color: var(--ink); text-align: right; }
 .sheet-prices tr.current { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-.sheet-prices tr.current th { color: var(--accent); }
+.sheet-prices tr.current th { color: var(--color-accent); }
 .sheet-price {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 0.95rem;
@@ -420,14 +326,14 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   margin-left: 0.4rem;
   font-family: var(--font-body);
   font-size: 0.6rem;
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   letter-spacing: 0.03em;
 }
 .sheet-fresh-stale { color: #c2410c; }
 .sheet-fresh-veryStale { color: var(--color-accent-700); }
 .sheet-rupture { color: var(--color-accent-700); font-size: 12px; }
 :root[data-theme="dark"] .sheet-fresh-stale { color: #fb923c; }
-.sheet-unavailable { color: var(--ink-dim); font-size: 0.75rem; font-style: italic; }
+.sheet-unavailable { color: var(--color-neutral-700); font-size: 0.75rem; font-style: italic; }
 
 .sheet-services {
   list-style: none;
@@ -437,7 +343,7 @@ select.input option { background: var(--color-surface); color: var(--color-text)
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 0.5rem 1rem;
   font-size: 0.8rem;
-  color: var(--ink);
+  color: var(--color-text);
 }
 .sheet-services li {
   display: flex;
@@ -450,7 +356,7 @@ body.sheet-open { overflow: hidden; }
 
 /* La carte station doit indiquer visuellement qu'elle est cliquable */
 .station:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -601,6 +507,33 @@ body.sheet-open { overflow: hidden; }
 .station-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .more-btn { margin-top: var(--space-4); min-height: 38px; justify-content: flex-start; }
 
+/* Prix périmés (plus de STALE_DAYS jours, voir app.js) : hors classement, en
+   queue de tableau, en ton atténué. neutral-700 et non 600 pour garder un
+   contraste lisible (≥ 4,5:1) sur le fond. */
+.stale-sep td {
+  padding-top: var(--space-6);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.station-row.is-stale td,
+.station-row.is-stale td.col-price { color: var(--color-neutral-700); }
+.col-stale {
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+.stale-notice {
+  padding: var(--space-4);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-neutral-500);
+}
+
 /* ═══════════════════ Écart dans le rayon ═══════════════════
    Traitement le plus fort de la page : c'est l'argument qui justifie l'outil. */
 .savings {
@@ -650,7 +583,6 @@ body.sheet-open { overflow: hidden; }
 /* Tablette (≤ 900px) */
 @media (max-width: 900px) {
   .container { padding: 1.5rem 1.2rem 3rem; }
-  header { margin-bottom: 2rem; }
   .hero { margin-bottom: 2rem; }
   .search-panel { padding: 1.5rem; }
 }
@@ -658,16 +590,6 @@ body.sheet-open { overflow: hidden; }
 /* Mobile (≤ 640px) */
 @media (max-width: 640px) {
   .container { padding: 1.2rem 1rem 2.5rem; }
-
-  /* Header : logo à gauche, bouton thème seul à droite, tagline/timestamp sous le logo */
-  header {
-    margin-bottom: 1.8rem;
-    padding-bottom: 1.2rem;
-  }
-  .meta { font-size: 0.6rem; }
-  .meta > div:first-child,
-  .meta #timestamp { display: none; }
-  .theme-toggle { margin-top: 0; width: 40px; height: 40px; }
 
   /* Hero plus compacte */
   .hero h1 { font-size: clamp(2rem, 9vw, 3rem); }
@@ -722,7 +644,6 @@ body.sheet-open { overflow: hidden; }
 
 /* Très petits écrans (≤ 380px) */
 @media (max-width: 380px) {
-  .logo { font-size: 1.8rem; }
   .hero h1 { font-size: 1.85rem; }
   .winner-price { font-size: clamp(44px, 13vw, 56px); }
 }
@@ -738,7 +659,7 @@ footer {
 }
 
 footer a {
-  color: var(--accent);
+  color: var(--color-accent);
   text-decoration: none;
 }
 
@@ -757,7 +678,7 @@ footer a {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -770,14 +691,14 @@ footer a {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   padding: 0.4rem 0.9rem 0.2rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-divider);
   margin-bottom: 0.2rem;
 }
 .suggestions li.sg-hist-item::before {
   content: '⏱ ';
-  color: var(--ink-dim);
+  color: var(--color-neutral-700);
   margin-right: 0.3rem;
 }
 
@@ -817,8 +738,14 @@ footer a {
   background: var(--color-surface);
   margin-bottom: var(--space-4);
 }
+/* Plan IGN désaturé : le fond reste dans la rampe neutre du design system et
+   seuls les marqueurs portent la couleur d'accent. En sombre, on inverse la
+   luminance du même fond gris plutôt que de charger une seconde couche. */
+.station-map .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.92) brightness(1.03);
+}
 :root[data-theme="dark"] .station-map .leaflet-tile-pane {
-  filter: hue-rotate(180deg) invert(0.92) brightness(0.95) contrast(0.9) saturate(0.8);
+  filter: grayscale(1) invert(0.88) contrast(0.9) brightness(0.95);
 }
 .leaflet-popup-content {
   font-family: var(--font-body);
@@ -844,6 +771,11 @@ footer a {
   font-size: 11px;
   color: var(--color-bg);
 }
+.map-pin-stale .map-pin-inner {
+  color: var(--color-neutral-700);
+  border-color: var(--color-neutral-500);
+  box-shadow: none;
+}
 
 @media (max-width: 640px) {
   .station-map { height: 420px; }
@@ -867,6 +799,14 @@ footer a {
   color: var(--color-accent-800);
   background: var(--color-accent-100);
   border-left: 3px solid var(--color-accent);
+}
+/* Variante neutre : un prix ancien n'est pas une anomalie, juste une réserve. */
+.sheet-note {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-neutral-500);
 }
 .sheet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .sheet-actions .btn { min-height: 38px; justify-content: flex-start; }

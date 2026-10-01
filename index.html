@@ -14,6 +14,9 @@
   <link rel="apple-touch-icon" href="favicon.svg" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="canonical" href="/" />
+  <!-- Applique le thème enregistré avant le premier rendu (évite le flash) :
+       app.js, chargé en defer, n'intervient qu'après le premier affichage. -->
+  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
@@ -34,8 +37,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
-  <link rel="preconnect" href="https://api-adresse.data.gouv.fr" />
-  <link rel="preconnect" href="https://valhalla.openstreetmap.de" />
+  <link rel="preconnect" href="https://data.geopf.fr" />
+  <link rel="preconnect" href="https://valhalla1.openstreetmap.de" />
   <link rel="preconnect" href="https://router.project-osrm.org" />
   <link rel="preconnect" href="https://unpkg.com" />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet" />
@@ -149,7 +152,7 @@
     </aside>
 
     <footer>
-      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">adresse.data.gouv.fr</a>
+      Données · data.economie.gouv.fr — Géocodage · <a href="https://adresse.data.gouv.fr" target="_blank" rel="noopener">Base Adresse Nationale</a> via la Géoplateforme IGN
     </footer>
   </div>
 

@@ -5,9 +5,13 @@ Comparateur de prix de carburant en France, en temps réel.
 Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
 - **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
-- **Géocodage** · `api-adresse.data.gouv.fr` (Base Adresse Nationale)
+- **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
-- **Routage** · Valhalla (primaire) + OSRM (fallback), pour le mode « en voiture »
+- **Routage** · Valhalla (primaire, `valhalla1.openstreetmap.de`) + OSRM (fallback), pour le mode
+  « en voiture ». Les deux tournent en parallèle et leurs distances sont fusionnées.
+- **Fond de carte** · Plan IGN v2 (WMTS Géoplateforme, sans clé), désaturé en CSS. Les serveurs de
+  tuiles d'OSM interdisent l'usage intensif sans accord, ce qu'un passage médiatique suffirait à
+  déclencher.
 
 Pas de backend, pas de base de données, pas de clé API côté navigateur. Seule exception : les
 [alertes quotidiennes](#alertes-quotidiennes), envoyées par un cron GitHub Actions — un email
@@ -28,6 +32,11 @@ d'Avignon. Le client demande donc 5 résultats et, à score quasi équivalent, p
 `municipality`. Sans risque pour les adresses précises : dès qu'une requête contient une voie ou
 un numéro, BAN ne remonte aucune commune dans son top 5.
 
+L'ancienne adresse `api-adresse.data.gouv.fr` est **fermée depuis le 31/01/2026** (en-têtes
+`Sunset` et `Deprecation`) ; Octane interroge la Géoplateforme de l'IGN depuis octobre 2026.
+C'est le même moteur : scores, types et format GeoJSON sont identiques, d'où une migration
+limitée à l'URL.
+
 ## Récupération des stations
 
 L'API Opendatasoft plafonne `limit` à **100 lignes par requête** : une recherche à 50 km autour
@@ -43,6 +52,16 @@ dupliquer ou sauter des lignes.
 Un `select` explicite limite la réponse aux champs réellement affichés : **76 Ko par page au lieu
 de 275 Ko**, le reste étant des blobs JSON sérialisés (`horaires`, `prix`, `rupture`) et le
 découpage administratif.
+
+### Prix périmés
+
+Le flux contient des stations qui ne déclarent plus : au 01/10/2026, « le moins cher » de Paris
+(5 km) était un gazole à 2,200 € relevé **184 jours** plus tôt, devant des prix du jour à 2,250 €.
+Un prix non redéclaré depuis plus de **7 jours** (`STALE_DAYS`) sort donc du classement : il ne
+peut plus être désigné gagnant, ne compte ni dans l'écart affiché ni dans le surcoût, et passe en
+fin de tableau sous un intercalaire « Hors classement », sans rang, avec sa date de relevé. Il
+reste visible, la station pouvant simplement n'avoir pas changé ses prix. Les alertes email sont
+plus strictes (3 jours) : elles désignent un seul gagnant, sans tableau pour nuancer.
 
 ## Développement local
 
@@ -91,11 +110,12 @@ faute de backend : la liste des abonnés vit dans un secret de dépôt.
 
 ### Fonctionnement
 
-`.github/workflows/daily-alerts.yml` tourne **toutes les heures** et exécute
-`scripts/send-alerts.mjs` (Node 20, aucune dépendance npm — `fetch` est natif). Le script ne
-retient que les abonnés dont l'heure d'envoi correspond à l'heure de **Paris** courante (calculée
-via `Intl`, donc l'heure d'été est gérée sans logique maison), regroupe les abonnés partageant la
-même zone pour ne faire qu'un appel API, puis envoie via l'API HTTP de Brevo.
+`.github/workflows/daily-alerts.yml` est programmé **toutes les heures** et exécute
+`scripts/send-alerts.mjs` (Node 20, aucune dépendance npm — `fetch` est natif). Le script retient
+les abonnés dont l'heure d'envoi est passée depuis moins de 6 heures (heure de **Paris**, calculée
+via `Intl`, donc l'heure d'été est gérée sans logique maison) et qui n'ont rien reçu aujourd'hui,
+regroupe les abonnés partageant la même zone pour ne faire qu'un appel API, puis envoie via l'API
+HTTP de Brevo.
 
 Le dépôt étant public, l'état persisté (`data/alerts/state.json`) ne contient que des **empreintes
 SHA-256** : ni email ni coordonnées en clair.
@@ -110,9 +130,11 @@ Deux garde-fous méritent d'être connus :
   qui tape 0,199 au lieu de 1,99), et seulement au-delà de 5 stations, en dessous desquelles la
   médiane n'est pas représentative.
 
-Le cron peut glisser de plusieurs dizaines de minutes côté GitHub : le script rattrape jusqu'à
-3 heures manquées, avec une garde « au plus un envoi par abonné et par jour » pour qu'un run
-rejoué n'envoie jamais deux fois le même email.
+Le cron « horaire » de GitHub n'est qu'indicatif : sur septembre 2026 il n'a tourné que 3 à
+7 fois par jour, avec des trous allant jusqu'à 6 h 44. D'où la fenêtre de 6 heures : une alerte
+réglée sur 8 h part au premier run entre 8 h et 14 h. La garde « au plus un envoi par abonné et
+par jour » empêche qu'un run suivant ou rejoué envoie deux fois le même email. La fenêtre ne
+franchit pas minuit.
 
 ### Configuration
 
@@ -164,6 +186,11 @@ avec leur tag `brand`/`operator`/`name`, et on ship le résultat dans
 `data/osm/brands.json`. Le client le charge une seule fois par session et cherche
 la marque la plus proche (≤ 150 m) en local.
 
+Il n'y a **aucun appel Overpass depuis le navigateur**. Un ancien fallback interrogeait les
+instances publiques à chaque recherche où une enseigne manquait ; il a été retiré avant la mise
+en ligne publique, leurs politiques d'usage proscrivant ce trafic dès qu'il devient massif. Une
+station absente de la base garde un affichage complet, simplement sans enseigne.
+
 **Rafraîchir localement (Node) :**
 ```bash
 node scripts/build-brands.mjs
@@ -178,12 +205,39 @@ python3 scripts/build_brands.py
 de chaque mois à 04:00 UTC (les marques OSM bougent lentement). Déclenchable manuellement
 via l'onglet Actions → Refresh OSM brands → Run workflow.
 
+## Design system
+
+L'interface suit le design system **Modernist** exporté de Claude Design : angles droits
+(`--radius-*` à 0), filets francs plutôt que cartes ombrées, Archivo en trois graisses, un seul
+accent rouge (`#ec3013`) sur une rampe de neutres chauds.
+
+- **`design-system.css` est la copie conforme de l'export**, chargée avant `style.css` sur les
+  trois pages. Elle porte les tokens (`--color-*`, `--font-*`, `--space-*`, `--shadow-*`) et les
+  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On ne la retouche
+  pas : une nouvelle version de l'export doit pouvoir l'écraser telle quelle. La seule addition
+  est le bloc « Thème sombre », en fin de fichier.
+- **`style.css` et les feuilles de page n'emploient que ces tokens.** Exceptions assumées, listées
+  en tête de `style.css` : couleurs d'enseigne des badges, rouge/vert des tendances de prix,
+  orange/rouge de la fraîcheur. L'accent étant lui-même rouge, une hausse à sa couleur ne se
+  distinguerait plus de la marque.
+- **Le clair est le thème par défaut**, conformément à la direction artistique. Le sombre est
+  activé par `data-theme="dark"` sur `<html>` (préférence système, puis choix mémorisé sous
+  `octane-theme` dans `localStorage`). Un script en ligne dans le `<head>` de chaque page l'applique
+  avant le premier rendu, pour éviter un flash clair.
+- **Le sombre inverse les rampes tonales au lieu de redéfinir les composants** :
+  `--color-neutral-100` reste « le plus proche du fond » et `-900` « le plus contrasté ». Chaque
+  règle écrite pour le clair fonctionne donc en sombre sans duplication. L'accent remonte d'un cran
+  (`#ff563c`) pour garder un contraste de 5,8:1 sur le fond sombre.
+- **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
+  `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
+
 ## Fichiers
 
 | Fichier | Rôle |
 |--|--|
 | `index.html` | Structure + SEO |
-| `style.css` | Style (thème sombre/clair, responsive) |
+| `design-system.css` | Design system Modernist (export Claude Design, intouché) + thème sombre |
+| `style.css` | Styles propres à l'outil, sur les tokens du design system |
 | `app.js` | Géocodage + appels API + rendu + cache + historique runtime |
 | `comment-ca-marche.html` · `.css` | Page d'explication |
 | `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |

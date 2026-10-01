@@ -1,9 +1,9 @@
 name: Daily fuel alerts
 
-# Octane n'a pas de backend : ce cron horaire tient lieu de planificateur. Le
-# script ne retient que les abonnés dont l'heure d'envoi correspond à l'heure
-# de Paris courante, et rattrape jusqu'à 3 heures manquées si un run a glissé —
-# les crons GitHub peuvent être retardés de plusieurs dizaines de minutes.
+# Octane n'a pas de backend : ce cron horaire tient lieu de planificateur. En
+# pratique GitHub ne le déclenche que 3 à 7 fois par jour ; le script envoie donc
+# chaque alerte au premier run qui suit son heure (jusqu'à 6 h de retard), et
+# une seule fois par jour grâce aux marqueurs d'envoi de l'état.
 on:
   schedule:
     - cron: '5 * * * *'   # toutes les heures à H+5 (UTC ; la conversion Paris est faite côté script)

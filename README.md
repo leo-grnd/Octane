@@ -213,9 +213,10 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
 
 - **`design-system.css` est la copie conforme de l'export**, chargée avant `style.css` sur les
   trois pages. Elle porte les tokens (`--color-*`, `--font-*`, `--space-*`, `--shadow-*`) et les
-  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On ne la retouche
-  pas : une nouvelle version de l'export doit pouvoir l'écraser telle quelle. La seule addition
-  est le bloc « Thème sombre », en fin de fichier.
+  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On la retouche le
+  moins possible, pour qu'une nouvelle version de l'export puisse l'écraser. Deux écarts
+  seulement, à refaire après un nouvel export : l'`@import` Google Fonts de la ligne 2 est retiré
+  (voir « Ressources tierces »), et le bloc « Thème sombre » est ajouté en fin de fichier.
 - **`style.css` et les feuilles de page n'emploient que ces tokens.** Exceptions assumées, listées
   en tête de `style.css` : couleurs d'enseigne des badges, rouge/vert des tendances de prix,
   orange/rouge de la fraîcheur. L'accent étant lui-même rouge, une hausse à sa couleur ne se
@@ -230,6 +231,23 @@ accent rouge (`#ec3013`) sur une rampe de neutres chauds.
   (`#ff563c`) pour garder un contraste de 5,8:1 sur le fond sombre.
 - **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
   `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
+
+### Ressources tierces servies par le site
+
+Aucune ressource n'est chargée depuis un CDN : police et cartographie sont copiées dans le dépôt.
+Pas d'adresse IP de visiteur transmise à Google (la jurisprudence européenne a jugé ce transfert
+contraire au RGPD), pas de panne d'unpkg qui casserait la carte, et la condition d'une politique
+de sécurité de contenu (CSP) stricte.
+
+| Ressource | Emplacement | Version | Licence |
+|--|--|--|--|
+| Archivo (police variable 400-800, latin + latin étendu) | `fonts/` | Google Fonts v25 | SIL OFL 1.1 |
+| Leaflet | `vendor/leaflet/` | 1.9.4 | BSD-2 |
+| Leaflet.markercluster | `vendor/leaflet.markercluster/` | 1.5.3 | MIT |
+
+Les fichiers Leaflet gardent leur attribut `integrity` (SRI), identique à celui de la version
+officielle sur unpkg. Pour monter de version : retélécharger les fichiers `dist/` dans le dossier
+correspondant, mettre à jour le hash SRI et le tableau ci-dessus, puis bumper le SW.
 
 ### Icônes et aperçu de partage
 
@@ -251,7 +269,9 @@ committer les PNG. Le script vérifie les dimensions de chaque image produite. `
 | Fichier | Rôle |
 |--|--|
 | `index.html` | Structure + SEO |
-| `design-system.css` | Design system Modernist (export Claude Design, intouché) + thème sombre |
+| `design-system.css` | Design system Modernist (export Claude Design) + thème sombre |
+| `fonts/` | Archivo en woff2 + `archivo.css` (`@font-face`) + licence |
+| `vendor/` | Leaflet et Leaflet.markercluster, avec leurs licences |
 | `style.css` | Styles propres à l'outil, sur les tokens du design system |
 | `app.js` | Géocodage + appels API + rendu + cache + historique runtime |
 | `comment-ca-marche.html` · `.css` | Page d'explication |

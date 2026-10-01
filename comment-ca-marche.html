@@ -26,9 +26,8 @@
     <meta name="twitter:image" content="https://leo-grnd.github.io/Octane/og-image.png">
     <!-- Applique le thème enregistré avant le premier rendu (évite le flash). -->
     <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet" />
+    <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="fonts/archivo.css">
     <link rel="stylesheet" href="design-system.css" />
   <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="comment-ca-marche.css">

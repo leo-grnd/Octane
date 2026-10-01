@@ -1,5 +1,8 @@
 /* Modernist — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
+/* OCTANE — l'export appelait ici Google Fonts (@import). Ligne retirée : la
+   police est servie par le site (fonts/archivo.css, lié par chaque page). À
+   refaire si l'export est remplacé par une nouvelle version. Seule autre
+   modification de l'export : le bloc « Thème sombre » en fin de fichier. */
 
 :root {
   --color-bg: #f3f2f2;

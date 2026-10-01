@@ -41,17 +41,17 @@
   <meta name="twitter:image" content="https://leo-grnd.github.io/Octane/og-image.png" />
   <meta name="twitter:image:alt" content="Octane — Le plein. Le moins cher. Autour de toi. Prix officiels des carburants en France." />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://data.economie.gouv.fr" />
   <link rel="preconnect" href="https://data.geopf.fr" />
   <link rel="preconnect" href="https://valhalla1.openstreetmap.de" />
   <link rel="preconnect" href="https://router.project-osrm.org" />
-  <link rel="preconnect" href="https://unpkg.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
+  <!-- Police et Leaflet servis par le site (fonts/, vendor/) : ni Google ni
+       unpkg. Le sous-ensemble latin est préchargé, il sert sur toutes les pages. -->
+  <link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="fonts/archivo.css" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" />
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.css" />
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="design-system.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -163,8 +163,8 @@
     </footer>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin="" defer></script>
+  <script src="vendor/leaflet/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" defer></script>
+  <script src="vendor/leaflet.markercluster/leaflet.markercluster.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

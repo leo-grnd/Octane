@@ -2,10 +2,17 @@
 // sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v44';
+const VERSION = 'octane-v45';
 const SHELL = [
   './',
   './index.html',
+  './fonts/archivo.css',
+  './fonts/archivo-latin.woff2',
+  './vendor/leaflet/leaflet.css',
+  './vendor/leaflet/leaflet.js',
+  './vendor/leaflet.markercluster/MarkerCluster.css',
+  './vendor/leaflet.markercluster/MarkerCluster.Default.css',
+  './vendor/leaflet.markercluster/leaflet.markercluster.js',
   './design-system.css',
   './style.css',
   './app.js',
@@ -80,7 +87,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // CDN externes (fonts, leaflet) : stale-while-revalidate
+  // Autres ressources tierces : stale-while-revalidate. Polices et Leaflet sont
+  // désormais servis par le site (fonts/, vendor/) et passent par la branche
+  // même origine ci-dessus ; plus aucun CDN n'est appelé au chargement.
   e.respondWith(
     caches.open(VERSION).then(cache =>
       cache.match(req).then(cached => {

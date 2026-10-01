@@ -326,6 +326,8 @@ const MAIL = {
 };
 // Archivo en premier pour les clients qui chargent les polices distantes
 // (Apple Mail, Thunderbird) ; Arial couvre les autres sans décaler la mise en page.
+// La police vient du site (fonts/archivo.css), pas de Google : ouvrir l'email
+// ne transmet l'adresse IP du destinataire à aucun tiers.
 const MAIL_FONT = "'Archivo', Arial, Helvetica, sans-serif";
 const TONE_COLOR = { up: '#b91c1c', down: '#15803d', flat: MAIL.muted };
 
@@ -381,7 +383,7 @@ function buildEmail(a, { rows, total }, previous, brandsData) {
   // capitales, prix à la plus grande échelle, le reste en commentaire.
   const html = `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet"></head>
+<link href="${SITE_URL}fonts/archivo.css" rel="stylesheet"></head>
 <body style="margin:0;padding:0;background:${MAIL.bg}">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${MAIL.bg};padding:24px 12px">
     <tr><td align="center">

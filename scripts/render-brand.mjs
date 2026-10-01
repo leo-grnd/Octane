@@ -100,6 +100,9 @@ for (const t of TARGETS) {
       '--disable-gpu',
       '--hide-scrollbars',
       '--force-device-scale-factor=1',
+      // og-image.html charge la police du site par un chemin file:// : sans ce
+      // drapeau, le navigateur bloque la police et rend en police système.
+      '--allow-file-access-from-files',
       `--user-data-dir=${profile}`,
       `--window-size=${t.w},${t.h}`,
       // Laisse le temps aux polices web (og-image) de se charger avant la capture.

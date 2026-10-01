@@ -1,12 +1,9 @@
 /* Styles de l'outil (page d'accueil), posés sur design-system.css. Couleurs,
-   typographie, rayons et ombres viennent exclusivement de ses tokens : le
-   thème sombre y est défini une fois, rien n'est à dupliquer ici. Exceptions
-   assumées, hors système : le voile de la fiche détail et les couleurs
-   d'enseigne des badges (app.js).
-
-   Refonte v3 en cours : les sections pas encore redessinées lisent les
-   anciens noms (--color-*), rebranchés sur les tokens v3 en tête de
-   design-system.css. */
+   typographie, rayons et ombres viennent exclusivement de ses tokens --o-* :
+   le thème sombre y est défini une fois, rien n'est à dupliquer ici.
+   Exceptions assumées, hors système : le voile de la fiche détail, l'ombre
+   des épingles de la carte (reprise telle quelle de la maquette) et les
+   couleurs d'enseigne des badges (app.js). */
 
 * { margin: 0; padding: 0; }
 
@@ -267,159 +264,6 @@
   color: var(--o-accent-ink);
 }
 .status .status-cta { margin-left: auto; }
-
-/* ============ Bottom sheet "détails station" ============ */
-/* Desktop : panneau centré (modal). Mobile : feuille qui glisse depuis le bas.
-   Animation purement CSS via une classe .hidden + transitions. */
-.station-sheet {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-}
-.station-sheet.hidden { display: none; }
-.sheet-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(20, 18, 16, 0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  animation: sheetFade 0.18s ease-out;
-}
-:root[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, 0.55); }
-@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes sheetSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.sheet-panel {
-  position: relative;
-  width: min(540px, calc(100% - 2rem));
-  max-height: 85vh;
-  overflow-y: auto;
-  background: var(--color-surface);
-  border: 2px solid var(--color-divider);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-lg);
-  animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  outline: none;
-}
-.sheet-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.8rem;
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  color: var(--color-neutral-700);
-  cursor: pointer;
-  line-height: 1;
-  padding: 0.4rem 0.6rem;
-  transition: color 0.15s;
-}
-.sheet-close:hover { color: var(--color-accent); }
-
-.sheet-header { margin-bottom: 1.2rem; }
-.sheet-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-right: 2rem;
-}
-.sheet-title-row h2 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 1.15rem;
-  color: var(--color-text);
-  margin: 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-.sheet-addr {
-  font-size: 0.8rem;
-  color: var(--color-neutral-700);
-  margin-top: 0.45rem;
-}
-.sheet-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-.sheet-section { margin-top: 1.3rem; }
-.sheet-section h3 {
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-neutral-700);
-  margin: 0 0 0.6rem;
-  font-weight: 500;
-}
-.sheet-section h3 + .table { margin-top: var(--space-2); }
-.sheet-prices tr.current { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-.sheet-prices tr.current th { color: var(--color-accent); }
-.sheet-price {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 0.95rem;
-  letter-spacing: -0.02em;
-}
-.sheet-fresh {
-  display: inline-block;
-  margin-left: 0.4rem;
-  font-family: var(--font-body);
-  font-size: 0.6rem;
-  color: var(--color-neutral-700);
-  letter-spacing: 0.03em;
-}
-.sheet-fresh-stale { color: #c2410c; }
-.sheet-fresh-veryStale { color: var(--color-accent-700); }
-.sheet-rupture { color: var(--color-accent-700); font-size: 12px; }
-:root[data-theme="dark"] .sheet-fresh-stale { color: #fb923c; }
-.sheet-unavailable { color: var(--color-neutral-700); font-size: 0.75rem; font-style: italic; }
-
-.sheet-services {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.5rem 1rem;
-  font-size: 0.8rem;
-  color: var(--color-text);
-}
-.sheet-services li {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-.amenity-big { font-size: 1rem; line-height: 1; opacity: 0.85; }
-
-body.sheet-open { overflow: hidden; }
-
-/* La carte station doit indiquer visuellement qu'elle est cliquable */
-.station:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/* Mobile : sheet en feuille bas qui prend toute la largeur */
-@media (max-width: 640px) {
-  .station-sheet { align-items: flex-end; }
-  .sheet-panel {
-    width: 100%;
-    max-width: 100%;
-    max-height: 90vh;
-    border-radius: 12px 12px 0 0;
-    padding: 1.2rem 1.1rem 1.5rem;
-  }
-  @keyframes sheetSlideUp {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  .sheet-services { grid-template-columns: 1fr 1fr; gap: 0.4rem 0.7rem; font-size: 0.75rem; }
-  .sheet-title-row h2 { font-size: 1rem; }
-}
 
 /* Roue de la barre d'état. */
 .loader {
@@ -758,107 +602,6 @@ body.sheet-open { overflow: hidden; }
   .sk { animation: none; }
 }
 
-/* ============ RESPONSIVE ============ */
-
-/* Mobile (≤ 640px) */
-@media (max-width: 640px) {
-  /* History cards : rank + (name + sparkline) */
-  .history-card {
-    grid-template-columns: auto 1fr;
-    padding: 0.85rem 1rem;
-    gap: 0.2rem 0.7rem;
-  }
-  .history-card .rank { font-size: 1.05rem; }
-  .history-card .info .name {
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .history-card .info .addr { font-size: 0.7rem; }
-  .history-card .hist-body { font-size: 0.7rem; padding-top: 0.3rem; }
-  .history-card .hist-body .sparkline { max-width: 100%; }
-  .hist-stats { gap: 0.25rem 0.7rem; font-size: 0.7rem; }
-}
-
-/* ============ CARTE LEAFLET ============ */
-.station-map {
-  height: 540px;
-  border: 2px solid var(--color-divider);
-  background: var(--color-surface);
-  margin-bottom: var(--space-4);
-}
-/* Plan IGN désaturé : le fond reste dans la rampe neutre du design system et
-   seuls les marqueurs portent la couleur d'accent. En sombre, on inverse la
-   luminance du même fond gris plutôt que de charger une seconde couche. */
-.station-map .leaflet-tile-pane {
-  filter: grayscale(1) contrast(0.92) brightness(1.03);
-}
-:root[data-theme="dark"] .station-map .leaflet-tile-pane {
-  filter: grayscale(1) invert(0.88) contrast(0.9) brightness(0.95);
-}
-.leaflet-popup-content {
-  font-family: var(--font-body);
-  font-size: 13px;
-  margin: var(--space-2) var(--space-3);
-}
-.leaflet-popup-content strong { font-family: var(--font-heading); font-weight: var(--font-heading-weight); letter-spacing: -0.02em; }
-.map-pin {
-  background: none;
-  border: none;
-}
-/* Carré franc plutôt que la goutte arrondie d'origine : le système pose
-   --radius-* à 0, une épingle en demi-cercle y jurerait. */
-.map-pin-inner {
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--color-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 11px;
-  color: var(--color-bg);
-}
-.map-pin-stale .map-pin-inner {
-  color: var(--color-neutral-700);
-  border-color: var(--color-neutral-500);
-  box-shadow: none;
-}
-
-@media (max-width: 640px) {
-  .station-map { height: 420px; }
-}
-
-
-/* ═══════════════════ Fiche détail : repères déplacés du tableau ═══════════ */
-.sheet-facts { display: grid; gap: var(--space-3); }
-.sheet-facts > div { display: flex; justify-content: space-between; gap: var(--space-4); align-items: baseline; }
-.sheet-facts dt {
-  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color-neutral-600); flex: none;
-}
-.sheet-facts dd { margin: 0; font-size: 14px; text-align: right; }
-.sheet-warn {
-  margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  font-size: 13px;
-  color: var(--color-accent-800);
-  background: var(--color-accent-100);
-  border-left: 3px solid var(--color-accent);
-}
-/* Variante neutre : un prix ancien n'est pas une anomalie, juste une réserve. */
-.sheet-note {
-  margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  font-size: 13px;
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-neutral-500);
-}
-.sheet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.sheet-actions .btn { min-height: 38px; justify-content: flex-start; }
-
 /* ═══════════════════ Tendance et fraîcheur ═══════════════════
    Ces classes sont composées dynamiquement (`trend-${sign}`,
    `freshness-${tier}`), d'où leur absence de toute recherche littérale dans
@@ -872,61 +615,6 @@ body.sheet-open { overflow: hidden; }
 .freshness-fresh { color: var(--o-subtle); }
 .freshness-stale { color: var(--o-stale); }
 .freshness-veryStale { color: var(--o-up); }
-
-/* ═══════════════════ Onglet Historique ═══════════════════
-   Une ligne par station : rang, identité, courbe. Les filets remplacent les
-   encadrés, comme partout ailleurs. */
-.history-list { display: block; }
-.history-card {
-  display: grid;
-  grid-template-columns: 48px 1fr minmax(240px, 1.2fr);
-  gap: var(--space-4);
-  align-items: center;
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--color-divider);
-}
-.history-card .rank {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 16px;
-  color: var(--color-neutral-600);
-}
-.history-card .info { min-width: 0; }
-.history-card .name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 15px;
-}
-.history-card .addr { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
-.name-text { min-width: 0; word-break: break-word; }
-
-.hist-body { min-width: 0; }
-.hist-empty {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 12px;
-  color: var(--color-neutral-600);
-}
-.sparkline {
-  width: 100%;
-  max-width: 260px;
-  height: 60px;
-  color: var(--color-accent);
-  display: block;
-}
-.hist-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  margin-top: var(--space-1);
-  font-size: 11px;
-  color: var(--color-neutral-700);
-}
-.hist-stats strong { color: var(--color-text); font-weight: 600; }
-.hist-trend { width: 100%; }
-.hist-trend.flat { color: var(--color-neutral-600); }
 
 /* ═══════════════════ Badge d'enseigne ═══════════════════
    Les couleurs viennent des marques elles-mêmes (Total, Shell…), pas du
@@ -986,60 +674,341 @@ body.sheet-open { overflow: hidden; }
   animation: octSpin .8s linear infinite;
 }
 
-@media (max-width: 640px) {
-  .history-card { grid-template-columns: 40px 1fr; }
-  .history-card .hist-body { grid-column: 1 / -1; }
+/* ═══════════════════ Carte ═══════════════════
+   Plan IGN en gris (token --o-tile-filter, inversé en thème sombre) et
+   épingles de la maquette : la moins chère en accent avec son prix, les
+   autres à leur rang, un point d'encre pour la position de départ. */
+.station-map {
+  position: relative;
+  z-index: 0;          /* contient les z-index de Leaflet (jusqu'à 1000) */
+  isolation: isolate;
+  height: 500px;
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: 20px;
+  background: var(--o-chip);
+  box-shadow: var(--o-sh-card);
+}
+.station-map.leaflet-container { background: var(--o-chip); font: inherit; }
+.station-map .leaflet-tile-pane { filter: var(--o-tile-filter); }
+@media (max-width: 639.98px) {
+  .station-map { height: 400px; }
 }
 
-/* ═══════════════════ Leaflet : habillage des composants tiers ═══════════════
-   MarkerCluster et les contrôles de zoom arrivent avec leur propre feuille
-   (vert d'eau, coins arrondis, ombres douces) qui jure avec un système plat
-   sans rayon. On les réaccorde plutôt que de les laisser dépareillés. */
-.marker-cluster,
-.marker-cluster div {
-  background: var(--color-accent) !important;
-  border-radius: 0 !important;
-  color: var(--color-bg);
+/* Épingle : étiquette et pointe en losange. Leaflet pose l'élément sur la
+   coordonnée ; la translation y amène le bas de la pointe. */
+.map-pin { background: none; border: 0; }
+.pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -100%);
 }
-.marker-cluster {
-  border: 2px solid var(--color-text) !important;
-  box-shadow: var(--shadow-sm);
-}
-.marker-cluster div {
-  width: 100%; height: 100%;
-  margin: 0;
-  display: flex; align-items: center; justify-content: center;
-}
-.marker-cluster span {
+.pin-label {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-surface);
+  color: var(--o-ink);
   font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
+  font-weight: 800;
   font-size: 12px;
-  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px -4px rgba(24, 24, 27, .4);
+}
+.pin::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--o-surface);
+  transform: rotate(45deg);
+}
+.pin-best .pin-label { height: 36px; padding: 0 12px; background: var(--o-accent); color: var(--o-on-accent); font-size: 14px; }
+.pin-best::after { background: var(--o-accent); }
+.pin-stale .pin-label { background: var(--o-chip); color: var(--o-subtle); box-shadow: none; }
+.pin-stale::after { background: var(--o-chip); }
+.map-pin:focus-visible { outline: 0; }
+.map-pin:focus-visible .pin-label { outline: 2px solid var(--o-accent); outline-offset: 2px; }
+
+/* Position de départ. */
+.map-me { background: none; border: 0; }
+.map-me span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--o-surface);
+  border-radius: 50%;
+  background: var(--o-ink);
+  box-shadow: 0 0 0 6px rgba(24, 24, 27, .12);
 }
 
-.leaflet-bar,
-.leaflet-bar a {
-  border-radius: 0 !important;
-  border-color: var(--color-divider) !important;
-}
-.leaflet-bar a {
-  background: var(--color-surface);
-  color: var(--color-text);
+/* Regroupements (Leaflet.markercluster) : pastille d'encre au nombre de
+   stations, dessinée par app.js (iconCreateFunction). */
+.map-cluster { background: none; border: 0; }
+.map-cluster span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--o-surface);
+  border-radius: 50%;
+  background: var(--o-ink);
+  color: var(--o-bg);
   font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 6px 16px -4px rgba(24, 24, 27, .4);
 }
-.leaflet-bar a:hover { background: var(--color-neutral-200); color: var(--color-accent); }
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-radius: 0;
-  box-shadow: var(--shadow-md);
+
+/* Contrôles, attribution et bulles de Leaflet, réaccordés au design system. */
+.station-map .leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-sm);
+  box-shadow: var(--o-sh-sm);
 }
-.leaflet-container a.leaflet-popup-close-button { color: var(--color-neutral-600); }
-.leaflet-control-attribution {
-  background: color-mix(in srgb, var(--color-surface) 85%, transparent) !important;
-  color: var(--color-neutral-700);
-  font-size: 10px;
+.station-map .leaflet-bar a {
+  width: 34px;
+  height: 34px;
+  border-bottom-color: var(--o-line-soft);
+  background: var(--o-surface);
+  color: var(--o-ink);
+  font: 600 18px/34px var(--font-body);
 }
-.leaflet-control-attribution a { color: var(--color-accent); }
+.station-map .leaflet-bar a:hover { background: var(--o-chip); color: var(--o-ink); }
+.station-map .leaflet-bar a.leaflet-disabled { background: var(--o-surface); color: var(--o-faint); }
+.station-map .leaflet-control-attribution {
+  margin: 0 8px 8px 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--o-glass);
+  color: var(--o-subtle);
+  font-size: 11px;
+}
+.station-map .leaflet-control-attribution a { color: var(--o-subtle); }
+.station-map .leaflet-popup-content-wrapper {
+  border: 1px solid var(--o-line);
+  border-radius: 14px;
+  background: var(--o-surface);
+  color: var(--o-ink);
+  box-shadow: var(--o-sh-card);
+}
+.station-map .leaflet-popup-tip { background: var(--o-surface); box-shadow: none; }
+.station-map .leaflet-popup-content { margin: 14px 16px; font-family: var(--font-body); font-size: 13px; line-height: 1.45; }
+.station-map a.leaflet-popup-close-button { top: 6px; right: 6px; color: var(--o-subtle); }
+.pop { display: flex; flex-direction: column; gap: 4px; }
+.pop-head { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+.pop-name { font-family: var(--font-heading); font-weight: 800; font-size: 15px; line-height: 1.2; }
+.pop-addr { font-size: 12px; color: var(--o-subtle); }
+.pop-facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 4px; color: var(--o-muted); }
+.pop-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--o-ink); }
+.pop-stale { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
+.pop .btn { align-self: flex-start; margin-top: 8px; }
+
+/* ═══════════════════ Onglet Historique ═══════════════════
+   Même carte que la liste : une ligne par station, rang, identité, courbe. */
+.history-list {
+  overflow: hidden;
+  border: 1px solid var(--o-line);
+  border-radius: 20px;
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+}
+.history-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(240px, 1.2fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--o-line-soft);
+}
+.history-card:last-child { border-bottom: 0; }
+.history-card .rank { font-family: var(--font-heading); font-weight: 800; font-size: 15px; color: var(--rank-color, var(--o-faint)); }
+.history-card .info { min-width: 0; }
+.history-card .name { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; }
+.history-card .name .brand-badge { min-width: 28px; height: 28px; padding: 0 5px; border-radius: 7px; font-size: 10px; }
+.history-card .addr { margin-top: 2px; padding-left: 40px; font-size: 12.5px; color: var(--o-subtle); }
+.name-text { min-width: 0; overflow-wrap: anywhere; }
+
+.hist-body { min-width: 0; }
+.hist-empty { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--o-subtle); }
+.sparkline { display: block; width: 100%; max-width: 260px; height: 60px; color: var(--o-accent); }
+.hist-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--o-subtle);
+}
+.hist-stats strong { font-weight: 600; color: var(--o-ink); }
+.hist-trend { width: 100%; }
+.hist-trend.up { color: var(--o-up); }
+.hist-trend.down { color: var(--o-down); }
+.hist-trend.flat { color: var(--o-subtle); }
+.hist-note { display: flex; align-items: center; gap: 10px; padding: 18px 24px; font-size: 14px; color: var(--o-text); }
+.hist-note .ic { width: 18px; height: 18px; color: var(--o-subtle); }
+
+@media (max-width: 639.98px) {
+  .history-card { grid-template-columns: 30px minmax(0, 1fr); gap: 8px 12px; padding: 14px 16px; }
+  .history-card .rank { font-size: 14px; }
+  .history-card .name { gap: 8px; }
+  .history-card .name .brand-badge { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 6px; font-size: 9px; }
+  .history-card .name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-card .addr { padding-left: 30px; }
+  .history-card .hist-body { grid-column: 1 / -1; }
+  .sparkline { max-width: 100%; }
+}
+
+/* ═══════════════════ Fiche détail d'une station ═══════════════════
+   Ordinateur : panneau centré. Téléphone : feuille qui monte du bas de
+   l'écran. Le voile est la seule couleur hors tokens : un noir translucide,
+   comme celui d'une ombre portée. */
+.station-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 15, 17, .45);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: sheetFade .18s ease-out;
+}
+:root[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, .6); }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.sheet-panel {
+  position: relative;
+  width: min(560px, calc(100% - 32px));
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--o-line);
+  border-radius: var(--o-radius-xl);
+  background: var(--o-surface);
+  box-shadow: var(--o-sh-card);
+  animation: sheetSlideUp .22s cubic-bezier(.16, 1, .3, 1);
+  outline: none;
+}
+.sheet-close { position: absolute; top: 16px; right: 16px; }
+body.sheet-open { overflow: hidden; }
+
+.sheet-header { display: flex; flex-direction: column; gap: 6px; }
+.sheet-title-row { display: flex; align-items: center; gap: 12px; margin-right: 48px; }
+.sheet-title-row .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
+.sheet-title-row h2 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+.sheet-addr { font-size: 14px; color: var(--o-subtle); }
+.sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sheet-actions .btn { flex: 1 1 auto; }
+
+.sheet-section { margin-top: 22px; }
+.sheet-section h3 {
+  margin: 0 0 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--o-subtle);
+}
+
+/* Repères du trajet et prix par carburant : listes à filets, encadrées. */
+.sheet-facts,
+.sheet-prices {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--o-line-soft);
+  border-radius: 14px;
+}
+.sheet-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 14px; }
+.sheet-facts > div + div { border-top: 1px solid var(--o-line-soft); }
+.sheet-facts dt { flex: none; font-size: 13px; color: var(--o-muted); }
+.sheet-facts dd { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 6px; margin: 0; font-size: 14px; font-weight: 600; text-align: right; }
+.sheet-facts dd .text-muted { font-weight: 400; }
+
+.sheet-prices { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.sheet-prices th,
+.sheet-prices td { padding: 10px 14px; border-bottom: 1px solid var(--o-line-soft); text-align: left; }
+.sheet-prices tr:last-child th,
+.sheet-prices tr:last-child td { border-bottom: 0; }
+.sheet-prices th { width: 40%; font-weight: 500; color: var(--o-muted); }
+.sheet-prices tr.current { background: var(--o-accent-soft); }
+.sheet-prices tr.current th { font-weight: 700; color: var(--o-accent-ink); }
+.sheet-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+.sheet-fresh { margin-left: 8px; font-size: 12px; color: var(--o-subtle); }
+.sheet-fresh-stale { color: var(--o-stale); }
+.sheet-fresh-veryStale { color: var(--o-up); }
+.sheet-rupture { font-size: 13px; color: var(--o-accent-ink); }
+.sheet-unavailable { font-size: 13px; color: var(--o-faint); }
+
+.sheet-services {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sheet-services li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-chip);
+  font-size: 13px;
+  color: var(--o-text);
+}
+.amenity-big { font-size: 16px; line-height: 1; }
+
+/* Réserves : prix aberrant (accent) ou prix ancien (neutre). */
+.sheet-warn,
+.sheet-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--o-radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sheet-warn p,
+.sheet-note p { margin: 0; }
+.sheet-warn .ic,
+.sheet-note .ic { margin-top: 2px; }
+.sheet-warn { background: var(--o-accent-soft); color: var(--o-accent-ink); }
+.sheet-note { background: var(--o-chip); color: var(--o-text); }
+
+@media (max-width: 639.98px) {
+  .station-sheet { align-items: flex-end; }
+  .sheet-panel {
+    width: 100%;
+    max-height: 90vh;
+    padding: 20px 16px 24px;
+    border-bottom: 0;
+    border-radius: var(--o-radius-xl) var(--o-radius-xl) 0 0;
+  }
+  .sheet-close { top: 12px; right: 12px; }
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .sheet-title-row h2 { font-size: 19px; }
+  .sheet-services { grid-template-columns: 1fr 1fr; }
+}

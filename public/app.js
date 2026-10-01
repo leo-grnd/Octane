@@ -1,4 +1,4 @@
-// Thème clair / sombre et menu mobile : site.js, commun à toutes les pages.
+// Thème clair / sombre : site.js, commun à toutes les pages.
 
 // Éléments
 const $address = document.getElementById('address');

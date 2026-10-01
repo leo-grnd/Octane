@@ -148,7 +148,6 @@ code {
 .outro h2 { margin-bottom: 12px; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.03em; }
 .outro h2 em { font-style: normal; color: var(--o-accent); }
 .outro p { max-width: 62ch; margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: var(--o-text); }
-.outro .outro-note { font-size: 13px; color: var(--o-muted); }
 .cta-final { align-self: flex-start; }
 
 /* ---- Apparition au défilement ---- */

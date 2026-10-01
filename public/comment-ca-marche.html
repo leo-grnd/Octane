@@ -40,19 +40,13 @@
                     <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
                     <span class="brand-word" aria-hidden="true">CTANE</span>
                 </a>
-                <div class="nav-links" id="navMenu">
-                    <a class="nav-link" href="alertes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes</a>
-                    <a class="nav-link" href="comment-ca-marche" aria-current="page"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Comment ça marche</a>
-                    <a class="nav-link" href="https://leo-grnd.github.io/hub/"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Tous les outils</a>
+                <div class="nav-links">
+                    <a class="nav-link" href="comment-ca-marche" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span class="nav-label">Comment ça marche</span></a>
                 </div>
                 <span class="nav-sep" aria-hidden="true"></span>
                 <button id="themeToggle" class="icon-btn theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
                     <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                </button>
-                <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navMenu">
-                    <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
-                    <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </nav>
         </header>
@@ -182,40 +176,13 @@
                     </div>
                 </div>
             </li>
-
-            <li class="step reveal">
-                <div class="step-head"><span class="step-num">06</span><h2>Reçois l'alerte chaque matin</h2></div>
-                <div class="step-body">
-                    <div class="step-text">
-                        <p>Plutôt que de venir chercher l'info, tu peux la recevoir : choisis un
-                           <strong>carburant</strong>, une <strong>zone</strong> et une
-                           <strong>heure</strong>, et la station la moins chère arrive par email.</p>
-                        <p>La zone peut être un rayon autour de chez toi&nbsp;— ou la
-                           <strong>France entière</strong>, pour savoir chaque jour où se trouve le
-                           carburant le moins cher du pays. Seules les stations ayant déclaré un
-                           prix depuis moins de trois jours sont retenues&nbsp;: sans ce filtre, le
-                           classement national est trusté par des stations qui ne déclarent plus.</p>
-                        <p><a class="btn btn-primary" href="alertes">Composer mon alerte</a></p>
-                    </div>
-                    <div class="step-visual">
-                        <div class="vchips">
-                            <span class="tag tag-neutral vchip">✉ Un email par jour</span>
-                            <span class="tag tag-neutral vchip">🕗 À l'heure de ton choix</span>
-                            <span class="tag tag-neutral vchip">🇫🇷 Rayon ou France entière</span>
-                            <span class="tag tag-neutral vchip">✓ Prix de moins de 3 jours</span>
-                        </div>
-                    </div>
-                </div>
-            </li>
         </ol>
 
         <section class="outro card reveal">
             <h2>Et c'est tout — <em>côté navigateur.</em></h2>
-            <p>Pas de serveur, pas de dépendance lourde, pas de compte à créer. Juste du HTML, du CSS et du
-               JavaScript, déployable tel quel sur GitHub&nbsp;Pages.</p>
-            <p class="outro-note">Seule exception : si tu demandes l'alerte quotidienne, ton adresse email est
-               conservée pour te l'envoyer — un email planifié ne peut pas partir d'une page statique. Le reste
-               de l'outil ne transmet rien.</p>
+            <p>Pas de serveur à nous, pas de dépendance lourde, pas de compte à créer. Juste du HTML, du CSS et
+               du JavaScript, servis tels quels : tes recherches ne quittent ton navigateur que pour interroger
+               les services publics de données.</p>
             <a class="btn btn-primary cta-final" href="./">Trouver mon carburant</a>
         </section>
         </main>

@@ -3,7 +3,6 @@
      redirige /page.html vers /page). À compléter si une page est ajoutée. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://octane-carburant.fr/</loc></url>
-  <url><loc>https://octane-carburant.fr/alertes</loc></url>
   <url><loc>https://octane-carburant.fr/comment-ca-marche</loc></url>
   <url><loc>https://octane-carburant.fr/mentions-legales</loc></url>
 </urlset>

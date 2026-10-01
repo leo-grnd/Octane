@@ -104,7 +104,7 @@ Quelques règles qui en découlent :
   liens partagés continuent donc de fonctionner, mais le code, les URL canoniques et le
   `sitemap.xml` utilisent la forme courte pour éviter une redirection à chaque clic.
 - **Aucun script en ligne** dans les pages : la CSP de `_headers` les bloquerait. Le thème est posé
-  par `theme-init.js` (chargé de façon bloquante dans le `<head>`), la bascule et le menu mobile
+  par `theme-init.js` (chargé de façon bloquante dans le `<head>`), la bascule
   par `site.js`, commun à toutes les pages.
 - **Seul `public/` est publié.** Sources, scripts, configuration et état des alertes vivent hors de
   ce dossier : ils ne peuvent pas fuiter par oubli. Le site y est aussi rangé parce que
@@ -259,7 +259,7 @@ l'onglet Historique est conservé à côté de Liste et Carte.
   filtres du fond de carte) **repris à l'identique de la maquette**, en clair et en sombre, plus
   `--font-*`, `--o-radius-*` et `--space-*` ; les composants (`.btn`, `.icon-btn`, `.input`,
   `.field`, `.seg` à curseur glissant, `.card`, `.tag`, `.table`, `.icon-chip`, `.ic`) ; et
-  l'habillage partagé par toutes les pages (fond de carte, en-tête et menu mobile, hero, pied de
+  l'habillage partagé par toutes les pages (fond de carte, en-tête, hero, pied de
   page). Pour retoucher l'apparence, on change un token, jamais une couleur dans une feuille.
 - **`style.css` est propre à l'outil** (formulaire, résultats, carte, historique, fiche détail) ;
   `alertes.css`, `comment-ca-marche.css` et `mentions-legales.css` aux pages du même nom. Toutes
@@ -269,8 +269,8 @@ l'onglet Historique est conservé à côté de Liste et Carte.
   (préférence système, puis choix mémorisé sous `octane-theme` dans `localStorage`) : il redéfinit
   les mêmes tokens, les composants n'ont rien à dupliquer. `theme-init.js`, chargé de façon
   bloquante dans le `<head>`, l'applique avant le premier rendu ; `site.js` porte le bouton de
-  bascule et le menu mobile de toutes les pages.
-- **Points de rupture de la maquette** : téléphone sous 640 px (menu burger, liste en deux étages),
+  bascule de toutes les pages.
+- **Points de rupture de la maquette** : téléphone sous 640 px (liste en deux étages),
   tablette sous 1024 px (formulaire sur deux lignes), ordinateur au-delà.
 - **L'email d'alerte reprend la palette claire en valeurs littérales** (`MAIL` dans
   `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
@@ -321,12 +321,12 @@ régénérer qu'elle). Le script vérifie les dimensions de chaque image produit
 | Fichier | Rôle |
 |--|--|
 | `index.html` · `app.js` · `style.css` | L'outil : géocodage, appels API, rendu, cache, historique |
-| `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |
+| `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour — **en sommeil** : aucun lien n'y mène, hors sitemap, `noindex` |
 | `comment-ca-marche.html` · `.css` · `.js` | Page d'explication et ses animations |
 | `mentions-legales.html` · `.css` | Mentions légales (LCEN), confidentialité (RGPD), licences, conditions d'utilisation |
 | `404.html` | Page d'erreur, servie pour toute adresse inconnue |
 | `design-system.css` | Design system v3 (maquette Claude Design) : tokens clair et sombre, composants, en-tête, hero, pied de page |
-| `theme-init.js` · `site.js` | Thème avant le premier rendu · bascule du thème et menu mobile, sur toutes les pages |
+| `theme-init.js` · `site.js` | Thème avant le premier rendu · bascule du thème, sur toutes les pages |
 | `backdrop.webp` | Fond de carte du haut des pages (Plan IGN en gris) — généré |
 | `sw.js` · `manifest.webmanifest` | Service worker et manifest PWA |
 | `fonts/` · `vendor/` | Archivo · Leaflet et markercluster, avec leurs licences |

@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alerte quotidienne — OCTANE</title>
+  <!-- Page en sommeil : plus aucun lien n'y mène et elle est retirée du
+       sitemap, en attendant les alertes en libre-service. Les moteurs ne
+       doivent pas l'indexer s'ils la découvrent quand même. -->
+  <meta name="robots" content="noindex" />
   <meta name="description" content="Reçois chaque matin par email la station-service la moins chère de ta zone, pour le carburant de ton choix. Données officielles du Ministère de l'Économie." />
   <meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#f7f7f8" media="(prefers-color-scheme: light)" />
@@ -43,19 +47,13 @@
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="arc" cx="16" cy="16" r="12"/><path class="needle" d="M16 16 23.5 9"/><circle class="hub" cx="16" cy="16" r="2.6"/></svg>
           <span class="brand-word" aria-hidden="true">CTANE</span>
         </a>
-        <div class="nav-links" id="navMenu">
-          <a class="nav-link" href="alertes" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alertes</a>
-          <a class="nav-link" href="comment-ca-marche"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Comment ça marche</a>
-          <a class="nav-link" href="https://leo-grnd.github.io/hub/"><svg class="menu-only" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Tous les outils</a>
+        <div class="nav-links">
+          <a class="nav-link" href="comment-ca-marche"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span class="nav-label">Comment ça marche</span></a>
         </div>
         <span class="nav-sep" aria-hidden="true"></span>
         <button id="themeToggle" class="icon-btn theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
           <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        </button>
-        <button id="menuToggle" class="icon-btn menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navMenu">
-          <svg class="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
-          <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </nav>
     </header>

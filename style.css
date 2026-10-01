@@ -817,8 +817,14 @@ footer a {
   background: var(--color-surface);
   margin-bottom: var(--space-4);
 }
+/* Plan IGN désaturé : le fond reste dans la rampe neutre du design system et
+   seuls les marqueurs portent la couleur d'accent. En sombre, on inverse la
+   luminance du même fond gris plutôt que de charger une seconde couche. */
+.station-map .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.92) brightness(1.03);
+}
 :root[data-theme="dark"] .station-map .leaflet-tile-pane {
-  filter: hue-rotate(180deg) invert(0.92) brightness(0.95) contrast(0.9) saturate(0.8);
+  filter: grayscale(1) invert(0.88) contrast(0.9) brightness(0.95);
 }
 .leaflet-popup-content {
   font-family: var(--font-body);

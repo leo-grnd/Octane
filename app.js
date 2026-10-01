@@ -1867,8 +1867,17 @@ let userMarker = null;
 function ensureMap() {
   if (map || typeof L === 'undefined') return map;
   map = L.map($stationMap, { scrollWheelZoom: true, zoomControl: true });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  // Fond Plan IGN (Géoplateforme) plutôt que les serveurs de tuiles d'OSM, dont
+  // la politique d'usage interdit le trafic intensif sans accord préalable — un
+  // passage médiatique suffirait à faire bloquer la carte. Service public,
+  // gratuit et sans clé ; il ne couvre que la France (404 au-delà des
+  // frontières, ce qui laisse le fond neutre de la carte). Désaturé en CSS pour
+  // laisser la couleur aux seuls marqueurs.
+  L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png' +
+    '&TILEMATRIXSET=PM_0_19&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    attribution: '&copy; <a href="https://www.ign.fr/">IGN</a> – Géoplateforme · ' +
+      'enseignes &copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
   // Cluster si le plugin a chargé, sinon layerGroup simple. Le cluster ne se

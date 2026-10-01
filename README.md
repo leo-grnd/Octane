@@ -8,6 +8,9 @@ Site statique qui interroge directement les APIs publiques :
 - **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
 - **Routage** · Valhalla (primaire) + OSRM (fallback), pour le mode « en voiture »
+- **Fond de carte** · Plan IGN v2 (WMTS Géoplateforme, sans clé), désaturé en CSS. Les serveurs de
+  tuiles d'OSM interdisent l'usage intensif sans accord, ce qu'un passage médiatique suffirait à
+  déclencher.
 
 Pas de backend, pas de base de données, pas de clé API côté navigateur. Seule exception : les
 [alertes quotidiennes](#alertes-quotidiennes), envoyées par un cron GitHub Actions — un email

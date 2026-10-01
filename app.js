@@ -399,7 +399,12 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
 // Valhalla (FOSSGIS) en primaire : costing plus nuancé qu'OSRM, respecte mieux
 // les restrictions de virages et les classes de routes, donc précision > OSRM
 // sur le terrain urbain. OSRM reste en fallback si Valhalla flanche.
-const VALHALLA_ENDPOINT = 'https://valhalla.openstreetmap.de';
+// L'API est servie par `valhalla1.openstreetmap.de` (100 lieux max par matrice,
+// d'où les lots de ROUTING_BATCH_MAX). `valhalla.openstreetmap.de` n'héberge
+// plus que l'interface web de démonstration : interrogé là, `/sources_to_targets`
+// renvoyait une page HTML sans en-tête CORS, et chaque matrice échouait en
+// silence — le mode voiture ne tenait plus que sur OSRM.
+const VALHALLA_ENDPOINT = 'https://valhalla1.openstreetmap.de';
 const OSRM_ENDPOINTS = [
   'https://router.project-osrm.org',
   'https://routing.openstreetmap.de/routed-car'

@@ -2,7 +2,7 @@
 // sans unregister manuel), stale-while-revalidate pour les CDN, bypass total
 // pour les APIs de données.
 // Bump VERSION à chaque release pour invalider le cache.
-const VERSION = 'octane-v41';
+const VERSION = 'octane-v42';
 const SHELL = [
   './',
   './index.html',
@@ -45,7 +45,7 @@ self.addEventListener('fetch', (e) => {
     'data.geopf.fr',
     'router.project-osrm.org',
     'routing.openstreetmap.de',
-    'valhalla.openstreetmap.de'
+    'valhalla1.openstreetmap.de'
   ];
   if (bypass.some(h => url.hostname.includes(h))) return;
 

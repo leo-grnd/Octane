@@ -7,7 +7,8 @@ Site statique qui interroge directement les APIs publiques :
 - **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
 - **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
 - **Enseignes** · Base pré-calculée (`data/osm/brands.json`, issue d'OSM)
-- **Routage** · Valhalla (primaire) + OSRM (fallback), pour le mode « en voiture »
+- **Routage** · Valhalla (primaire, `valhalla1.openstreetmap.de`) + OSRM (fallback), pour le mode
+  « en voiture ». Les deux tournent en parallèle et leurs distances sont fusionnées.
 - **Fond de carte** · Plan IGN v2 (WMTS Géoplateforme, sans clé), désaturé en CSS. Les serveurs de
   tuiles d'OSM interdisent l'usage intensif sans accord, ce qu'un passage médiatique suffirait à
   déclencher.

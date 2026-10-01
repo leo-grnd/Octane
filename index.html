@@ -14,6 +14,9 @@
   <link rel="apple-touch-icon" href="favicon.svg" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="canonical" href="/" />
+  <!-- Applique le thème enregistré avant le premier rendu (évite le flash) :
+       app.js, chargé en defer, n'intervient qu'après le premier affichage. -->
+  <script>(function(){try{var t=localStorage.getItem('octane-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />

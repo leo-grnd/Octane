@@ -788,7 +788,7 @@ function getBrandBadge(name) {
   // Fallback : initiale du 1er mot signifiant, fond gris neutre
   const word = name.trim().split(/\s+/).find(w => /[a-z]/i.test(w));
   if (!word) return null;
-  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--ink)' };
+  return { mono: word[0].toUpperCase(), bg: 'rgba(128,128,128,0.35)', fg: 'var(--color-text)' };
 }
 
 // Nom commercial de la station (avec la ville si on peut)

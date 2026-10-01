@@ -205,12 +205,39 @@ python3 scripts/build_brands.py
 de chaque mois à 04:00 UTC (les marques OSM bougent lentement). Déclenchable manuellement
 via l'onglet Actions → Refresh OSM brands → Run workflow.
 
+## Design system
+
+L'interface suit le design system **Modernist** exporté de Claude Design : angles droits
+(`--radius-*` à 0), filets francs plutôt que cartes ombrées, Archivo en trois graisses, un seul
+accent rouge (`#ec3013`) sur une rampe de neutres chauds.
+
+- **`design-system.css` est la copie conforme de l'export**, chargée avant `style.css` sur les
+  trois pages. Elle porte les tokens (`--color-*`, `--font-*`, `--space-*`, `--shadow-*`) et les
+  composants (`.nav`, `.btn`, `.input`, `.field`, `.seg`, `.table`, `.tag`…). On ne la retouche
+  pas : une nouvelle version de l'export doit pouvoir l'écraser telle quelle. La seule addition
+  est le bloc « Thème sombre », en fin de fichier.
+- **`style.css` et les feuilles de page n'emploient que ces tokens.** Exceptions assumées, listées
+  en tête de `style.css` : couleurs d'enseigne des badges, rouge/vert des tendances de prix,
+  orange/rouge de la fraîcheur. L'accent étant lui-même rouge, une hausse à sa couleur ne se
+  distinguerait plus de la marque.
+- **Le clair est le thème par défaut**, conformément à la direction artistique. Le sombre est
+  activé par `data-theme="dark"` sur `<html>` (préférence système, puis choix mémorisé sous
+  `octane-theme` dans `localStorage`). Un script en ligne dans le `<head>` de chaque page l'applique
+  avant le premier rendu, pour éviter un flash clair.
+- **Le sombre inverse les rampes tonales au lieu de redéfinir les composants** :
+  `--color-neutral-100` reste « le plus proche du fond » et `-900` « le plus contrasté ». Chaque
+  règle écrite pour le clair fonctionne donc en sombre sans duplication. L'accent remonte d'un cran
+  (`#ff563c`) pour garder un contraste de 5,8:1 sur le fond sombre.
+- **L'email d'alerte reprend la palette en valeurs littérales** (`MAIL` dans
+  `scripts/send-alerts.mjs`) : les clients mail ne résolvent ni les variables CSS ni `color-mix`.
+
 ## Fichiers
 
 | Fichier | Rôle |
 |--|--|
 | `index.html` | Structure + SEO |
-| `style.css` | Style (thème sombre/clair, responsive) |
+| `design-system.css` | Design system Modernist (export Claude Design, intouché) + thème sombre |
+| `style.css` | Styles propres à l'outil, sur les tokens du design system |
 | `app.js` | Géocodage + appels API + rendu + cache + historique runtime |
 | `comment-ca-marche.html` · `.css` | Page d'explication |
 | `alertes.html` · `.css` · `.js` | Composition d'une alerte quotidienne + aperçu du jour |

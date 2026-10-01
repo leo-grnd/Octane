@@ -91,11 +91,12 @@ faute de backend : la liste des abonnés vit dans un secret de dépôt.
 
 ### Fonctionnement
 
-`.github/workflows/daily-alerts.yml` tourne **toutes les heures** et exécute
-`scripts/send-alerts.mjs` (Node 20, aucune dépendance npm — `fetch` est natif). Le script ne
-retient que les abonnés dont l'heure d'envoi correspond à l'heure de **Paris** courante (calculée
-via `Intl`, donc l'heure d'été est gérée sans logique maison), regroupe les abonnés partageant la
-même zone pour ne faire qu'un appel API, puis envoie via l'API HTTP de Brevo.
+`.github/workflows/daily-alerts.yml` est programmé **toutes les heures** et exécute
+`scripts/send-alerts.mjs` (Node 20, aucune dépendance npm — `fetch` est natif). Le script retient
+les abonnés dont l'heure d'envoi est passée depuis moins de 6 heures (heure de **Paris**, calculée
+via `Intl`, donc l'heure d'été est gérée sans logique maison) et qui n'ont rien reçu aujourd'hui,
+regroupe les abonnés partageant la même zone pour ne faire qu'un appel API, puis envoie via l'API
+HTTP de Brevo.
 
 Le dépôt étant public, l'état persisté (`data/alerts/state.json`) ne contient que des **empreintes
 SHA-256** : ni email ni coordonnées en clair.
@@ -110,9 +111,11 @@ Deux garde-fous méritent d'être connus :
   qui tape 0,199 au lieu de 1,99), et seulement au-delà de 5 stations, en dessous desquelles la
   médiane n'est pas représentative.
 
-Le cron peut glisser de plusieurs dizaines de minutes côté GitHub : le script rattrape jusqu'à
-3 heures manquées, avec une garde « au plus un envoi par abonné et par jour » pour qu'un run
-rejoué n'envoie jamais deux fois le même email.
+Le cron « horaire » de GitHub n'est qu'indicatif : sur septembre 2026 il n'a tourné que 3 à
+7 fois par jour, avec des trous allant jusqu'à 6 h 44. D'où la fenêtre de 6 heures : une alerte
+réglée sur 8 h part au premier run entre 8 h et 14 h. La garde « au plus un envoi par abonné et
+par jour » empêche qu'un run suivant ou rejoué envoie deux fois le même email. La fenêtre ne
+franchit pas minuit.
 
 ### Configuration
 

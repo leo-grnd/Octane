@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Envoi des alertes carburant quotidiennes.
 //
-// Octane n'a pas de backend : ce script est exécuté toutes les heures par
-// GitHub Actions (.github/workflows/daily-alerts.yml). Il lit la liste des
-// abonnés dans un secret de dépôt, ne retient que ceux dont l'heure d'envoi
-// correspond à l'heure de Paris courante, interroge l'API prix carburants et
-// envoie un email via l'API HTTP de Brevo. Zéro dépendance npm : Node 20+
-// fournit `fetch` nativement.
+// Octane n'a pas de backend : ce script est exécuté par un cron horaire GitHub
+// Actions (.github/workflows/daily-alerts.yml). Il lit la liste des abonnés
+// dans un secret de dépôt, retient ceux dont l'heure d'envoi est passée depuis
+// moins de MAX_LATE_HOURS et qui n'ont rien reçu aujourd'hui, interroge l'API
+// prix carburants et envoie un email via l'API HTTP de Brevo. Zéro dépendance
+// npm : Node 20+ fournit `fetch` nativement.
 //
 // Usage :
 //   node scripts/send-alerts.mjs                  # envoi réel
@@ -58,11 +58,14 @@ const TOP_N = 3;
 // même seuil que la détection d'aberrations de l'interface.
 const OUTLIER_FLOOR_RATIO = 0.6;
 const MIN_FOR_MEDIAN = 5;
-// Rattrapage : si un run horaire a été retardé ou sauté (les crons GitHub
-// peuvent glisser de plusieurs dizaines de minutes), on traite aussi les heures
-// manquées de la journée, dans la limite de 3 pour ne pas rejouer une nuit
-// entière après une panne longue.
-const MAX_CATCH_UP_HOURS = 3;
+// Fenêtre d'envoi : une alerte réglée sur H part au premier run entre H et
+// H + MAX_LATE_HOURS. Le cron « horaire » de GitHub n'est qu'indicatif — sur
+// septembre 2026 il n'a tourné que 3 à 7 fois par jour, avec des trous allant
+// jusqu'à 6 h 44 —, donc on ne peut pas compter sur un run par heure. La
+// fenêtre couvre ces trous sans envoyer l'alerte du matin en pleine soirée.
+// Limite connue : la fenêtre ne franchit pas minuit (une alerte de 23 h dont
+// le run glisse au lendemain est perdue pour la journée).
+const MAX_LATE_HOURS = 6;
 
 const FUEL_LABELS = {
   e10_prix: 'SP95-E10',
@@ -454,13 +457,13 @@ async function sendEmail(to, { subject, text, html }, cfg) {
 
 // ===== État persisté =====
 function loadState() {
-  if (!existsSync(STATE_PATH)) return { groups: {}, sent: {}, lastRun: null };
+  if (!existsSync(STATE_PATH)) return { groups: {}, sent: {} };
   try {
     const s = JSON.parse(readFileSync(STATE_PATH, 'utf8'));
-    return { groups: s.groups || {}, sent: s.sent || {}, lastRun: s.lastRun || null };
+    return { groups: s.groups || {}, sent: s.sent || {} };
   } catch (err) {
     log(`⚠ state.json illisible (${err.message}) — on repart de zéro`);
-    return { groups: {}, sent: {}, lastRun: null };
+    return { groups: {}, sent: {} };
   }
 }
 
@@ -474,7 +477,6 @@ function saveState(state) {
   mkdirSync(dirname(STATE_PATH), { recursive: true });
   writeFileSync(STATE_PATH, JSON.stringify({
     updated: new Date().toISOString(),
-    lastRun: state.lastRun,
     groups: state.groups,
     sent: state.sent
   }, null, 2) + '\n');
@@ -491,14 +493,12 @@ function rememberPrice(state, key, price, stationId, today) {
   return previous;
 }
 
-function hoursToProcess(state, today, nowHour) {
-  const last = state.lastRun;
-  if (!last || last.date !== today || !Number.isInteger(last.hour)) return [nowHour];
-  const hours = [];
-  for (let h = Math.min(nowHour, last.hour + 1); h <= nowHour; h++) hours.push(h);
-  if (!hours.length) hours.push(nowHour);
-  return hours.slice(-MAX_CATCH_UP_HOURS);
-}
+// L'échéance ne dépend que de l'heure courante et des marqueurs d'envoi du
+// jour, jamais de la date du run précédent : la version d'avant se repérait sur
+// un `lastRun` qui n'était écrit qu'en cas d'envoi, donc presque toujours daté
+// d'un autre jour — le rattrapage ne s'enclenchait jamais et une alerte de 9 h
+// n'arrivait que si un run tombait pile entre 9 h et 10 h.
+const isInWindow = (a, nowHour) => nowHour >= a.hour && nowHour - a.hour <= MAX_LATE_HOURS;
 
 // ===== Programme principal =====
 async function main() {
@@ -535,11 +535,11 @@ async function main() {
   validationErrors.forEach(e => log(`✗ ${e}`));
 
   const state = loadState();
-  const hours = hoursToProcess(state, today, nowHour);
-  log(`Paris ${today} ${String(nowHour).padStart(2, '0')}h — heures traitées : ${hours.join(', ')}`);
+  const windowStart = Math.max(0, nowHour - MAX_LATE_HOURS);
+  log(`Paris ${today} ${String(nowHour).padStart(2, '0')}h — alertes réglées entre ${windowStart}h et ${nowHour}h`);
   log(`${alerts.length} abonnement(s) valide(s), ${validationErrors.length} rejeté(s)`);
 
-  const due = alerts.filter(a => hours.includes(a.hour)).filter(a => {
+  const due = alerts.filter(a => isInWindow(a, nowHour)).filter(a => {
     if (FORCE || DRY_RUN) return true;
     // Au plus un envoi par abonné et par jour, même si un run est rejoué.
     if (state.sent[stateKeyForAlert(a)] === today) {
@@ -550,10 +550,8 @@ async function main() {
   });
 
   if (!due.length) {
-    // On n'écrit PAS l'état ici : le cron tourne toutes les heures, et
-    // persister `lastRun` à vide produirait 24 commits par jour dans le dépôt
-    // pour rien. Le rattrapage supporte très bien un `lastRun` un peu ancien —
-    // il est borné à MAX_CATCH_UP_HOURS et la garde anti-doublon fait le reste.
+    // On n'écrit PAS l'état ici : le cron tourne jusqu'à 24 fois par jour, et
+    // committer un état inchangé à chaque fois encombrerait le dépôt.
     log('Aucune alerte à envoyer sur ce créneau — état inchangé.');
     return validationErrors.length ? 1 : 0;
   }
@@ -618,7 +616,6 @@ async function main() {
     }
   }
 
-  state.lastRun = { date: today, hour: nowHour };
   if (!DRY_RUN) saveState(state);
   else log('[dry-run] état non enregistré');
 

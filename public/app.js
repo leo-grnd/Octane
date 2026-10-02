@@ -310,6 +310,7 @@ async function fetchWithRetry(fetcher, { tries = 3, backoff = [400, 1200, 2500],
 }
 
 // ===== Appel API prix carburants =====
+const PRICES_RECORDS_URL = 'https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records';
 const STATIONS_PAGE = 100;          // maximum autorisé par l'API Opendatasoft
 const MAX_STATIONS = 400;           // au-delà, la liste n'est plus exploitable
 const ODS_OFFSET_CEILING = 10000;   // contrainte API : offset + limit <= 10000
@@ -336,7 +337,7 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const cached = cacheGet(sessionStorage, key, TTL_FUEL);
   if (cached) return cached;
   const whereClause = `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km) AND ${fuelField} IS NOT NULL`;
-  const base = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?` +
+  const base = `${PRICES_RECORDS_URL}?` +
     `where=${encodeURIComponent(whereClause)}` +
     `&select=${encodeURIComponent(STATION_FIELDS)}` +
     // Tri serveur par prix croissant : si le rayon dépasse MAX_STATIONS, on
@@ -375,6 +376,34 @@ async function fetchStations(lat, lon, radiusKm, fuelField) {
   const payload = { stations, total, truncated: total > stations.length };
   cacheSet(sessionStorage, key, payload);
   return payload;
+}
+
+// Stations en rupture temporaire du carburant recherché. Le flux officiel leur
+// retire ce prix (`gazole_prix` vide) : la requête des prix les écarte donc,
+// et elles disparaîtraient sans un mot — alors qu'en pleine pénurie, c'est
+// exactement ce qu'on veut savoir avant de prendre la route. Une rupture
+// déclarée depuis plus de RUPTURE_MAX_DAYS jours n'en est plus une : la
+// station a cessé de vendre ce carburant sans le déclarer (le flux en garde
+// depuis 2023).
+const RUPTURE_MAX_DAYS = 30;
+const RUPTURE_LIMIT = 100;
+
+async function fetchRuptures(lat, lon, radiusKm, fuelField) {
+  const key = `rupt1:${lat.toFixed(3)}:${lon.toFixed(3)}:${radiusKm}:${fuelField}`;
+  const cached = cacheGet(sessionStorage, key, TTL_FUEL);
+  if (cached) return cached;
+  const base = fuelField.replace('_prix', '');
+  const whereClause = `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km)` +
+    ` AND ${base}_rupture_type="temporaire" AND ${base}_rupture_debut >= now(days=-${RUPTURE_MAX_DAYS})`;
+  const url = `${PRICES_RECORDS_URL}?` +
+    `where=${encodeURIComponent(whereClause)}` +
+    `&select=${encodeURIComponent(`id,cp,ville,adresse,geom,${base}_rupture_debut`)}` +
+    `&limit=${RUPTURE_LIMIT}`;
+  const res = await fetchWithRetry(signal => fetch(url, { signal }));
+  if (!res.ok) throw httpError(res, 'prix');
+  const stations = (await res.json()).results || [];
+  cacheSet(sessionStorage, key, stations);
+  return stations;
 }
 
 // ===== Routage routier (Valhalla primaire + OSRM fallback) =====
@@ -755,7 +784,8 @@ const ICONS = {
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   navigation: '<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  chevronDown: '<path d="m6 9 6 6 6-6"/>'
 };
 function icon(name) {
   return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -1024,6 +1054,60 @@ function buildStationRow(s, i, fuelField, refStation) {
   return tr;
 }
 
+// Nom du carburant dans une phrase : « en rupture de gazole », mais les sigles
+// restent tels quels (« de SP95-E10 », « de GPLc »).
+function fuelInSentence(fuelField) {
+  return fuelField === 'gazole_prix' ? 'gazole' : FUEL_LABELS[fuelField];
+}
+
+// « depuis 3 h », à partir du début de rupture déclaré par la station.
+function formatSince(iso) {
+  const rel = formatRelativeTime(iso);
+  if (!rel) return null;
+  return rel.text.startsWith('il y a ') ? `depuis ${rel.text.slice(7)}` : 'à l’instant';
+}
+
+// Stations en rupture du carburant recherché, sous le classement : une carte
+// repliée (le compte est déjà dans la ligne de méta), dépliée d'office quand
+// aucune station du rayon n'en vend. Lignes au format du tableau, mais sans
+// fiche : il n'y a pas de prix à détailler.
+function buildRuptureCard(ruptures, fuelField, open) {
+  const n = ruptures.length;
+  const el = document.createElement('details');
+  el.className = 'list-card rupture-card';
+  el.open = open;
+  el.innerHTML = `
+    <summary class="rupture-summary">${icon('alert')}<span>${n} station${n > 1 ? 's' : ''} en rupture de ${esc(fuelInSentence(fuelField))} dans ton rayon</span>${icon('chevronDown')}</summary>
+    <table class="station-table rupture-table"><tbody></tbody></table>
+  `;
+  const tbody = el.querySelector('tbody');
+  for (const s of ruptures) tbody.appendChild(buildRuptureRow(s, fuelField));
+  el.addEventListener('toggle', () => { rupturesOpen = el.open; });
+  return el;
+}
+
+function buildRuptureRow(s, fuelField) {
+  const v = stationView(s, fuelField);
+  const dist = v.distKm != null ? km1(v.distKm) : '—';
+  const since = formatSince(s._ruptureSince);
+  const tr = document.createElement('tr');
+  tr.className = 'rupture-row';
+  tr.innerHTML = `
+    <td class="col-rank">—</td>
+    <td class="col-station">
+      <div class="station-id">
+        ${brandBadgeHtml(v.brandName, { neutral: true })}
+        <span class="station-name">${esc(v.title)}</span>
+        <span class="station-sub station-sub-wide">${esc(v.subtitle)}</span><span class="station-sub station-sub-phone">${esc([dist, v.cpVille].filter(Boolean).join(' · '))}</span>
+      </div>
+    </td>
+    <td class="col-dist">${esc(dist)}</td>
+    <td class="col-price"><span class="rupture-tag">Rupture</span></td>
+    <td class="col-extra">${since ? esc(since) : ''}</td>
+  `;
+  return tr;
+}
+
 // Intercalaire entre le classement et les prix périmés, dans le tableau même :
 // la frontière se lit sans quitter la liste des yeux.
 function buildStaleSeparator(count) {
@@ -1108,6 +1192,7 @@ function placeName(label) {
 const STATIONS_VISIBLE = 10;
 let rowsExpanded = false;
 let histExpanded = false;
+let rupturesOpen = false; // carte des ruptures dépliée, conservée aux re-rendus
 
 function buildMoreButton(count, onClick) {
   const foot = document.createElement('div');
@@ -1121,6 +1206,7 @@ function buildMoreButton(count, onClick) {
 function renderStations() {
   if (!currentResults) return;
   const { fuelField, stations } = currentResults;
+  const ruptures = currentResults.ruptures || [];
   const total = stations.length;
 
   $results.classList.remove('is-loading');
@@ -1128,33 +1214,41 @@ function renderStations() {
   $resultsBottom.innerHTML = '';
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
-  // Ligne de méta unique, comme la maquette : carburant, lieu, rayon, effectif.
-  // Elle remplace le couple titre + compteur, qui disait deux fois la même
-  // chose sur deux lignes.
+  // Ligne de méta unique, comme la maquette : carburant, lieu, rayon, effectif,
+  // et les ruptures du rayon s'il y en a. Elle remplace le couple titre +
+  // compteur, qui disait deux fois la même chose sur deux lignes.
   $resultsTitle.textContent = [
     FUEL_LABELS[fuelField],
     placeName(currentResults.label),
     `${currentResults.radiusKm || parseInt($radius.value, 10) || 5} km`,
-    `${total} station${total > 1 ? 's' : ''}`
-  ].join(' · ');
+    `${total} station${total > 1 ? 's' : ''}`,
+    ruptures.length ? `${ruptures.length} en rupture` : null
+  ].filter(Boolean).join(' · ');
 
   if (total === 0) {
     const node = document.createElement('div');
     node.className = 'notice';
     const currentR = currentResults.radiusKm || parseInt($radius.value, 10) || 5;
     const nextR = Math.min(50, currentR * 2);
+    const n = ruptures.length;
+    const why = n
+      ? `Aucune station ne vend de ${esc(fuelInSentence(fuelField))} dans un rayon de ${currentR} km en ce moment : ` +
+        `${n > 1 ? `${n} sont en rupture` : 'la seule qui en propose est en rupture'}.`
+      : `Aucune station avec ce carburant dans un rayon de ${currentR} km.`;
     if (nextR > currentR) {
-      node.innerHTML = `${icon('info')}<p>Aucune station avec ce carburant dans un rayon de ${currentR} km.</p>
+      node.innerHTML = `${icon('info')}<p>${why}</p>
         <button type="button" class="btn btn-primary btn-sm">Élargir à ${nextR} km</button>`;
       node.querySelector('button').addEventListener('click', () => {
         $radius.value = String(nextR);
         doAddressSearch();
       }, { once: true });
     } else {
-      node.innerHTML = `${icon('info')}<p>Aucune station avec ce carburant dans un rayon de ${currentR} km. Essaie un autre carburant ou une autre zone.</p>`;
+      node.innerHTML = `${icon('info')}<p>${why} Essaie un autre carburant ou une autre zone.</p>`;
     }
     $resultsTop.appendChild(node);
+    if (n) $stationList.appendChild(buildRuptureCard(ruptures, fuelField, true));
     $resultsCount.textContent = '';
+    if (currentView === 'map') renderMap(stations);
     return;
   }
 
@@ -1215,6 +1309,7 @@ function renderStations() {
     }
     $stationList.appendChild(card);
   }
+  if (ruptures.length) $stationList.appendChild(buildRuptureCard(ruptures, fuelField, rupturesOpen));
 
   // Troncature : on ne prétend pas afficher un classement exhaustif quand le
   // rayon contient plus de stations qu'on n'en charge.
@@ -1279,6 +1374,24 @@ function enrichStations(rawStations, fuelField, userLat, userLon) {
     }
   }
   return enriched;
+}
+
+// Stations en rupture : coordonnées et distance comme les autres, gardées dans
+// le rayon demandé (à vol d'oiseau, même en mode voiture : on ne route pas des
+// stations où l'on n'ira pas), les plus proches d'abord.
+function enrichRuptures(rawRuptures, fuelField, userLat, userLon, radiusKm) {
+  const sinceField = fuelField.replace('_prix', '_rupture_debut');
+  return rawRuptures.map(s => {
+    const { lat, lon } = extractCoords(s);
+    return {
+      ...s,
+      lat,
+      lon,
+      distance: lat != null && lon != null ? haversine(userLat, userLon, lat, lon) : null,
+      _ruptureSince: s[sinceField]
+    };
+  }).filter(s => s.distance != null && s.distance <= radiusKm + 0.05)
+    .sort((a, b) => a.distance - b.distance);
 }
 
 // Applique une matrice de distances routières au set de stations et refresh
@@ -1359,9 +1472,11 @@ async function runSearch(lat, lon, label) {
 
   const token = ++currentSearchToken;
   setCtaLoading(true);
-  // Toute nouvelle recherche repart sur une liste et un historique repliés.
+  // Toute nouvelle recherche repart sur une liste, un historique et des
+  // ruptures repliés.
   rowsExpanded = false;
   histExpanded = false;
+  rupturesOpen = false;
   // En mode voiture, on sur-fetch en vol d'oiseau pour ne pas manquer de
   // stations accessibles qui sont au-delà du cercle haversine.
   const fetchRadiusKm = distanceMode === 'drive'
@@ -1374,8 +1489,15 @@ async function runSearch(lat, lon, label) {
     // Base de marques shippée statiquement : chargée une fois par session, < 1 s
     // même sur la toute première visite grâce à la taille (~200 Ko gzip).
     const brandsPromise = loadOSMBrands();
+    // Les ruptures partent en même temps que les prix ; sans elles, la
+    // recherche reste complète, d'où l'échec silencieux.
+    const rupturesPromise = fetchRuptures(lat, lon, radiusKm, fuelField).catch(err => {
+      console.warn('Ruptures indisponibles :', err);
+      return [];
+    });
     const { stations: rawStations, total: totalInRadius, truncated } =
       await fetchStations(lat, lon, fetchRadiusKm, fuelField);
+    const ruptures = enrichRuptures(await rupturesPromise, fuelField, lat, lon, radiusKm);
     if (token !== currentSearchToken) return;
 
     hideStatus();
@@ -1394,6 +1516,7 @@ async function runSearch(lat, lon, label) {
     const enriched = enrichedAll.filter(s => s.distance != null && s.distance <= radiusKm + 0.05);
     currentResults = {
       stations: enriched,
+      ruptures,
       rawStations,
       fuelField,
       userLat: lat,
@@ -1406,9 +1529,10 @@ async function runSearch(lat, lon, label) {
     };
 
     // Applique les marques déjà chargées sur TOUT le superset (les objets sont
-    // partagés par référence avec `enriched`, donc le display en profite aussi).
+    // partagés par référence avec `enriched`, donc le display en profite aussi),
+    // ruptures comprises.
     if (osmBrandsData && osmBrandsData.grid) {
-      enrichedAll.forEach(s => {
+      [...enrichedAll, ...ruptures].forEach(s => {
         const b = lookupOSMBrand(s.lat, s.lon, osmBrandsData);
         if (b) s._osmBrand = b;
       });
@@ -1438,7 +1562,7 @@ async function runSearch(lat, lon, label) {
         let changed = false;
         // Itère sur le SUPERSET (enrichedAll) pour que les stations qui
         // apparaîtront après routage héritent aussi des marques.
-        enrichedAll.forEach(s => {
+        [...enrichedAll, ...ruptures].forEach(s => {
           const brand = lookupOSMBrand(s.lat, s.lon, data);
           if (brand && brand !== s._osmBrand) { s._osmBrand = brand; changed = true; }
         });
@@ -2076,6 +2200,36 @@ function renderMap(stations) {
       (best ? bestLayer : markersLayer).addLayer(marker);
       bounds.extend([s.lat, s.lon]);
     });
+  }
+
+  // Stations en rupture : épingle grise « ! », sous les autres, et une bulle
+  // sans bouton Détails (pas de prix à détailler).
+  const ruptures = currentResults.ruptures || [];
+  ruptures.forEach(s => {
+    const v = stationView(s, fuelField);
+    const since = formatSince(s._ruptureSince);
+    const marker = L.marker([s.lat, s.lon], {
+      icon: L.divIcon({
+        className: 'map-pin',
+        html: '<div class="pin pin-rupture"><span class="pin-label">!</span></div>',
+        iconSize: null,
+        popupAnchor: [0, -36]
+      }),
+      title: `${v.title}, en rupture de ${fuelInSentence(fuelField)}`,
+      zIndexOffset: -500
+    });
+    marker.bindPopup(`
+      <div class="pop">
+        <div class="pop-head">${brandBadgeHtml(v.brandName, { neutral: true })}<strong class="pop-name">${esc(v.title)}</strong></div>
+        ${v.subtitle ? `<div class="pop-addr">${esc(v.subtitle)}</div>` : ''}
+        <div class="pop-rupture">Rupture de ${esc(fuelInSentence(fuelField))}${since ? ` ${esc(since)}` : ''}</div>
+        ${v.distKm != null ? `<div class="pop-facts"><span>${esc(km1(v.distKm))}</span></div>` : ''}
+      </div>`, { minWidth: 220 });
+    markersLayer.addLayer(marker);
+    bounds.extend([s.lat, s.lon]);
+  });
+
+  if (stations.length || ruptures.length) {
     m.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
   } else {
     m.setView([userLat, userLon], 13);

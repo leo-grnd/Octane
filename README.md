@@ -251,9 +251,10 @@ L'interface suit la maquette **« Octane Accueil v3 »** de Claude Design (octob
 garde du système Modernist précédent la police (Archivo) et l'accent rouge (`#ec3013`), mais
 passe aux angles arrondis, à des cartes blanches ombrées posées sur un fond zinc (`#f7f7f8`), et
 à des pastilles. La maquette ne dessinait que l'accueil : Alertes, Comment ça marche, les mentions
-légales et la page 404 en transposent le langage. Deux écarts volontaires avec la maquette :
-l'accueil n'a pas de carte « Source officielle » à droite du titre (la colonne reste vide), et
-l'onglet Historique est conservé à côté de Liste et Carte.
+légales et la page 404 en transposent le langage. Trois écarts volontaires avec la maquette :
+l'accueil n'a pas de carte « Source officielle » à droite du titre (la colonne reste vide),
+l'onglet Historique est conservé à côté de Liste et Carte, et le bandeau « Écart dans ton
+rayon » passe sous le panneau de l'onglet au lieu de suivre le bloc gagnant.
 
 - **`design-system.css` porte tout le socle commun** : les tokens `--o-*` (couleurs, ombres,
   filtres du fond de carte) **repris à l'identique de la maquette**, en clair et en sombre, plus

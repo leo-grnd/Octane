@@ -171,12 +171,14 @@
       <div id="osmHint" class="osm-hint hidden" aria-live="polite">
         <span class="loader-sm" aria-hidden="true"></span>Identification des enseignes en cours…
       </div>
-      <!-- Bloc « Le moins cher » et écart : visibles quel que soit l'onglet,
-           qui ne remplace que le panneau du dessous (liste, carte, historique). -->
+      <!-- Bloc « Le moins cher » au-dessus et écart en dessous : visibles quel
+           que soit l'onglet, qui ne remplace que le panneau du milieu (liste,
+           carte, historique). -->
       <div id="resultsTop" class="results-top" aria-live="polite"></div>
       <div id="stationList" class="station-list" aria-live="polite" aria-busy="false"></div>
       <div id="stationMap" class="station-map hidden" role="tabpanel" aria-label="Carte des stations"></div>
       <div id="historyList" class="history-list hidden" role="tabpanel" aria-label="Historique des prix"></div>
+      <div id="resultsBottom" class="results-bottom"></div>
     </section>
 
     <aside id="stationSheet" class="station-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">

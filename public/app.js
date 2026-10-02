@@ -9,6 +9,7 @@ const $geolocBtn = document.getElementById('geolocBtn');
 const $status = document.getElementById('status');
 const $results = document.getElementById('results');
 const $resultsTop = document.getElementById('resultsTop');
+const $resultsBottom = document.getElementById('resultsBottom');
 const $stationList = document.getElementById('stationList');
 const $resultsTitle = document.getElementById('resultsTitle');
 const $resultsCount = document.getElementById('resultsCount');
@@ -1052,9 +1053,9 @@ function buildHistoryCard(s, i, total) {
   return el;
 }
 
-// Bloc d'écart, en pleine largeur sur fond d'accent : c'est l'argument qui
-// justifie l'outil, la maquette lui donne donc le traitement le plus fort de
-// la page. Seulement si l'écart dépasse 1 ct/L, sinon il n'y a rien à dire.
+// Bloc d'écart, en pleine largeur sur fond d'accent. Placé en bas des
+// résultats, après le panneau de l'onglet : moins important que le gagnant et
+// la liste. Seulement si l'écart dépasse 1 ct/L, sinon il n'y a rien à dire.
 function buildSavingsBanner(stations) {
   if (!stations || stations.length < 2) return null;
   const delta = stations[stations.length - 1].price - stations[0].price;
@@ -1084,6 +1085,7 @@ function renderSkeletons() {
       <div class="winner-info"><div class="sk sk-name"></div><div class="sk sk-addr"></div><div class="sk sk-btn"></div></div>
     </div>
   `;
+  $resultsBottom.innerHTML = '';
   $stationList.innerHTML = '';
 }
 
@@ -1107,6 +1109,7 @@ function renderStations() {
 
   $results.classList.remove('is-loading');
   $resultsTop.innerHTML = '';
+  $resultsBottom.innerHTML = '';
   $stationList.innerHTML = '';
   $stationList.setAttribute('aria-busy', 'false');
   // Ligne de méta unique, comme la maquette : carburant, lieu, rayon, effectif.
@@ -1158,7 +1161,7 @@ function renderStations() {
   // L'écart ne se calcule qu'entre prix actualisés : un vieux prix bas ou haut
   // gonflerait un écart qui n'existe plus à la pompe.
   const savings = buildSavingsBanner(fresh);
-  if (savings) $resultsTop.appendChild(savings);
+  if (savings) $resultsBottom.appendChild(savings);
 
   const rest = refStation ? stations.slice(1) : stations;
   const offset = refStation ? 1 : 0; // index de `rest[0]` dans `stations`
@@ -1435,6 +1438,7 @@ async function runSearch(lat, lon, label) {
     $stationList.setAttribute('aria-busy', 'false');
     $stationList.innerHTML = '';
     $resultsTop.innerHTML = '';
+    $resultsBottom.innerHTML = '';
     $results.classList.remove('is-loading');
     $results.classList.add('hidden');
     console.error(err);

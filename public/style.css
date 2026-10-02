@@ -288,6 +288,7 @@
 }
 .results-top { display: flex; flex-direction: column; gap: 16px; }
 .results-top:empty,
+.results-bottom:empty,
 .station-list:empty { display: none; }
 /* Panneaux des onglets : même marge que la section quand la page y descend
    (showView dans app.js). */
@@ -439,7 +440,7 @@
 .winner-actions .btn-primary { padding: 0 20px 0 18px; }
 
 /* ═══════════════════ Écart dans le rayon ═══════════════════
-   Traitement le plus fort de la page : c'est l'argument qui justifie l'outil. */
+   En bas des résultats (#resultsBottom), après le panneau de l'onglet. */
 .savings {
   display: flex;
   flex-direction: column;

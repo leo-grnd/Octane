@@ -284,21 +284,39 @@ function streetsAgree(input, ign) {
   const matched = a.filter(w => b.some(x => nearlySame(w, x))).length;
   return matched * 2 >= a.length || nearlySame(a.join(''), b.join(''));
 }
-// Libellé de voie de l'IGN : sans la commune déléguée qu'il ajoute parfois
-// (« Avenue de Paris, Couhé », « Avenue de la Riottiere (Ingrandes) »), et
-// avec une majuscule aux noms propres qu'il laisse en minuscule (« Rue
-// poincaré »).
-function cleanIgnStreet(street) {
-  return street.replace(/\s*[,(].*$/, '').split(' ').map((w, i) => {
-    if (i > 0 && (SMALL_WORDS.has(stripAccents(w).toUpperCase()) || /^[ld]['’]/i.test(w))) return w;
-    return w.charAt(0).toUpperCase() + w.slice(1);
-  }).join(' ');
+// Libellé de voie de l'IGN, sans la commune déléguée qu'il ajoute parfois
+// (« Avenue de Paris, Couhé », « Avenue de la Riottiere (Ingrandes) »).
+const cleanIgnStreet = (street) => street.replace(/\s*[,(].*$/, '');
+
+// Casse d'un libellé de voie déjà écrit en minuscules accentuées : petits
+// mots en minuscules, le reste avec une capitale, noms composés compris
+// (« rue de la république » → « Rue de la République », « Rue De La
+// Riviere » → « Rue de la Riviere », « saint-rémy » → « Saint-Rémy »).
+const upperFirst = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+// Mot resté en capitales dans une saisie mixte (« Avenue du GENERAL DE
+// GAULLE ») : remis en casse, accents usuels compris.
+const isShouted = (w) => /^\p{Lu}{2,}$/u.test(w) && !KEEP_UPPER.has(stripAccents(w));
+function caseWord(w, isFirst) {
+  if (!isFirst && SMALL_WORDS.has(stripAccents(w).toUpperCase())) {
+    // « Le », « La », « Les » déjà en capitale appartiennent souvent à un nom
+    // propre (« Rue Jean Le Guennec », « Route de La Clusaz ») : intacts.
+    return /^(Le|La|Les)$/.test(w) ? w : w.toLowerCase();
+  }
+  if (/^[ld]['’]$/i.test(w)) return isFirst ? upperFirst(w.toLowerCase()) : w.toLowerCase();
+  const elision = w.match(/^([ld])(['’])(.+)$/i);
+  if (elision) return (isFirst ? elision[1].toUpperCase() : elision[1].toLowerCase()) + elision[2] + caseWord(elision[3], true);
+  const [head, ...tail] = w.split('-');
+  return [isShouted(head) ? capitalizePart(head) : upperFirst(head), ...tail.map(part => caseWord(part, false))].join('-');
 }
+const smartCase = (s) => s.replace(/(['’])\s+/g, '$1').split(' ').map((w, i) => caseWord(w, i === 0)).join(' ');
 
 // Apostrophe typographique, comme le reste du site.
 const typo = (s) => s && s.replace(/'/g, '’');
 const accentCount = (s) => (s.normalize('NFD').match(/[̀-ͯ]/g) || []).length;
-const sameLetters = (a, b) => stripAccents(a).toLowerCase() === stripAccents(b).toLowerCase();
+// Même libellé aux accents, à la casse et à la ponctuation près
+// (« Route de Saint-Rémy » / « Route de Saint Remy »).
+const lettersOnly = (s) => stripAccents(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+const sameLetters = (a, b) => lettersOnly(a) === lettersOnly(b);
 
 // Une adresse déjà en minuscules dans le flux (« Rue Joliot Curie ») a été
 // saisie à la main : on la garde telle quelle si l'IGN ne fait pas mieux.
@@ -371,11 +389,15 @@ async function normalizeAddresses(stations) {
       streetTypeOf(street) === wanted &&
       streetsAgree(rest, street);
     if (ok) {
-      // L'IGN a parfois moins d'accents que la saisie d'origine (« Boulevard
-      // des Resistants ») : à libellé égal, on garde la mieux accentuée.
+      // Selon les communes, l'IGN a moins d'accents ou de traits d'union que
+      // la saisie d'origine (« Rue des Ecoles », « Route de Saint Remy »). À
+      // lettres égales, on garde la mieux écrite, puis on en refait la casse.
       const typed = !isAllCaps(l.adresse) && splitNumber(l.adresse.trim()).rest;
-      const label = typed && sameLetters(typed, street) && accentCount(typed) > accentCount(street) ? typed : street;
-      out.set(l.id, typo([number, label].filter(Boolean).join(' ')));
+      const dashes = (s) => (s.match(/-/g) || []).length;
+      const better = typed && sameLetters(typed, street) &&
+        (accentCount(typed) > accentCount(street) ||
+          (accentCount(typed) === accentCount(street) && dashes(typed) > dashes(street)));
+      out.set(l.id, typo([number, smartCase(better ? typed : street)].filter(Boolean).join(' ')));
       stats.ign++;
     } else {
       out.set(l.id, typo(tidyAddress(l.adresse, l.expanded)));

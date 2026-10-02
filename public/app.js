@@ -809,8 +809,17 @@ function isStalePrice(s, fuelField) {
 
 // Ordre du classement : prix actualisés d'abord, chaque groupe trié par prix.
 // Les stations périmées se retrouvent donc toujours en queue de liste.
+// À prix égal (au millième, la précision des relevés — ex. un prix national
+// commun à toute une enseigne), la plus proche passe devant : distance par la
+// route quand elle est connue, sinon à vol d'oiseau.
 function compareStations(a, b) {
-  return (a._stale - b._stale) || (a.price - b.price);
+  return (a._stale - b._stale)
+    || (Math.round(a.price * 1000) - Math.round(b.price * 1000))
+    || (stationKm(a) - stationKm(b));
+}
+
+function stationKm(s) {
+  return s.driveKm ?? s.distance ?? Infinity;
 }
 
 // "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour.

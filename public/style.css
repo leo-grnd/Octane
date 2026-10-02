@@ -834,6 +834,9 @@
   border-bottom: 1px solid var(--o-line-soft);
 }
 .history-card:last-child { border-bottom: 0; }
+/* La dernière carte porte déjà le filet qui sépare le bouton « Afficher les
+   N autres ». */
+.history-list > .list-more { border-top: 0; }
 .history-card .rank { font-family: var(--font-heading); font-weight: 800; font-size: 15px; color: var(--rank-color, var(--o-faint)); }
 .history-card .info { min-width: 0; }
 .history-card .name { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; }

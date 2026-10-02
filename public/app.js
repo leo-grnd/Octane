@@ -1097,10 +1097,21 @@ function placeName(label) {
   return m ? m[1] : label;
 }
 
-// Nombre de lignes affichées avant le bouton « Afficher les N autres ». Au-delà,
-// le tableau devient un mur : la maquette coupe volontairement.
-const ROWS_VISIBLE = 12;
+// Stations affichées (gagnant compris) avant le bouton « Afficher les N
+// autres », dans la liste comme dans l'historique : la liste s'arrête donc au
+// Nº 10, comme l'historique. Au-delà, la page devient un mur.
+const STATIONS_VISIBLE = 10;
 let rowsExpanded = false;
+let histExpanded = false;
+
+function buildMoreButton(count, onClick) {
+  const foot = document.createElement('div');
+  foot.className = 'list-more';
+  foot.innerHTML = `<button type="button" class="btn btn-secondary btn-sm">${
+    count > 1 ? `Afficher les ${count} autres stations` : 'Afficher la dernière station'}</button>`;
+  foot.querySelector('button').addEventListener('click', onClick, { once: true });
+  return foot;
+}
 
 function renderStations() {
   if (!currentResults) return;
@@ -1166,7 +1177,7 @@ function renderStations() {
   const rest = refStation ? stations.slice(1) : stations;
   const offset = refStation ? 1 : 0; // index de `rest[0]` dans `stations`
   if (rest.length) {
-    const shown = rowsExpanded ? rest.length : Math.min(rest.length, ROWS_VISIBLE);
+    const shown = rowsExpanded ? rest.length : Math.min(rest.length, STATIONS_VISIBLE - offset);
     const card = document.createElement('div');
     card.className = 'list-card';
     const table = document.createElement('table');
@@ -1195,11 +1206,7 @@ function renderStations() {
     card.appendChild(table);
 
     if (rest.length > shown) {
-      const foot = document.createElement('div');
-      foot.className = 'list-more';
-      foot.innerHTML = `<button type="button" class="btn btn-secondary btn-sm">Afficher les ${rest.length - shown} autres stations</button>`;
-      foot.querySelector('button').addEventListener('click', () => { rowsExpanded = true; renderStations(); });
-      card.appendChild(foot);
+      card.appendChild(buildMoreButton(rest.length - shown, () => { rowsExpanded = true; renderStations(); }));
     }
     $stationList.appendChild(card);
   }
@@ -1347,7 +1354,9 @@ async function runSearch(lat, lon, label) {
 
   const token = ++currentSearchToken;
   setCtaLoading(true);
-  rowsExpanded = false; // toute nouvelle recherche repart sur un tableau replié
+  // Toute nouvelle recherche repart sur une liste et un historique repliés.
+  rowsExpanded = false;
+  histExpanded = false;
   // En mode voiture, on sur-fetch en vol d'oiseau pour ne pas manquer de
   // stations accessibles qui sont au-delà du cercle haversine.
   const fetchRadiusKm = distanceMode === 'drive'
@@ -1920,8 +1929,8 @@ function renderPriceHistory() {
     return;
   }
   const pendingToken = currentSearchToken;
-  stations.forEach((s, i) => {
-    const card = buildHistoryCard(s, i, total);
+  const appendCards = (from, to) => stations.slice(from, to).forEach((s, k) => {
+    const card = buildHistoryCard(s, from + k, total);
     $historyList.appendChild(card);
     const body = card.querySelector('.hist-body');
     const sid = s.id != null ? String(s.id) : null;
@@ -1936,6 +1945,19 @@ function renderPriceHistory() {
         : `<div class="hist-empty">Historique indisponible pour cette station.</div>`;
     });
   });
+
+  const shown = histExpanded ? total : Math.min(total, STATIONS_VISIBLE);
+  appendCards(0, shown);
+  // Le bouton ajoute les cartes manquantes sous les premières, sans refaire
+  // celles déjà tracées.
+  if (total > shown) {
+    const more = buildMoreButton(total - shown, () => {
+      histExpanded = true;
+      more.remove();
+      appendCards(shown, total);
+    });
+    $historyList.appendChild(more);
+  }
 }
 
 // ===== Carte Leaflet =====

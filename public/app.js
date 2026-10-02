@@ -41,22 +41,6 @@ function setTankSize(liters) {
   if (!$tank || !Number.isFinite(v) || v <= 0) return;
   $tank.value = Math.min(200, Math.max(1, v));
 }
-
-// Consommation du véhicule (L/100 km), pour le coût du trajet jusqu'à la
-// station. Bornée 2–30, au dixième : d'une citadine sobre à un utilitaire.
-const $conso = document.getElementById('conso');
-const CONSO_KEY = 'octane-conso';
-const CONSO_DEFAULT = 6.5;
-const clampConso = (v) => Math.min(30, Math.max(2, Math.round(v * 10) / 10));
-function getConso() {
-  const v = parseFloat(String($conso ? $conso.value : '').replace(',', '.'));
-  return Number.isFinite(v) && v > 0 ? clampConso(v) : CONSO_DEFAULT;
-}
-function setConso(value) {
-  const v = parseFloat(String(value).replace(',', '.'));
-  if (!$conso || !Number.isFinite(v) || v <= 0) return;
-  $conso.value = clampConso(v);
-}
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
@@ -1095,8 +1079,11 @@ const eur2 = (v) => `${v.toFixed(2).replace('.', ',')} €`;
 // au prix ; le bloc gagnant signale seulement la station qui revient moins cher
 // trajet compris. Aller-retour depuis le point de recherche, par la route quand
 // on la connaît, sinon à vol d'oiseau × ROAD_FACTOR (détour routier moyen),
-// carburant payé au prix de la station.
+// avec une consommation moyenne fixe (pas de champ à remplir : il encombrait
+// le formulaire pour une précision illusoire), carburant payé au prix de la
+// station.
 const ROAD_FACTOR = 1.3;
+const CONSO_L_100KM = 6;
 const TRIP_MIN_GAIN = 0.5; // en dessous de 50 centimes, l'écart ne vaut pas un détour
 
 function tripKm(s) {
@@ -1106,7 +1093,7 @@ function tripKm(s) {
 }
 function tripCost(s) {
   const t = tripKm(s);
-  return t ? { cost: t.km * getConso() / 100 * s.price, estimated: t.estimated } : null;
+  return t ? { cost: t.km * CONSO_L_100KM / 100 * s.price, estimated: t.estimated } : null;
 }
 
 // Station (prix récent et plausible) qui revient le moins cher, plein et
@@ -1771,8 +1758,6 @@ function updateUrlParams() {
   if (mode !== 'crow') params.set('mode', mode);
   const tank = getTankSize();
   if (tank !== TANK_DEFAULT) params.set('tank', String(tank));
-  const conso = getConso();
-  if (conso !== CONSO_DEFAULT) params.set('conso', String(conso));
   const url = `${location.pathname}?${params.toString()}${location.hash}`;
   history.replaceState(null, '', url);
 }
@@ -2661,11 +2646,6 @@ if ('serviceWorker' in navigator) {
   const storedTank = (() => { try { return localStorage.getItem(TANK_KEY); } catch { return null; } })();
   setTankSize(urlTank || storedTank || TANK_DEFAULT);
 
-  // Consommation : URL > localStorage > défaut (6,5)
-  const urlConso = params.get('conso');
-  const storedConso = (() => { try { return localStorage.getItem(CONSO_KEY); } catch { return null; } })();
-  setConso(urlConso || storedConso || CONSO_DEFAULT);
-
   const q = params.get('q');
   const fuel = normalizeFuelField(params.get('fuel'));
   const r = params.get('r');
@@ -2730,17 +2710,6 @@ if ($tank) {
     const v = getTankSize();
     setTankSize(v); // clamp visible immédiat si l'user a tapé 300
     try { localStorage.setItem(TANK_KEY, String(v)); } catch {}
-    updateUrlParams();
-    if (currentResults) renderStations();
-  });
-}
-
-// Consommation : même principe (l'indication « trajet compris » se recalcule).
-if ($conso) {
-  $conso.addEventListener('change', () => {
-    const v = getConso();
-    setConso(v);
-    try { localStorage.setItem(CONSO_KEY, String(v)); } catch {}
     updateUrlParams();
     if (currentResults) renderStations();
   });

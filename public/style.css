@@ -30,38 +30,33 @@
   box-shadow: var(--o-sh-card);
 }
 
-/* Trois dispositions, celles de la maquette, plus le champ « Ma conso »
-   (trajet compris) : une ligne sur ordinateur, champs sur deux lignes sur
-   tablette, deux colonnes sur téléphone (carburant et rayon, puis réservoir
-   et conso). Le bouton reste en dernier dans le DOM, après les options qu'il
-   prend en compte. */
+/* Trois dispositions, celles de la maquette : une ligne sur ordinateur,
+   champs sur deux lignes sur tablette, une colonne (rayon et réservoir
+   côte à côte) sur téléphone. Le bouton reste en dernier dans le DOM, après
+   les options qu'il prend en compte. */
 .search-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-areas: "addr addr" "fuel rad" "tank conso" "opts opts" "cta cta";
+  grid-template-areas: "addr addr" "fuel fuel" "rad tank" "opts opts" "cta cta";
   gap: 14px;
   align-items: end;
 }
 @media (min-width: 640px) {
   .search-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-areas: "addr addr fuel" "rad tank conso" "opts opts opts" "cta cta cta";
+    grid-template-areas: "addr addr addr" "fuel rad tank" "opts opts opts" "cta cta cta";
   }
 }
 @media (min-width: 1024px) {
   .search-grid {
-    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, .7fr) minmax(0, .8fr) minmax(0, .95fr) 168px;
-    grid-template-areas: "addr fuel rad tank conso cta" "opts opts opts opts opts opts";
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, .75fr) minmax(0, .85fr) 168px;
+    grid-template-areas: "addr fuel rad tank cta" "opts opts opts opts opts";
   }
 }
 .search-grid .field-address { grid-area: addr; }
 .search-grid .field-fuel { grid-area: fuel; }
 .search-grid .field-radius { grid-area: rad; }
 .search-grid .field-tank { grid-area: tank; }
-.search-grid .field-conso { grid-area: conso; }
-/* « L/100 » est l'unité la plus large : un peu moins d'écart pour laisser la
-   place à « 6,5 » à 1024 px. */
-.field-conso .field-box { gap: 6px; }
 .search-grid .search-opts { grid-area: opts; }
 .search-grid .search-cta { grid-area: cta; }
 

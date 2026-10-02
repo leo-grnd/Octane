@@ -86,8 +86,8 @@ Le classement reste au prix au litre. Mais avec un prix plafonné d'enseigne, la
 souvent à 15 km quand une station à 2 km ne coûte que quelques centimes de plus : le bloc gagnant
 signale alors la station qui revient moins cher **plein et aller-retour compris** (écart d'au
 moins 0,50 €). Aller-retour depuis le point de recherche, par la route en mode voiture, sinon à
-vol d'oiseau × 1,3 (« environ ») ; consommation saisie dans « Ma conso » (6,5 L/100 km par
-défaut, mémorisée comme le réservoir) ; carburant du trajet payé au prix de la station.
+vol d'oiseau × 1,3 (« environ ») ; consommation moyenne fixe de 6 L/100 km (`CONSO_L_100KM`,
+sans champ dans le formulaire) ; carburant du trajet payé au prix de la station.
 
 ## Développement local
 

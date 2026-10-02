@@ -845,21 +845,25 @@ function formatRelativeTime(iso) {
   return { text, tier };
 }
 
-// Compare le prix actuel à la moyenne des 7 derniers jours d'historique
-// (déjà chargé en mémoire par prefetchHistory). Retourne { sign, arrow, deltaEur }
-// ou null si l'historique n'est pas encore là ou trop court.
+// Compare le prix actuel au prix pratiqué il y a 7 jours, d'après l'historique
+// (déjà chargé en mémoire par prefetchHistory) : l'évolution sur une semaine.
+// Retourne { sign, arrow, deltaEur } ou null si l'historique n'est pas encore
+// là ou ne remonte pas à 7 jours.
 function getStationTrend(stationId, fuelField, currentPrice) {
   if (stationId == null || !HIST_FUELS.has(fuelField) || !Number.isFinite(currentPrice)) return null;
   const points = historyMemCache[`${stationId}:${fuelField}`];
-  if (!points || points.length < 3) return null;
+  if (!points || !points.length) return null;
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  // points = [[tsMs, milliEuros], ...] triés du plus ancien au plus récent
-  const recent = points.filter(p => p[0] >= cutoff).map(p => p[1] / 1000);
-  // Fallback : si on a moins de 2 points sur 7j, on prend les 5 derniers globaux
-  const series = recent.length >= 2 ? recent : points.slice(-5).map(p => p[1] / 1000);
-  if (series.length < 2) return null;
-  const avg = series.reduce((s, v) => s + v, 0) / series.length;
-  const deltaEur = currentPrice - avg;
+  // points = [[tsMs, milliEuros], ...] triés du plus ancien au plus récent, un
+  // point par changement de prix : le prix en vigueur il y a 7 jours est donc
+  // celui du dernier point antérieur à cette date.
+  let then = null;
+  for (const p of points) {
+    if (p[0] > cutoff) break;
+    then = p[1] / 1000;
+  }
+  if (then == null) return null;
+  const deltaEur = currentPrice - then;
   const deltaCt = Math.round(deltaEur * 1000) / 10; // centimes, au dixième
   // Moins d'un demi-centime d'écart : on parle de stabilité.
   const sign = deltaCt <= -0.5 ? 'down' : deltaCt >= 0.5 ? 'up' : 'flat';
@@ -867,12 +871,12 @@ function getStationTrend(stationId, fuelField, currentPrice) {
   return { sign, arrow, deltaEur };
 }
 
-// « −1,08 € / plein vs moyenne 7 jours », avec un vrai signe moins : l'écart
-// au litre ramené au réservoir saisi, plus parlant que des centimes par litre.
+// « −1,08 € / plein en 7 jours », avec un vrai signe moins : l'écart au litre
+// ramené au réservoir saisi, plus parlant que des centimes par litre.
 function formatTrend(trend) {
   if (trend.sign === 'flat') return 'stable sur 7 jours';
   const value = eur2(Math.abs(trend.deltaEur) * getTankSize());
-  return `${trend.deltaEur > 0 ? '+' : '−'}${value} / plein vs moyenne 7 jours`;
+  return `${trend.deltaEur > 0 ? '+' : '−'}${value} / plein en 7 jours`;
 }
 
 // URL Google Maps pour itinéraire depuis la position de l'utilisateur

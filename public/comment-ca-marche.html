@@ -141,6 +141,11 @@
                         <p>Les stations s'affichent <strong>triées par prix</strong>, avec le coût d'un plein et la
                            distance. Bascule entre <strong>liste</strong>, <strong>carte</strong> et
                            <strong>historique</strong> des prix pour voir la tendance.</p>
+                        <p>Les stations <strong>en rupture</strong> de ton carburant sont signalées à part, avec
+                           l'heure de la rupture déclarée : tu sais où ne pas aller.</p>
+                        <p>Octane compte aussi l'<strong>aller-retour</strong>, sur une consommation moyenne de
+                           6 L aux 100 km : si une station plus proche te revient moins cher, trajet compris, il te
+                           le dit.</p>
                     </div>
                     <div class="step-visual">
                         <div class="rank" aria-hidden="true">
@@ -157,9 +162,11 @@
                 <div class="step-body">
                     <div class="step-text">
                         <p>Les prix proviennent du <strong>flux officiel du Ministère de l'Économie</strong>
-                           (<code>data.economie.gouv.fr</code>), mis à jour en continu. Le géocodage des adresses
-                           s'appuie sur la Base Adresse Nationale, servie par la Géoplateforme de l'IGN, le routage
-                           sur OSRM/Valhalla, les enseignes sur OpenStreetMap.</p>
+                           (<code>data.economie.gouv.fr</code>), mis à jour en continu. Les noms et enseignes des
+                           stations viennent de leur fiche sur le site officiel <code>prix-carburants.gouv.fr</code>,
+                           relevée chaque mois (OpenStreetMap en secours). Le géocodage et les adresses s'appuient sur
+                           la Base Adresse Nationale, servie par la Géoplateforme de l'IGN, le routage sur
+                           OSRM/Valhalla.</p>
                         <p>Tout tourne <strong>dans ton navigateur</strong> : aucune clé, aucun compte, aucun cookie.
                            Seule une mesure d'audience anonyme compte les visites, sans te suivre
                            (<a href="mentions-legales#confidentialite">détails</a>). Le site fonctionne même hors-ligne

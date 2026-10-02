@@ -410,6 +410,10 @@
 .winner-title { display: flex; align-items: center; gap: 12px; }
 .winner-title .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
 .winner-name { margin: 0; font-size: clamp(20px, 2.4vw, 26px); line-height: 1.15; letter-spacing: -0.02em; }
+/* Nom officiel de la station (« Relais des Invalides »), entre le titre
+   (enseigne + ville) et l'adresse. */
+.winner-station,
+.sheet-station { font-size: 15px; font-weight: 600; color: var(--o-muted); }
 .winner-addr { font-size: 14px; color: var(--o-subtle); }
 .winner-facts {
   display: flex;
@@ -435,6 +439,28 @@
   font-size: 13px;
 }
 .winner-warn .ic { margin-top: 1px; }
+/* « Trajet compris, X te revient 1,80 € de moins » : note cliquable (ouvre
+   la fiche de X), neutre, l'icône au vert des économies. */
+.winner-trip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-chip);
+  color: var(--o-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.winner-trip:hover { background: var(--o-hover); }
+.winner-trip:focus-visible { outline: 2px solid var(--o-accent); outline-offset: 2px; }
+.winner-trip .ic { flex: none; margin-top: 1px; color: var(--o-down); }
+.winner-trip strong { color: var(--o-ink); font-weight: 700; }
 .winner-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .winner-actions .btn { flex: 1 1 auto; justify-content: flex-start; white-space: nowrap; }
 .winner-actions .btn-primary { padding: 0 20px 0 18px; }
@@ -559,6 +585,32 @@
 
 .list-more { padding: 16px 24px; border-top: 1px solid var(--o-line-soft); text-align: center; }
 
+/* Stations en rupture du carburant recherché (voir fetchRuptures dans app.js) :
+   carte repliable sous le classement, lignes au gabarit du tableau mais
+   inertes, et l'orange des signaux d'attention. */
+.list-card + .rupture-card { margin-top: 16px; }
+.rupture-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--o-ink);
+  list-style: none;
+  cursor: pointer;
+}
+.rupture-summary::-webkit-details-marker { display: none; }
+.rupture-summary:hover { background: var(--o-hover); }
+.rupture-summary:focus-visible { outline: 2px solid var(--o-accent); outline-offset: -2px; }
+.rupture-summary > .ic:first-child { color: var(--o-stale); }
+.rupture-summary > span { flex: 1; min-width: 0; }
+.rupture-summary > .ic:last-child { color: var(--o-subtle); transition: transform .2s; }
+.rupture-card[open] > .rupture-summary { border-bottom: 1px solid var(--o-line-soft); }
+.rupture-card[open] > .rupture-summary > .ic:last-child { transform: rotate(180deg); }
+.rupture-row { color: var(--o-subtle); }
+.rupture-tag { font-family: var(--font-body); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
+
 /* Sous 760 px, la colonne « Sur un plein » saute (elle reste dans la fiche). */
 @media (max-width: 759.98px) {
   .station-table tr { grid-template-columns: 40px minmax(0, 1fr) 90px 80px; }
@@ -587,6 +639,7 @@
   .station-sub-phone { display: block; }
   .station-table tr.stale-sep { padding: 18px 16px 8px; }
   .list-more { padding: 14px 16px; }
+  .rupture-summary { padding: 14px 16px; }
 }
 
 /* ═══════════════════ Squelette de chargement ═══════════════════ */
@@ -737,6 +790,8 @@
 .pin-best::after { background: var(--o-accent); }
 .pin-stale .pin-label { background: var(--o-chip); color: var(--o-subtle); box-shadow: none; }
 .pin-stale::after { background: var(--o-chip); }
+.pin-rupture .pin-label { min-width: 24px; justify-content: center; background: var(--o-chip); color: var(--o-stale); box-shadow: none; }
+.pin-rupture::after { background: var(--o-chip); }
 .map-pin:focus-visible { outline: 0; }
 .map-pin:focus-visible .pin-label { outline: 2px solid var(--o-accent); outline-offset: 2px; }
 
@@ -813,7 +868,8 @@
 .pop-addr { font-size: 12px; color: var(--o-subtle); }
 .pop-facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 4px; color: var(--o-muted); }
 .pop-price { font-family: var(--font-heading); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--o-ink); }
-.pop-stale { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
+.pop-stale,
+.pop-rupture { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--o-stale); }
 .pop .btn { align-self: flex-start; margin-top: 8px; }
 
 /* ═══════════════════ Onglet Historique ═══════════════════
@@ -918,6 +974,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-title-row { display: flex; align-items: center; gap: 12px; margin-right: 48px; }
 .sheet-title-row .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
 .sheet-title-row h2 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+.sheet-station { margin-top: -2px; }
 .sheet-addr { font-size: 14px; color: var(--o-subtle); }
 .sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .sheet-actions .btn { flex: 1 1 auto; }
@@ -969,6 +1026,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-key-fresh .ic { width: 14px; height: 14px; }
 .sheet-key-dist { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px; color: var(--o-subtle); text-align: right; }
 .sheet-key-num { font-family: var(--font-heading); font-weight: 800; font-size: 22px; color: var(--o-ink); }
+.sheet-key-trip { margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 /* Autres carburants vendus : liste à filets, encadrée. */
 .sheet-others {

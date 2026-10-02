@@ -1,0 +1,50 @@
+name: Refresh official station names
+
+on:
+  schedule:
+    - cron: '0 4 2 * *'   # le 2 du mois à 04:00 UTC (marques OSM : le 1er)
+  workflow_dispatch:       # bouton manuel
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-stations
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Collect official names, brands and addresses
+        run: node scripts/build-stations.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "octane-bot"
+          git config user.email "octane-bot@users.noreply.github.com"
+          git add public/data/stations
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore(data): refresh official station names"
+          # Push résilient : si main a avancé entre le checkout et maintenant
+          # (commit humain pendant la collecte), on rebase et on ré-essaie.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "Push réussi (essai $attempt)"
+              exit 0
+            fi
+            echo "Push refusé (essai $attempt) — rebase puis retry"
+            git pull --rebase origin main
+          done
+          echo "Push échoué après 5 essais"
+          exit 1

@@ -30,33 +30,38 @@
   box-shadow: var(--o-sh-card);
 }
 
-/* Trois dispositions, celles de la maquette : une ligne sur ordinateur,
-   champs sur deux lignes sur tablette, une colonne (rayon et réservoir
-   côte à côte) sur téléphone. Le bouton reste en dernier dans le DOM, après
-   les options qu'il prend en compte. */
+/* Trois dispositions, celles de la maquette, plus le champ « Ma conso »
+   (trajet compris) : une ligne sur ordinateur, champs sur deux lignes sur
+   tablette, deux colonnes sur téléphone (carburant et rayon, puis réservoir
+   et conso). Le bouton reste en dernier dans le DOM, après les options qu'il
+   prend en compte. */
 .search-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-areas: "addr addr" "fuel fuel" "rad tank" "opts opts" "cta cta";
+  grid-template-areas: "addr addr" "fuel rad" "tank conso" "opts opts" "cta cta";
   gap: 14px;
   align-items: end;
 }
 @media (min-width: 640px) {
   .search-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-areas: "addr addr addr" "fuel rad tank" "opts opts opts" "cta cta cta";
+    grid-template-areas: "addr addr fuel" "rad tank conso" "opts opts opts" "cta cta cta";
   }
 }
 @media (min-width: 1024px) {
   .search-grid {
-    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, .75fr) minmax(0, .85fr) 168px;
-    grid-template-areas: "addr fuel rad tank cta" "opts opts opts opts opts";
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, .7fr) minmax(0, .8fr) minmax(0, .95fr) 168px;
+    grid-template-areas: "addr fuel rad tank conso cta" "opts opts opts opts opts opts";
   }
 }
 .search-grid .field-address { grid-area: addr; }
 .search-grid .field-fuel { grid-area: fuel; }
 .search-grid .field-radius { grid-area: rad; }
 .search-grid .field-tank { grid-area: tank; }
+.search-grid .field-conso { grid-area: conso; }
+/* « L/100 » est l'unité la plus large : un peu moins d'écart pour laisser la
+   place à « 6,5 » à 1024 px. */
+.field-conso .field-box { gap: 6px; }
 .search-grid .search-opts { grid-area: opts; }
 .search-grid .search-cta { grid-area: cta; }
 
@@ -439,6 +444,28 @@
   font-size: 13px;
 }
 .winner-warn .ic { margin-top: 1px; }
+/* « Trajet compris, X te revient 1,80 € de moins » : note cliquable (ouvre
+   la fiche de X), neutre, l'icône au vert des économies. */
+.winner-trip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--o-radius-sm);
+  background: var(--o-chip);
+  color: var(--o-text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.winner-trip:hover { background: var(--o-hover); }
+.winner-trip:focus-visible { outline: 2px solid var(--o-accent); outline-offset: 2px; }
+.winner-trip .ic { flex: none; margin-top: 1px; color: var(--o-down); }
+.winner-trip strong { color: var(--o-ink); font-weight: 700; }
 .winner-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .winner-actions .btn { flex: 1 1 auto; justify-content: flex-start; white-space: nowrap; }
 .winner-actions .btn-primary { padding: 0 20px 0 18px; }
@@ -1004,6 +1031,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-key-fresh .ic { width: 14px; height: 14px; }
 .sheet-key-dist { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13px; color: var(--o-subtle); text-align: right; }
 .sheet-key-num { font-family: var(--font-heading); font-weight: 800; font-size: 22px; color: var(--o-ink); }
+.sheet-key-trip { margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 /* Autres carburants vendus : liste à filets, encadrée. */
 .sheet-others {

@@ -41,6 +41,22 @@ function setTankSize(liters) {
   if (!$tank || !Number.isFinite(v) || v <= 0) return;
   $tank.value = Math.min(200, Math.max(1, v));
 }
+
+// Consommation du véhicule (L/100 km), pour le coût du trajet jusqu'à la
+// station. Bornée 2–30, au dixième : d'une citadine sobre à un utilitaire.
+const $conso = document.getElementById('conso');
+const CONSO_KEY = 'octane-conso';
+const CONSO_DEFAULT = 6.5;
+const clampConso = (v) => Math.min(30, Math.max(2, Math.round(v * 10) / 10));
+function getConso() {
+  const v = parseFloat(String($conso ? $conso.value : '').replace(',', '.'));
+  return Number.isFinite(v) && v > 0 ? clampConso(v) : CONSO_DEFAULT;
+}
+function setConso(value) {
+  const v = parseFloat(String(value).replace(',', '.'));
+  if (!$conso || !Number.isFinite(v) || v <= 0) return;
+  $conso.value = clampConso(v);
+}
 const $viewList = document.getElementById('viewList');
 const $viewMap = document.getElementById('viewMap');
 const $viewHistory = document.getElementById('viewHistory');
@@ -853,7 +869,8 @@ const ICONS = {
   navigation: '<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-  chevronDown: '<path d="m6 9 6 6 6-6"/>'
+  chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>'
 };
 function icon(name) {
   return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -1071,12 +1088,50 @@ function stationView(s, fuelField) {
 const km1 = (v) => `${v.toFixed(1).replace('.', ',')} km`;
 const eur2 = (v) => `${v.toFixed(2).replace('.', ',')} €`;
 
+// ===== Trajet compris =====
+// La moins chère au litre n'est pas toujours la moins chère une fois le trajet
+// compté : avec le prix plafonné d'une enseigne, elle est souvent à 15 km quand
+// une station à 2 km ne coûte que quelques centimes de plus. Le classement reste
+// au prix ; le bloc gagnant signale seulement la station qui revient moins cher
+// trajet compris. Aller-retour depuis le point de recherche, par la route quand
+// on la connaît, sinon à vol d'oiseau × ROAD_FACTOR (détour routier moyen),
+// carburant payé au prix de la station.
+const ROAD_FACTOR = 1.3;
+const TRIP_MIN_GAIN = 0.5; // en dessous de 50 centimes, l'écart ne vaut pas un détour
+
+function tripKm(s) {
+  if (s.driveKm != null) return { km: s.driveKm * 2, estimated: false };
+  if (s.distance != null) return { km: s.distance * ROAD_FACTOR * 2, estimated: true };
+  return null;
+}
+function tripCost(s) {
+  const t = tripKm(s);
+  return t ? { cost: t.km * getConso() / 100 * s.price, estimated: t.estimated } : null;
+}
+
+// Station (prix récent et plausible) qui revient le moins cher, plein et
+// aller-retour compris, si elle bat le gagnant d'au moins TRIP_MIN_GAIN.
+function findTripWinner(stations, winner) {
+  const total = (s) => { const t = tripCost(s); return t ? s.price * getTankSize() + t.cost : null; };
+  const base = total(winner);
+  if (base == null) return null;
+  let best = null;
+  stations.forEach((s, idx) => {
+    if (s === winner || s._stale || s._outlier) return;
+    const c = total(s);
+    if (c != null && (!best || c < best.cost)) best = { station: s, idx, cost: c };
+  });
+  if (!best || base - best.cost < TRIP_MIN_GAIN) return null;
+  return { ...best, gain: base - best.cost, estimated: tripKm(best.station).estimated };
+}
+
 // Bloc « Le moins cher » : l'objet de la page, traité à l'échelle qu'il mérite.
 // Le prix est posé en clamp(64px, 13vw, 112px) comme dans la maquette — c'est
 // l'information qu'on vient chercher, tout le reste la commente.
 const TREND_ICONS = { down: 'trendDown', up: 'trendUp', flat: 'trendFlat' };
-function buildWinnerBlock(s, fuelField) {
+function buildWinnerBlock(s, fuelField, trip) {
   const v = stationView(s, fuelField);
+  const tv = trip && stationView(trip.station, fuelField);
   const trend = s.id != null ? getStationTrend(String(s.id), fuelField, s.price) : null;
   const [euros, cents] = s.price.toFixed(3).split('.');
 
@@ -1098,6 +1153,8 @@ function buildWinnerBlock(s, fuelField) {
         ${v.freshness ? `<span class="winner-fresh freshness-${v.freshness.tier}">${icon('clock')}relevé ${esc(v.freshness.text)}</span>` : ''}
       </div>
       ${s._outlier ? `<div class="winner-warn">${icon('alert')}Prix qui s’écarte de ${Math.round(s._outlier.ratio * 100)} % de la médiane locale — à vérifier sur place.</div>` : ''}
+      ${trip ? `<button type="button" class="winner-trip" data-station-idx="${trip.idx}">${icon('route')}<span>Trajet compris, <strong>${esc(tv.title)}</strong>` +
+        `${tv.distKm != null ? ` (${esc(km1(tv.distKm))})` : ''} te revient ${trip.estimated ? 'environ ' : ''}<strong>${esc(eur2(trip.gain))}</strong> de moins.</span></button>` : ''}
       <div class="winner-actions">
         <a class="btn btn-primary" href="${esc(v.dirUrl)}" target="_blank" rel="noopener">${icon('navigation')}Itinéraire</a>
         <button type="button" class="btn btn-secondary" data-show-map>Voir sur la carte</button>
@@ -1353,7 +1410,7 @@ function renderStations() {
   const refStation = fresh.length ? stations[0] : null;
 
   if (refStation) {
-    $resultsTop.appendChild(buildWinnerBlock(refStation, fuelField));
+    $resultsTop.appendChild(buildWinnerBlock(refStation, fuelField, findTripWinner(stations, refStation)));
   } else {
     const note = document.createElement('div');
     note.className = 'notice';
@@ -1714,6 +1771,8 @@ function updateUrlParams() {
   if (mode !== 'crow') params.set('mode', mode);
   const tank = getTankSize();
   if (tank !== TANK_DEFAULT) params.set('tank', String(tank));
+  const conso = getConso();
+  if (conso !== CONSO_DEFAULT) params.set('conso', String(conso));
   const url = `${location.pathname}?${params.toString()}${location.hash}`;
   history.replaceState(null, '', url);
 }
@@ -2411,6 +2470,7 @@ function buildSheetContent(s, fuelField) {
   // surcoût reste dans le tableau, la tendance dans le bloc gagnant).
   const fresh = formatRelativeTime(s[fuelField.replace('_prix', '_maj')]);
   const distKm = s.driveKm != null ? s.driveKm : s.distance;
+  const trip = tripCost(s);
   const keyHtml = `
     <div class="sheet-key">
       <div class="sheet-key-price">
@@ -2421,6 +2481,7 @@ function buildSheetContent(s, fuelField) {
       ${distKm != null ? `<div class="sheet-key-dist">
         <span class="sheet-key-num">${esc(km1(distKm))}</span>
         <span>${s.driveKm != null ? 'par la route' : 'à vol d’oiseau'}${s.driveMin != null ? ` · ${s.driveMin} min` : ''}</span>
+        ${trip ? `<span class="sheet-key-trip">Aller-retour ${trip.estimated ? '≈ ' : ''}${esc(eur2(trip.cost))}</span>` : ''}
       </div>` : ''}
     </div>`;
 
@@ -2517,8 +2578,9 @@ if ($stationSheet) {
 // Click handler global sur la liste : on remonte au .station, on retrouve
 // l'objet station depuis currentResults.stations par index (data-station-idx
 // posé au render). Ignore les clics sur les liens internes (Itinéraire).
-// Deux points d'entrée vers la fiche : une ligne du tableau, ou le bouton
-// « Détails » du bloc gagnant. Les deux portent data-station-idx.
+// Trois points d'entrée vers la fiche : une ligne du tableau, le bouton
+// « Détails » du bloc gagnant, ou son indication « trajet compris ». Tous
+// portent data-station-idx.
 function openCardFromEvent(e) {
   const trigger = e.target.closest('[data-station-idx]');
   if (!trigger) return;
@@ -2580,6 +2642,11 @@ if ('serviceWorker' in navigator) {
   const urlTank = params.get('tank');
   const storedTank = (() => { try { return localStorage.getItem(TANK_KEY); } catch { return null; } })();
   setTankSize(urlTank || storedTank || TANK_DEFAULT);
+
+  // Consommation : URL > localStorage > défaut (6,5)
+  const urlConso = params.get('conso');
+  const storedConso = (() => { try { return localStorage.getItem(CONSO_KEY); } catch { return null; } })();
+  setConso(urlConso || storedConso || CONSO_DEFAULT);
 
   const q = params.get('q');
   const fuel = normalizeFuelField(params.get('fuel'));
@@ -2647,6 +2714,17 @@ if ($tank) {
     const v = getTankSize();
     setTankSize(v); // clamp visible immédiat si l'user a tapé 300
     try { localStorage.setItem(TANK_KEY, String(v)); } catch {}
+    updateUrlParams();
+    if (currentResults) renderStations();
+  });
+}
+
+// Consommation : même principe (l'indication « trajet compris » se recalcule).
+if ($conso) {
+  $conso.addEventListener('change', () => {
+    const v = getConso();
+    setConso(v);
+    try { localStorage.setItem(CONSO_KEY, String(v)); } catch {}
     updateUrlParams();
     if (currentResults) renderStations();
   });

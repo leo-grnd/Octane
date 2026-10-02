@@ -65,6 +65,30 @@ fin de tableau sous un intercalaire « Hors classement », sans rang, avec sa da
 reste visible, la station pouvant simplement n'avoir pas changé ses prix. Les alertes email sont
 plus strictes (3 jours) : elles désignent un seul gagnant, sans tableau pour nuancer.
 
+### Heures du flux
+
+Le flux date ses relevés (`*_maj`, `*_rupture_debut`) **à l'heure de Paris, mais les étiquette
+UTC** : le 02/10/2026 à 15 h 46 UTC, le relevé le plus récent portait `17:17:39+00:00`, deux
+heures dans le futur. `parseFluxTime` relit ces heures comme des heures de Paris (été comme hiver),
+seulement quand elles se disent UTC, pour ne pas décaler deux fois si le flux est corrigé.
+
+### Ruptures
+
+Une station en rupture temporaire d'un carburant n'a plus de prix pour lui : la requête des prix
+(`<carburant> IS NOT NULL`) l'écarte. Une seconde requête, en parallèle, récupère les ruptures
+temporaires du rayon déclarées depuis moins de 30 jours (au-delà, la station a cessé de vendre ce
+carburant sans le déclarer ; le flux en garde depuis 2023). Elles sont comptées dans la ligne de
+méta, listées dans une carte repliable sous le classement et posées sur la carte en gris.
+
+### Trajet compris
+
+Le classement reste au prix au litre. Mais avec un prix plafonné d'enseigne, la moins chère est
+souvent à 15 km quand une station à 2 km ne coûte que quelques centimes de plus : le bloc gagnant
+signale alors la station qui revient moins cher **plein et aller-retour compris** (écart d'au
+moins 0,50 €). Aller-retour depuis le point de recherche, par la route en mode voiture, sinon à
+vol d'oiseau × 1,3 (« environ ») ; consommation saisie dans « Ma conso » (6,5 L/100 km par
+défaut, mémorisée comme le réservoir) ; carburant du trajet payé au prix de la station.
+
 ## Développement local
 
 ```bash

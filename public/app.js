@@ -833,8 +833,27 @@ function formatPrice(price) {
 // ne rien déclarer pendant quelques jours.
 const STALE_DAYS = 7;
 
+// Le flux officiel date ses relevés (`*_maj`, `*_rupture_debut`) à l'heure de
+// Paris, mais les étiquette UTC : le 2 oct. 2026 à 15 h 46 UTC, le relevé le
+// plus récent portait « 17:17:39+00:00 », deux heures dans le futur. Lus tels
+// quels, tous les « relevé il y a… » étaient trop jeunes de 2 h (1 h en hiver),
+// et un relevé de moins de 2 h affichait « à l'instant ». On relit donc l'heure
+// affichée comme une heure de Paris — seulement si elle se dit UTC, pour ne
+// pas décaler deux fois le jour où le flux sera corrigé.
+const PARIS_CLOCK = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Paris', hourCycle: 'h23',
+  year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'
+});
+function parseFluxTime(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t) || !/(\+00:00|Z)$/.test(iso)) return t;
+  const p = Object.fromEntries(PARIS_CLOCK.formatToParts(new Date(t)).map(x => [x.type, Number(x.value)]));
+  const parisOffset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - t;
+  return t - parisOffset;
+}
+
 function isStalePrice(s, fuelField) {
-  const t = new Date(s[fuelField.replace('_prix', '_maj')]).getTime();
+  const t = parseFluxTime(s[fuelField.replace('_prix', '_maj')]);
   return !Number.isFinite(t) || Date.now() - t > STALE_DAYS * 864e5;
 }
 
@@ -853,14 +872,15 @@ function stationKm(s) {
   return s.driveKm ?? s.distance ?? Infinity;
 }
 
-// "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage de mise à jour.
-// Retourne { text, tier } pour permettre une coloration selon la fraîcheur :
+// "il y a 3h", "il y a 2j", "il y a 5 min" — pour l'horodatage d'un relevé du
+// flux (voir parseFluxTime). Retourne { text, tier } pour permettre une
+// coloration selon la fraîcheur :
 //   fresh = < 48 h (chip neutre, opacité faible)
 //   stale = 48 h–7 j (chip orange, attention douce)
 //   veryStale = > 7 j (chip rouge, hors classement — voir STALE_DAYS)
 function formatRelativeTime(iso) {
   if (!iso) return null;
-  const then = new Date(iso).getTime();
+  const then = parseFluxTime(iso);
   if (isNaN(then)) return null;
   const diffMin = Math.max(0, Math.round((Date.now() - then) / 60000));
   const diffH = diffMin / 60;

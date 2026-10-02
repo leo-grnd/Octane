@@ -1780,23 +1780,34 @@ function updateUrlParams() {
 // Garde anti-double-submit : désactivée pendant une recherche en cours pour
 // éviter de lancer 3 fetch en parallèle si l'user clique plusieurs fois.
 let searchBusy = false;
-function setSearchBusy(busy) {
+// `spinner: false` pendant la géolocalisation : les boutons sont bloqués, mais
+// « Chercher » n'affiche pas « Recherche… », aucune recherche n'étant lancée.
+function setSearchBusy(busy, { spinner = true } = {}) {
   searchBusy = busy;
   $searchBtn.disabled = busy;
   $geolocBtn.disabled = busy;
-  setCtaLoading(busy);
+  setCtaLoading(busy && spinner);
 }
 
 // Bouton Chercher en « Recherche… » avec sa roue, quel que soit le point
-// d'entrée de la recherche (bouton, suggestion, reprise, changement de mode).
+// d'entrée de la recherche (bouton, reprise, lien partagé, « Élargir »).
 // Le CSS bascule libellé et icône sur aria-busy.
 function setCtaLoading(on) {
   $searchBtn.setAttribute('aria-busy', String(on));
 }
 
+// Seul « Chercher » lance une recherche : choisir une suggestion, une
+// recherche récente ou sa position ne fait que remplir l'adresse, pour ne pas
+// couper quelqu'un qui règle encore carburant, rayon ou réservoir. Le lieu
+// choisi est retenu ici, et « Chercher » part de ses coordonnées exactes tant
+// que le champ n'a pas été retouché (une position sans adresse retrouvée
+// n'aurait sinon que « 43.94920, 4.80590 » à géocoder).
+let pickedPlace = null; // { text, lat, lon, label, fromGeoloc }
+
 async function doAddressSearch() {
   if (searchBusy) return;
   const address = $address.value.trim();
+  const picked = pickedPlace && pickedPlace.text === address ? pickedPlace : null;
   // Le géocodeur refuse les requêtes de moins de 3 caractères (400) ; les
   // communes à nom très court (Eu, Ay, Y…) passent avec leur code postal.
   if (!address || address.length < 3) {
@@ -1806,10 +1817,13 @@ async function doAddressSearch() {
   updateUrlParams();
   setSearchBusy(true);
   try {
-    showStatus('Localisation de l\'adresse...');
-    const { lat, lon, label } = await geocode(address);
-    pushHistory(address, label);
-    await runSearch(lat, lon, label);
+    let place = picked;
+    if (!place) {
+      showStatus('Localisation de l\'adresse...');
+      place = await geocode(address);
+    }
+    if (!place.fromGeoloc) pushHistory(address, place.label);
+    await runSearch(place.lat, place.lon, place.label);
   } catch (err) {
     showStatusAction(
       friendlyError(err, 'adresses'),
@@ -1878,16 +1892,15 @@ function renderSuggestions(features) {
   $suggestions._features = features;
 }
 
+// Suggestion choisie : l'adresse est remplie, la recherche attend « Chercher ».
 function selectSuggestion(feature) {
   const label = feature.properties.label;
   const [lon, lat] = feature.geometry.coordinates;
   $address.value = label;
   closeSuggestions();
+  pickedPlace = { text: label, lat, lon, label };
   // Cache le géocodage pour éviter un nouvel appel BAN
   cacheSet(localStorage, geoCacheKey(label), { lat, lon, label });
-  pushHistory(label, label);
-  updateUrlParams();
-  runSearch(lat, lon, label);
 }
 
 function renderHistory() {
@@ -1901,12 +1914,13 @@ function renderHistory() {
   $suggestions.classList.remove('hidden');
   $address.setAttribute('aria-expanded', 'true');
   suggestionIdx = -1;
+  $suggestions._features = null; // Entrée ne doit pas reprendre d'anciennes suggestions
   $suggestions.querySelectorAll('li.sg-hist-item').forEach((li, i) => {
     li.addEventListener('mousedown', e => {
       e.preventDefault();
       $address.value = hist[i].q;
+      pickedPlace = null;
       closeSuggestions();
-      doAddressSearch();
     });
   });
   $suggestions._history = hist;
@@ -1945,12 +1959,13 @@ $address.addEventListener('keydown', e => {
   } else if (e.key === 'Escape' && open) {
     closeSuggestions();
   } else if (e.key === 'Enter') {
+    // Entrée choisit la suggestion surlignée, sans chercher : sur téléphone,
+    // c'est aussi la touche qui ferme le clavier en fin de saisie.
     if (open && suggestionIdx >= 0 && $suggestions._features?.[suggestionIdx]) {
       e.preventDefault();
       selectSuggestion($suggestions._features[suggestionIdx]);
     } else {
       closeSuggestions();
-      doAddressSearch();
     }
   }
 });
@@ -1981,6 +1996,8 @@ function setGeoState(state, sub) {
 }
 $address.addEventListener('input', () => {
   if ($geolocBtn.classList.contains('is-done')) setGeoState('idle');
+  // Adresse retouchée : le lieu choisi ne vaut plus, « Chercher » géocodera.
+  if (pickedPlace && $address.value.trim() !== pickedPlace.text) pickedPlace = null;
 });
 
 $geolocBtn.addEventListener('click', () => {
@@ -1993,21 +2010,22 @@ $geolocBtn.addEventListener('click', () => {
     );
     return;
   }
-  setSearchBusy(true);
+  setSearchBusy(true, { spinner: false });
   setGeoState('busy');
   showStatus('Récupération de ta position...');
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
       const address = await reverseGeocode(lat, lon);
-      $address.value = address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      const text = address || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      $address.value = text;
       setGeoState('done', address);
-      // Relancer « Chercher » sur cette adresse ne coûte pas de nouvel appel,
-      // et retombe sur la position exacte plutôt que sur le numéro de rue.
+      // La position remplit l'adresse ; « Chercher » partira de la position
+      // exacte plutôt que du numéro de rue retrouvé.
+      pickedPlace = { text, lat, lon, label: address || 'ta position actuelle', fromGeoloc: true };
       if (address) cacheSet(localStorage, geoCacheKey(address), { lat, lon, label: address });
-      updateUrlParams();
-      try { await runSearch(lat, lon, address || 'ta position actuelle'); }
-      finally { setSearchBusy(false); }
+      hideStatus();
+      setSearchBusy(false);
     },
     (err) => {
       setGeoState('idle');
@@ -2694,15 +2712,13 @@ function showResumeBanner(last) {
   banner.querySelector('.resume-dismiss').addEventListener('click', () => banner.remove());
 }
 
-// Persiste le choix du mode + relance la recherche si on en a déjà une en cours
+// Persiste le choix du mode. Il s'applique à la prochaine recherche : seul
+// « Chercher » en lance une (voir pickedPlace).
 $modeRadios.forEach(r => {
   r.addEventListener('change', () => {
     const mode = getDistanceMode();
     try { localStorage.setItem(DISTANCE_MODE_KEY, mode); } catch {}
     updateUrlParams();
-    if (currentResults) {
-      runSearch(currentResults.userLat, currentResults.userLon, currentResults.label);
-    }
   });
 });
 

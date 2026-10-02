@@ -846,7 +846,7 @@ function formatRelativeTime(iso) {
 }
 
 // Compare le prix actuel à la moyenne des 7 derniers jours d'historique
-// (déjà chargé en mémoire par prefetchHistory). Retourne { sign, arrow, deltaCt }
+// (déjà chargé en mémoire par prefetchHistory). Retourne { sign, arrow, deltaEur }
 // ou null si l'historique n'est pas encore là ou trop court.
 function getStationTrend(stationId, fuelField, currentPrice) {
   if (stationId == null || !HIST_FUELS.has(fuelField) || !Number.isFinite(currentPrice)) return null;
@@ -864,14 +864,15 @@ function getStationTrend(stationId, fuelField, currentPrice) {
   // Moins d'un demi-centime d'écart : on parle de stabilité.
   const sign = deltaCt <= -0.5 ? 'down' : deltaCt >= 0.5 ? 'up' : 'flat';
   const arrow = sign === 'down' ? '↘' : sign === 'up' ? '↗' : '→';
-  return { sign, arrow, deltaCt };
+  return { sign, arrow, deltaEur };
 }
 
-// « −1,8 ct/L vs moyenne 7 jours », avec un vrai signe moins.
+// « −1,08 € / plein vs moyenne 7 jours », avec un vrai signe moins : l'écart
+// au litre ramené au réservoir saisi, plus parlant que des centimes par litre.
 function formatTrend(trend) {
   if (trend.sign === 'flat') return 'stable sur 7 jours';
-  const value = Math.abs(trend.deltaCt).toFixed(1).replace('.', ',');
-  return `${trend.deltaCt > 0 ? '+' : '−'}${value} ct/L vs moyenne 7 jours`;
+  const value = eur2(Math.abs(trend.deltaEur) * getTankSize());
+  return `${trend.deltaEur > 0 ? '+' : '−'}${value} / plein vs moyenne 7 jours`;
 }
 
 // URL Google Maps pour itinéraire depuis la position de l'utilisateur
@@ -2368,7 +2369,8 @@ $modeRadios.forEach(r => {
 });
 
 // Taille réservoir : persiste + re-render des stations (le bandeau d'économie
-// recalcule avec le nouveau volume). Pas besoin de re-fetcher l'API.
+// et la tendance du gagnant recalculent avec le nouveau volume). Pas besoin
+// de re-fetcher l'API.
 if ($tank) {
   $tank.addEventListener('change', () => {
     const v = getTankSize();

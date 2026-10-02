@@ -667,6 +667,73 @@ function lookupOSMBrand(lat, lon, data) {
   return nearest ? data.brands[nearest[2]] : null;
 }
 
+// ===== Noms, enseignes et adresses officiels =====
+// Le flux des prix n'a ni nom ni enseigne, et ses adresses sont brutes
+// (« 55 BLD DE PICPUS »). scripts/build-stations.mjs relève chaque mois la
+// fiche officielle de chaque station (prix-carburants.gouv.fr) et normalise
+// son adresse avec l'IGN, en tranches par préfixe d'identifiant :
+// data/stations/{2 chiffres}.json = { id: [nom, enseigne, adresse] }. On ne
+// charge que les tranches des stations trouvées, quelques Ko chacune.
+const shardOf = (id) => String(id).padStart(8, '0').slice(0, 2);
+const stationShards = new Map(); // préfixe → Promise<{ id: entrée } | null>
+
+function loadStationShards(stations) {
+  const prefixes = new Set(stations.filter(s => s.id != null).map(s => shardOf(s.id)));
+  return Promise.all([...prefixes].map(p => {
+    if (!stationShards.has(p)) {
+      stationShards.set(p, fetch(`data/stations/${p}.json`)
+        .then(res => (res.ok ? res.json() : null))
+        .catch(() => null));
+    }
+    return stationShards.get(p);
+  })).then(shards => {
+    const byPrefix = new Map([...prefixes].map((p, i) => [p, shards[i]]));
+    return (id) => {
+      const shard = byPrefix.get(shardOf(id));
+      const e = shard && shard[String(id)];
+      return e ? { name: e[0], brand: e[1], address: e[2] } : null;
+    };
+  });
+}
+
+function applyOfficialData(stations, lookup) {
+  let changed = false;
+  for (const s of stations) {
+    if (s.id == null || s._official) continue;
+    const o = lookup(s.id);
+    if (o) { s._official = o; changed = true; }
+  }
+  return changed;
+}
+
+// Enseigne affichée : l'officielle d'abord. « Indépendant sans enseigne »
+// n'en est pas une, mais l'emporte quand même sur OpenStreetMap, qui peut
+// désigner la station d'en face. Sans fiche officielle, OpenStreetMap.
+function stationBrand(s) {
+  const o = s._official;
+  if (o && o.brand) return /^ind[ée]pendant/i.test(o.brand) ? null : o.brand;
+  return s._osmBrand || null;
+}
+
+function stationAddress(s) {
+  return (s._official && s._official.address) || s.adresse || '';
+}
+
+// Nom officiel de la station, quand il apprend quelque chose : pas une raison
+// sociale (« SARL Garage Svs »), ni la simple répétition de l'enseigne et de
+// la ville (« Intermarché Saverdun »). « Relais des Invalides » passe.
+const LEGAL_NAME = /^(sarl|sas|sasu|eurl|snc|sa|sci|selarl|ets|etablissements?)\b/i;
+const NAME_FILLERS = new Set(['station', 'stations', 'service', 'services', 'super', 'hyper', 'market',
+  'express', 'contact', 'u', 'relais', 'centre', 'carburant', 'carburants', 'de', 'du', 'des', 'la', 'le',
+  'les', 'l', 'd', 'et', 'e', 'en', 'sur', 'st', 'ste', 'saint', 'sainte']);
+const plainWords = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+function stationOfficialName(s) {
+  const name = s._official && s._official.name;
+  if (!name || LEGAL_NAME.test(name)) return null;
+  const known = new Set(plainWords(`${stationBrand(s) || ''} ${s._official.brand || ''} ${s.ville || ''}`));
+  return plainWords(name).some(w => !known.has(w) && !NAME_FILLERS.has(w)) ? name : null;
+}
+
 // Pas de requête Overpass au runtime : un ancien fallback interrogeait les
 // instances publiques à chaque recherche où une enseigne manquait. Leurs
 // politiques d'usage proscrivent ce trafic dès qu'il devient massif, et une
@@ -730,7 +797,7 @@ const KNOWN_BRANDS = [
 // la marque-mère (Total) pour que le bon match l'emporte. Si rien ne matche,
 // on tombe sur un badge neutre gris avec l'initiale.
 const BRAND_BADGES = [
-  { re: /total\s*acc/i, mono: 'TA', bg: '#E5004B' },
+  { re: /total\s*acc|totalenergies\s*access/i, mono: 'TA', bg: '#E5004B' },
   { re: /totalenergies/i, mono: 'TE', bg: '#E5004B' },
   { re: /total/i, mono: 'T', bg: '#E5004B' },
   { re: /e\.?\s*leclerc|leclerc/i, mono: 'L', bg: '#0066B3' },
@@ -749,7 +816,8 @@ const BRAND_BADGES = [
   { re: /leader\s*price/i, mono: 'LP', bg: '#E2001A' },
   { re: /colruyt/i, mono: 'CL', bg: '#003D7A' },
   { re: /elan/i, mono: 'EL', bg: '#0066B3' },
-  { re: /agip/i, mono: 'AG', bg: '#FFCD00', fg: '#000' }
+  { re: /agip/i, mono: 'AG', bg: '#FFCD00', fg: '#000' },
+  { re: /\beni\b/i, mono: 'EN', bg: '#FFCD00', fg: '#000' }
 ];
 function getBrandBadge(name) {
   if (!name) return null;
@@ -793,15 +861,14 @@ function icon(name) {
 
 // Nom commercial de la station (avec la ville si on peut)
 function extractStationName(s) {
-  // 1) Marque déjà matchée via OSM (priorité absolue, géospatial)
-  if (s._osmBrand) {
-    return s.ville ? `${s._osmBrand} ${s.ville}` : s._osmBrand;
-  }
-  // 2) Champs directs éventuels
-  const raw = s.marque || s.brand || s.enseignes || s.nom_station || s.nom || null;
-  if (raw && String(raw).trim()) {
-    const brand = String(raw).trim();
-    return s.ville ? `${brand} ${s.ville}` : brand;
+  // 1) Enseigne officielle, sinon OSM (voir stationBrand)
+  const brand = stationBrand(s);
+  if (brand) return s.ville ? `${brand} ${s.ville}` : brand;
+  // 2) Station indépendante d'après sa fiche : son nom tient lieu d'enseigne
+  // (« Relais de Noves », « Garage Doulmet » sans son « SARL »).
+  if (s._official) {
+    const bare = (s._official.name || '').replace(LEGAL_NAME, '').replace(/^[\s\-–]+/, '').trim();
+    return bare || null;
   }
   // 3) Détection sur l'adresse (+ ville au cas où)
   const haystack = `${s.adresse || ''} ${s.ville || ''}`;
@@ -979,14 +1046,19 @@ let currentView = 'list';
 // Données d'affichage communes au bloc gagnant et aux lignes du tableau.
 function stationView(s, fuelField) {
   const brandName = extractStationName(s);
-  const title = brandName || s.adresse || 'Station sans nom';
+  const address = stationAddress(s);
+  const title = brandName || address || 'Station sans nom';
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   const subParts = [];
-  if (brandName && s.adresse) subParts.push(s.adresse);
+  if (brandName && address) subParts.push(address);
   if (cpVille) subParts.push(cpVille);
+  const officialName = stationOfficialName(s);
   return {
     brandName,
     title,
+    // Nom de la station sous le titre (bloc gagnant, fiche), s'il n'y est pas déjà.
+    stationName: officialName && officialName !== title ? officialName : null,
+    address,
     subtitle: subParts.join(' · '),
     cpVille,
     freshness: formatRelativeTime(s[fuelField.replace('_prix', '_maj')]),
@@ -1018,6 +1090,7 @@ function buildWinnerBlock(s, fuelField) {
     </div>
     <div class="winner-info">
       <div class="winner-title">${brandBadgeHtml(v.brandName)}<h3 class="winner-name">${esc(v.title)}</h3></div>
+      ${v.stationName ? `<div class="winner-station">${esc(v.stationName)}</div>` : ''}
       <div class="winner-addr">${esc(v.subtitle)}</div>
       <div class="winner-facts">
         <span><span class="winner-num">${v.distKm != null ? esc(km1(v.distKm)) : '—'}</span> ${v.byRoad ? 'par la route' : 'à vol d’oiseau'}</span>
@@ -1140,10 +1213,11 @@ function buildStaleSeparator(count) {
 function buildHistoryCard(s, i, total) {
   const color = getColorForRank(s._stale ? -1 : i, total);
   const brandName = extractStationName(s);
-  const title = brandName || s.adresse || 'Station sans nom';
+  const address = stationAddress(s);
+  const title = brandName || address || 'Station sans nom';
   const badgeHtml = brandBadgeHtml(brandName, { neutral: s._stale });
   const subParts = [];
-  if (brandName && s.adresse) subParts.push(s.adresse);
+  if (brandName && address) subParts.push(address);
   const cpVille = [s.cp, s.ville].filter(Boolean).join(' ');
   if (cpVille) subParts.push(cpVille);
   const subtitle = subParts.join(' · ');
@@ -1555,6 +1629,23 @@ async function runSearch(lat, lon, label) {
       [...enrichedAll, ...ruptures].forEach(s => {
         const b = lookupOSMBrand(s.lat, s.lon, osmBrandsData);
         if (b) s._osmBrand = b;
+      });
+    }
+
+    // Noms, enseignes et adresses officiels : de petites tranches du site,
+    // attendues 800 ms au plus pour que le premier rendu soit déjà le bon
+    // (sinon enseignes et adresses changeraient sous les yeux) ; au-delà,
+    // elles complètent l'affichage à leur arrivée.
+    const everyStation = [...enrichedAll, ...ruptures];
+    const officialPromise = loadStationShards(everyStation);
+    const early = await Promise.race([officialPromise, new Promise(r => setTimeout(() => r(null), 800))]);
+    if (token !== currentSearchToken) return;
+    if (early) {
+      applyOfficialData(everyStation, early);
+      $osmHint.classList.add('hidden'); // les enseignes sont déjà là
+    } else {
+      officialPromise.then(lookup => {
+        if (token === currentSearchToken && applyOfficialData(everyStation, lookup)) renderStations();
       });
     }
 
@@ -2308,9 +2399,10 @@ function wazeUrl(lat, lon) {
 }
 
 function buildSheetContent(s, fuelField) {
-  const brandName = extractStationName(s) || s.adresse || 'Station sans nom';
-  const badgeHtml = brandBadgeHtml(brandName);
-  const fullAddr = [s.adresse, [s.cp, s.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const v = stationView(s, fuelField);
+  const brandName = v.title;
+  const badgeHtml = brandBadgeHtml(v.brandName);
+  const fullAddr = [v.address, v.cpVille].filter(Boolean).join(', ');
 
   // Fiche volontairement courte : uniquement les données officielles utiles
   // pour décider d'y aller. Le prix recherché et son relevé, la distance, les
@@ -2359,6 +2451,7 @@ function buildSheetContent(s, fuelField) {
   return `
     <header class="sheet-header">
       <div class="sheet-title-row">${badgeHtml}<h2 id="sheetTitle">${esc(brandName)}</h2></div>
+      ${v.stationName ? `<div class="sheet-station">${esc(v.stationName)}</div>` : ''}
       ${fullAddr ? `<div class="sheet-addr">${esc(fullAddr)}</div>` : ''}
     </header>
     ${keyHtml}

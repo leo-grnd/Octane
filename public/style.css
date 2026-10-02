@@ -410,6 +410,10 @@
 .winner-title { display: flex; align-items: center; gap: 12px; }
 .winner-title .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
 .winner-name { margin: 0; font-size: clamp(20px, 2.4vw, 26px); line-height: 1.15; letter-spacing: -0.02em; }
+/* Nom officiel de la station (« Relais des Invalides »), entre le titre
+   (enseigne + ville) et l'adresse. */
+.winner-station,
+.sheet-station { font-size: 15px; font-weight: 600; color: var(--o-muted); }
 .winner-addr { font-size: 14px; color: var(--o-subtle); }
 .winner-facts {
   display: flex;
@@ -948,6 +952,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-title-row { display: flex; align-items: center; gap: 12px; margin-right: 48px; }
 .sheet-title-row .brand-badge { min-width: 34px; height: 34px; padding: 0 6px; border-radius: 9px; font-size: 11px; }
 .sheet-title-row h2 { margin: 0; font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+.sheet-station { margin-top: -2px; }
 .sheet-addr { font-size: 14px; color: var(--o-subtle); }
 .sheet-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .sheet-actions .btn { flex: 1 1 auto; }

@@ -6,7 +6,9 @@ Site statique qui interroge directement les APIs publiques :
 - **Prix** · `data.economie.gouv.fr` (flux instantané du Ministère de l'Économie)
 - **Historique prix** · `public.opendatasoft.com/prix-des-carburants-j-1` (12 mois glissants, runtime)
 - **Géocodage** · `data.geopf.fr/geocodage` (Base Adresse Nationale, servie par la Géoplateforme IGN)
-- **Enseignes** · Base pré-calculée (`public/data/osm/brands.json`, issue d'OSM)
+- **Noms, enseignes, adresses** · Base pré-calculée chaque mois (`public/data/stations/`) depuis les
+  fiches officielles de `prix-carburants.gouv.fr` et la Base Adresse Nationale ; OSM
+  (`public/data/osm/brands.json`) en secours pour l'enseigne
 - **Routage** · Valhalla (primaire, `valhalla1.openstreetmap.de`) + OSRM (fallback), pour le mode
   « en voiture ». Les deux tournent en parallèle et leurs distances sont fusionnées.
 - **Fond de carte** · Plan IGN v2 (WMTS Géoplateforme, sans clé), désaturé en CSS. Les serveurs de
@@ -245,6 +247,37 @@ python3 scripts/build_brands.py
 de chaque mois à 04:00 UTC (les marques OSM bougent lentement). Déclenchable manuellement
 via l'onglet Actions → Refresh OSM brands → Run workflow.
 
+## Noms, enseignes et adresses officiels
+
+Le flux des prix exclut le nom et l'enseigne des stations, et ses adresses sont brutes
+(« 55 BLD DE PICPUS »). Le site gouvernemental `prix-carburants.gouv.fr` affiche nom et enseigne
+sur la fiche de chaque point de vente (`/map/recuperer_infos_pdv/{id}`). `scripts/build-stations.mjs` :
+
+1. liste les stations du flux (un export Opendatasoft) ;
+2. lit leur fiche officielle, à un rythme modéré (2 requêtes en parallèle, pause de 250 ms,
+   User-Agent identifiable : ~30 min pour ~9 800 fiches) ; une fiche illisible garde l'entrée
+   du mois précédent ;
+3. normalise les adresses : abréviations développées, puis géocodage IGN en un lot CSV
+   (`data.geopf.fr/geocodage/search/csv`), retenu seulement si le score atteint 0,8 et que type de
+   voie et mots du nom concordent — sans ce garde-fou, « 55 BLD DE PICPUS » devenait « Rue de
+   Picpus » et « Route de Saint-Quentin », « Route de Tullins » ;
+4. écrit `public/data/stations/{2 premiers chiffres de l'id sur 8}.json` =
+   `{ "75012021": ["Relais du Bel Air", "TotalEnergies", "55 Boulevard de Picpus"] }`.
+
+Le client ne charge que les tranches des stations trouvées (quelques Ko). Priorité de l'enseigne :
+fiche officielle, puis OSM, puis motifs sur l'adresse. Le nom de la station n'apparaît que dans le
+bloc gagnant et la fiche détail, et seulement s'il apprend quelque chose (ni raison sociale, ni
+répétition de l'enseigne et de la ville).
+
+```bash
+node scripts/build-stations.mjs                 # collecte complète
+node scripts/build-stations.mjs --limit=200     # essai
+node scripts/build-stations.mjs --skip-pages    # adresses seules, noms repris des tranches
+```
+
+**Automatisation :** `.github/workflows/build-stations.yml`, le 2 de chaque mois à 04:00 UTC, et
+manuellement via Actions → Refresh official station names → Run workflow.
+
 ## Design system
 
 L'interface suit la maquette **« Octane Accueil v3 »** de Claude Design (octobre 2026). Elle
@@ -335,6 +368,7 @@ régénérer qu'elle). Le script vérifie les dimensions de chaque image produit
 | `apple-touch-icon.png` · `icons/` | Icônes iOS (180) et PWA (192, 512, aussi « maskable ») — générées |
 | `og-image.png` | Aperçu de partage 1200 × 630 (réseaux sociaux, messageries) — généré |
 | `data/osm/brands.json` | Base des marques OSM (générée chaque mois par la CI, diffusée sous ODbL) |
+| `data/stations/` | Noms, enseignes et adresses officiels, en tranches par préfixe d'identifiant (générés chaque mois par la CI) |
 | `_headers` | En-têtes HTTP (CSP, HSTS…) — lu par Cloudflare, jamais servi lui-même |
 | `sitemap.xml` · `robots.txt` | Indexation par les moteurs |
 
@@ -345,9 +379,11 @@ régénérer qu'elle). Le script vérifie les dimensions de chaque image produit
 | `wrangler.jsonc` · `worker/` | Configuration Cloudflare · code des routes `/api/*` |
 | `scripts/render-brand.mjs` · `scripts/brand/` | Rendu des images générées via Chrome/Edge headless (sans dépendance) |
 | `scripts/build-brands.mjs` · `build_brands.py` | Scrape OSM → `public/data/osm/brands.json` (Node ou Python stdlib) |
+| `scripts/build-stations.mjs` | Fiches officielles + adresses IGN → `public/data/stations/` (Node, sans dépendance) |
 | `scripts/send-alerts.mjs` | Envoi des alertes quotidiennes (Node, sans dépendance) |
 | `data/alerts/state.json` | Prix de la veille + anti-doublon (empreintes, écrit par la CI) |
 | `.github/workflows/build-brands.yml` | Cron mensuel GHA (marques) |
+| `.github/workflows/build-stations.yml` | Cron mensuel GHA (noms, enseignes et adresses officiels) |
 | `.github/workflows/daily-alerts.yml` | Cron horaire GHA (alertes) |
 | `.github/workflows/pages-redirect.yml` · `scripts/build-pages-redirect.mjs` | Redirections de l'ancienne adresse GitHub Pages |
 

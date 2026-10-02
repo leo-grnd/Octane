@@ -66,9 +66,10 @@ self.addEventListener('fetch', (e) => {
   // API du Worker : réponses personnelles ou éphémères, jamais mises en cache.
   if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
 
-  // Données précalculées (marques OSM) : toujours frais côté réseau,
-  // fallback cache si offline. Évite de servir un 404 figé après redeploy.
-  if (url.origin === self.location.origin && url.pathname.includes('/data/osm/')) {
+  // Données précalculées (marques OSM, noms officiels des stations) : toujours
+  // frais côté réseau, fallback cache si offline. Évite de servir un 404 figé
+  // après redeploy.
+  if (url.origin === self.location.origin && url.pathname.includes('/data/')) {
     e.respondWith(
       caches.open(VERSION).then(cache =>
         fetch(req).then(res => {
